@@ -25,6 +25,13 @@ Separate BE Generic Suite to publish on PyPi [FA-84].
 Initial commit as an independent repository.
 
 
+## 0.0.5 (2023-07-30)
+---
+
+### New
+Add `generate_blueprints_from_json` function to generate the blueprints from the `endpoints.json` file.
+
+
 ## 0.0.4 (2023-07-13)
 ---
 
@@ -50,6 +57,4 @@ DynamoDb emulated a-la MongoDB way.
 ---
 
 ### New
-Fynapp webapp Preview version with initial deployment of BE (Backend) and FE (Frontend).
-Release notes:
 Start programming of the generic editor.

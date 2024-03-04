@@ -1,11 +1,14 @@
 [tool.poetry]
-name = "genericsuite-be"
+name = "genericsuite"
 version = "0.1.0"
 description = "The GenericSuite for Python (backend version)"
 authors = ["Carlos J. Ramirez <tomkat_cr@yahoo.com>"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/tomkat-cr/genericsuite-be.git"
+packages = [
+    { include = "genericsuite" }
+]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
