@@ -1,7 +1,9 @@
-# genericsuite-be
+# GenericSuite (backend version)
 The GenericSuite for Python (backend version).
 
-GenericSuite is a versatile backend solution, designed to provide a comprehensive suite of features for Python web applications. It supports various frameworks including Chalice, FastAPI, and Flask, making it adaptable to a range of projects. This repository contains the backend logic, utilities, and configurations necessary to build and deploy scalable and maintainable applications.
+![GenericSuite Logo](https://github.com/tomkat-cr/genericsuite-fe/blob/main/src/lib/images/gs_logo_circle.svg)
+
+GenericSuite is a versatile backend solution, designed to provide a comprehensive suite of features for Python APIs. It supports various frameworks including Chalice, FastAPI, and Flask, making it adaptable to a range of projects. This repository contains the backend logic, utilities, and configurations necessary to build and deploy scalable and maintainable applications.
 
 ## Features
 
@@ -15,25 +17,44 @@ GenericSuite is a versatile backend solution, designed to provide a comprehensiv
 
 ## Pre-requisites
 
-Python 3.9+, 3.10+, 3.11
+- Python >= 3.9 and < 4.0
 
 ## Installation
 
 To use GenericSuite in your project, install it with the following command(s):
 
-### Pip
+### From Pypi
+
+#### Pip
 ```bash
-pip install git+https://github.com/tomkat-cr/genericsuite-be
+pip install genericsuite
 ```
 
-### Pipenv
+#### Pipenv
 ```bash
-pipenv install git+https://github.com/tomkat-cr/genericsuite-be
+pipenv install genericsuite
 ```
 
-### Poetry
+#### Poetry
 ```bash
-poetry add git+https://github.com/tomkat-cr/genericsuite-be
+poetry add genericsuite
+```
+
+### From a specific branch in the repository, e.g. "branch_x"
+
+#### Pip
+```bash
+pip install git+https://github.com/tomkat-cr/genericsuite-be@branch_x
+```
+
+#### Pipenv
+```bash
+pipenv install git+https://github.com/tomkat-cr/genericsuite-be@branch_x
+```
+
+#### Poetry
+```bash
+poetry add git+https://github.com/tomkat-cr/genericsuite-be@branch_x
 ```
 
 ## Configuration
@@ -55,9 +76,8 @@ For detailed documentation on each feature and module, please refer to the inlin
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
+## Credits
 
-- Carlos J. Ramirez, for initiating and maintaining this project.
-- All contributors who help in enhancing and expanding the capabilities of GenericSuite.
+This project is developed and maintained by Carlos J. Ramirez. For more information or to contribute to the project, visit [GenericSuite on GitHub](https://github.com/tomkat-cr/genericsuite-be).
 
-Thank you for your interest in the GenericSuite for Python.
+Happy Coding!
