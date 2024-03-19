@@ -38,9 +38,6 @@ To get started with GenericSuite, follow these steps:
 To create the project directory for the App's backend API. E.g. `exampleapp_backend`, instrctions will depend on the dependency management of your preference:
 
 ```bash
-```
-
-```bash
 # Pip
 mkdir -p exampleapp_backend/exampleapp_backend
 cd exampleapp_backend
