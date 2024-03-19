@@ -360,7 +360,7 @@ This is a suggested App development repository structure for a Chalice project:
 
 The main menu, API endpoints and CRUD editor configurations are defined in the JSON configuration files.
 
-You can find examples about configurations and how to code an App [here](https://github.com/tomkat-cr/genericsuite-fe/blob/main/src/configs/README.md) and the different JSON files in the [src/configs/frontend](https://github.com/tomkat-cr/genericsuite-fe/blob/main/src/configs/frontend) and [src/configs/backend](https://github.com/tomkat-cr/genericsuite-fe/blob/main/src/configs/backend) directories.
+You can find examples about configurations and how to code an App in the [GenericSuite App Creation and Configuration guide](https://github.com/tomkat-cr/genericsuite-fe/blob/main/src/configs/README.md).
 
 ## License
 
