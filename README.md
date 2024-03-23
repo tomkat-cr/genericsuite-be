@@ -109,7 +109,7 @@ poetry add git+https://github.com/tomkat-cr/genericsuite-be@branch_x
 
 ## Configuration
 
-Configure your application by setting up the necessary environment variables. Refer to the [.env.example](https://github.com/tomkat-cr/genericsuite-be/blob/main/.env-example) file for the required variables.
+Configure your application by setting up the necessary environment variables. Refer to the [.env.example](https://github.com/tomkat-cr/genericsuite-be/blob/main/.env.example) and [config.py](https://github.com/tomkat-cr/genericsuite-be/blob/main/genericsuite/config/config.py) files for the available options.
 
 1. Aplicacion name
 ```
@@ -209,12 +209,12 @@ APP_FRONTEND_AUDIENCE_QA=
 ```
 ```
 # Staging
-APP_CORS_ORIGIN_STAGING=*
+APP_CORS_ORIGIN_STAGING=https://app-qa.exampleapp.com
 APP_FRONTEND_AUDIENCE_STAGING=
 ```
 ```
 # PROD
-APP_CORS_ORIGIN_PROD=*
+APP_CORS_ORIGIN_PROD=https://app.exampleapp.com
 APP_FRONTEND_AUDIENCE_PROD=
 ```
 9. Current framework options: chalice, flask, fastapi
@@ -275,17 +275,6 @@ TEST_APP_URL=http://app.exampleapp.local:5002
 ```
 FLASK_APP=index.py
 ```
-20. For GenricSuite AI only
-```
-# Aplicacion AI assistant name
-AI_ASSISTANT_NAME=ExampleBot
-
-# AWS configuration
-AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_DEV=aws-s3-bucket-name
-AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_QA=aws-s3-bucket-name
-AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_STAGING=aws-s3-bucket-name
-AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_PROD=aws-s3-bucket-name
-```
 
 ## App structure
 
@@ -307,7 +296,7 @@ This is a suggested App development repository structure for a Chalice project:
 │   ├── dynamodb_cf_template.yaml
 │   └── policy-qa.json
 ├── .env
-├── .env-example
+├── .env.example
 ├── .gitignore
 ├── CHANGELOG.md
 ├── LICENSE
