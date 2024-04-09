@@ -1,0 +1,59 @@
+[project]
+name = "genericsuite"
+version = "0.1.3"
+authors = [
+    { name="Carlos J. Ramirez", email="<tomkat_cr@yahoo.com>" }
+]
+description = "The GenericSuite for Python (backend version)"
+readme = "README.md"
+requires-python = ">=3.9,<4.0"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/tomkat-cr/genericsuite-be"
+Issues = "https://github.com/tomkat-cr/genericsuite-be/issues"
+
+[tool.poetry]
+name = "genericsuite"
+version = "0.1.3"
+description = "The GenericSuite for Python (backend version)"
+authors = ["Carlos J. Ramirez <tomkat_cr@yahoo.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/tomkat-cr/genericsuite-be.git"
+packages = [
+    { include = "genericsuite" }
+]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<4.0"
+boto3 = "^1.24.55"
+botocore = "^1.27.96"
+s3transfer = "^0.6.0"
+python-dateutil = "^2.8.2"
+urllib3 = "^1.26.18"
+wheel = "^0.41.3"
+marshmallow = "^3.19.0"
+requests = "^2.31.0"
+pyjwt = "^2.8.0"
+werkzeug = "^3.0.1"
+dnspython = "^2.6.0rc1"
+pymongo = "^4.6.0"
+
+[tool.poetry.group.dev.dependencies]
+changelog-cli = "^0.7.1"
+mypy = "^0.931"
+pytest = "^7.0.1"
+pytest-cov = "^3.0.0"
+yapf = "^0.32.0"
+coverage = "^7.2.7"
+pylint = "^3.1.0"
+flake8 = "^7.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
