@@ -16,7 +16,8 @@ def get_curr_user_id(request: AuthorizedRequest) -> str:
     user_id = None
     authorized_request = hasattr(request, 'user') and request.user
     if authorized_request:
-        user_id = request.user.get("public_id")
+        # user_id = request.user.get("public_id")
+        user_id = request.user.public_id
     else:
         # Is a non-authorization request, so returns the identificator
         # 'N/A/R' meaning "Non-Authorization Request"

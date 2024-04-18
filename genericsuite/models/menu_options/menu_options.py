@@ -3,14 +3,7 @@ Menu options access
 """
 from typing import Optional
 
-# from chalice.app import Response
 from genericsuite.util.framework_abs_layer import Response
-
-# from genericsuite.util.blueprint_one import BlueprintOne
-# from genericsuite.util.jwt import (
-#     request_authentication,
-#     AuthorizedRequest
-# )
 
 from genericsuite.util.jwt import (
     AuthorizedRequest
@@ -27,14 +20,6 @@ from genericsuite.util.utilities import (
 from genericsuite.config.config_from_db import app_context_and_set_env
 
 
-# bp = BlueprintOne(__name__)
-
-
-# @bp.route(
-#     '/',
-#     methods=['GET'],
-#     authorizor=request_authentication(),
-# )
 def menu_options_get(
     request: AuthorizedRequest,
     other_params: Optional[dict] = None
@@ -57,11 +42,6 @@ def menu_options_get(
     )
 
 
-# @bp.route(
-#     '/element',
-#     methods=['POST'],
-#     authorizor=request_authentication(),
-# )
 def menu_options_element(
     request: AuthorizedRequest,
     other_params: Optional[dict] = None

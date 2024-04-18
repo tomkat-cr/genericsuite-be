@@ -90,15 +90,17 @@ class GenericEndpointHelper:
             return error_resultset(self.dbo.error_message)
 
         row_id = self.query_params.get('id')
-        additional_query_params = self.dbo.cnf_db.get('additional_query_params')
         like_param = self.get_like_param()
         comb_param = self.get_comb_param()
+
+        additional_query_params = self.dbo.cnf_db.get('additional_query_params')
 
         (limit, skip, page) = get_navigation_params(self.request)
 
         _ = DEBUG and log_debug(f' | row_id: {row_id}' +
             f' | additional_query_params: {additional_query_params}' +
             f' | limit: {limit} | skip: {skip} | page: {page}' + 
+            f' | like_param: {like_param} | comb_param: {comb_param}' + 
             f'\n | request_body: {self.request_body}')
 
         if self.request.method == 'POST':

@@ -17,6 +17,27 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## Unreleased
+---
+
+### New
+Add FastAPI framework abstraction specific "create_app", "generate_blueprints_from_json" and Auth Request elements [FA-246].
+Add basic endpoints for menu_options and users (test, login, supad-create) for the FastAPI framework abstraction [FA-122].
+
+### Changes
+"view_func1" renamed as "view_function" in "endpoints.json" configuration file.
+Fix Response and Request objects in FastAPI framework abstraction layer [FA-246].
+AWS_API_GATEWAY_STAGE env. var. removed.
+AWS_LAMBDA_FUNCTION_ROLE env. var. replaced by AWS_LAMBDA_FUNCTION_ROLE_QA, AWS_LAMBDA_FUNCTION_ROLE_STAGINNG, AWS_LAMBDA_FUNCTION_ROLE_DEMO and AWS_LAMBDA_FUNCTION_ROLE_PROD.
+Replace "users" specific CRUD endpoint handler with the JSON configured one.
+Change "get_curr_user_id" to use "request.user.public_id" instead of "request.user.get("public_id")" [FA-122].
+Change "jwt.py" to have a separate def "get_general_authorized_request" to abstract it functionality between frameworks [FA-122].
+Change "jwt.py" to call "AuthorizedRequest()" passing the 1st parameter as named "event_dict=request.to_original_event()" [FA-122]. 
+
+### Breaks
+Remove "pas-enc" endpoint for security reasons.
+
+
 ## 0.1.3 (2024-04-09)
 ---
 

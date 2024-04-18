@@ -1,6 +1,6 @@
 # The GenericSuite for Python (backend version)
 
-![GenericSuite Logo](https://github.com/tomkat-cr/genericsuite-fe/blob/main/src/lib/images/gs_logo_circle.png)
+![GenericSuite Logo](https://genericsuite.carlosjramirez.com/images/gs_logo_circle.svg)
 
 [GenericSuite](https://www.carlosjramirez.com/genericsuite) is a versatile backend solution, designed to provide a comprehensive suite of features for Python APIs. It supports various frameworks including FastAPI, Flask and Chalice, making it adaptable to a range of projects. This repository contains the backend logic, utilities, and configurations necessary to build and deploy scalable and maintainable applications.
 
@@ -169,7 +169,7 @@ APP_STAGE=qa
 APP_DEBUG=0
 APP_STAGE=prod
 ```
-5. Application secret ket (to be used in password encryption)
+5. Application secret key (to be used in password encryption)
 ```
 APP_SECRET_KEY=xxxx
 ```
@@ -264,7 +264,7 @@ CURRENT_FRAMEWORK=chalice
 10. JSON configuration files location and git URL
 ```
 GIT_SUBMODULE_LOCAL_PATH=lib/config_dbdef
-GIT_SUBMODULE_URL=git://github.com/username/configs_repo_name.git
+GIT_SUBMODULE_URL=git://github.com/username/exampleapp_configs.git
 ```
 11. Frontend application path (to copy version file during big lambdas deployment)
 ```
@@ -278,11 +278,13 @@ PYTHON_VERSION=3.11.5
 ```
 13. AWS Configuration
 ```
-AWS_S3_BUCKET_NAME_FE=aws-s3-bucket-name
+AWS_S3_BUCKET_NAME_FE=exampleapp-frontend-website-[STAGE]
 AWS_REGION=aws-region
-AWS_API_GATEWAY_STAGE=aws-api-gateway-stage
-AWS_LAMBDA_FUNCTION_NAME=aws-lambda-function-name
-AWS_LAMBDA_FUNCTION_ROLE=aws-lambda-function-role
+AWS_LAMBDA_FUNCTION_NAME=exampleapp-backend
+AWS_LAMBDA_FUNCTION_ROLE_QA=exampleapp-api_handler-role-qa
+AWS_LAMBDA_FUNCTION_ROLE_STAGING=exampleapp-api_handler-role-staging
+AWS_LAMBDA_FUNCTION_ROLE_DEMO=exampleapp-api_handler-role-demo
+AWS_LAMBDA_FUNCTION_ROLE_PROD=exampleapp-api_handler-role-prod
 AWS_SSL_CERTIFICATE_ARN=arn:aws:acm:AWS-REGION:AWS-ACCOUNT:certificate/AWS-CERTIFICATE-UUID
 ```
 15. SMTP Mail configuration
@@ -309,14 +311,123 @@ RUN_METHOD="chalice_docker"
 18. Tests configuration
 ```
 # Testing enndpoint
-TEST_APP_URL=http://app.exampleapp.local:5002
+TEST_APP_URL=http://app.exampleapp.local:5001
 ```
-19. Flask configuration
+19. Run methods and framework App directory and entry point
 ```
-FLASK_APP=index.py
+#
+# Default App main code directory
+# for Chalice:
+# https://aws.github.io/chalice/topics/packaging.html
+# APP_DIR='.'
+# for FastAPI:
+# https://fastapi.tiangolo.com/tutorial/bigger-applications/?h=directory+structure#an-example-file-structure
+# APP_DIR='app'
+# for Flask:
+# https://flask.palletsprojects.com/en/2.3.x/tutorial/layout/
+# APP_DIR='flaskr'
+#
+# Default App entry point code file
+# for Chalice:
+# https://aws.github.io/chalice/topics/packaging.html
+# APP_MAIN_FILE='app'
+# for FastAPI:
+# https://fastapi.tiangolo.com/tutorial/bigger-applications/?h=directory+structure#an-example-file-structure
+# APP_MAIN_FILE='main'
+# for Flask:
+# https://flask.palletsprojects.com/en/2.3.x/tutorial/factory/
+# APP_MAIN_FILE='__init__'
+#
+```
+20. Flask configuration
+```
+FLASK_APP=__init__.py
 ```
 
+## Framework installation
+
+* [FastAPI installation](https://fastapi.tiangolo.com/#installation)
+* [Flask installation](https://flask.palletsprojects.com/en/2.3.x/installation/)
+* [Chalice installation](https://aws.github.io/chalice/quickstart.html)
+
 ## App structure
+
+Suggested directory structure by framework:
+
+* [FastAPI directory structure](https://fastapi.tiangolo.com/tutorial/bigger-applications/?h=directory+structure#an-example-file-structure)
+* [Flask directory structure](https://flask.palletsprojects.com/en/2.3.x/tutorial/layout/)
+* [Chalice directory structure](https://aws.github.io/chalice/topics/packaging.html)
+
+This is a suggested App development repository structure for a FastAPI project:
+
+```
+.
+├── app
+│   ├── __init__.py
+│   ├── main.py
+│   ├── dependencies.py
+│   └── routers
+│   │   ├── __init__.py
+│   │   ├── items.py
+│   │   └── users.py
+│   └── internal
+│       ├── __init__.py
+│       └── admin.py
+├── logs
+│   └── .gitignore
+├── .env
+├── .env.example
+├── .gitignore
+├── CHANGELOG.md
+├── LICENSE
+├── Makefile
+├── Pipfile
+├── Pipfile.lock
+├── README.md
+├── package-lock.json
+├── package.json
+├── requirements.txt
+├── tests
+│   ├── .env.for_test
+│   ├── __init__.py
+│   ├── assets
+│   ├── conftest.py
+│   └── pytest.ini
+└── version.txt
+```
+
+This is a suggested App development repository structure for a Flask project:
+
+```
+.
+├── flaskr/
+│   ├── __init__.py
+│   ├── items.py
+│   ├── users.py
+│   ├── admin.py
+│   └── index.py
+├── logs
+│   └── .gitignore
+├── package-lock.json
+├── package.json
+├── requirements.txt
+├── tests
+│   ├── .env.for_test
+│   ├── __init__.py
+│   ├── assets
+│   ├── conftest.py
+│   └── pytest.ini
+├── .env
+├── .env.example
+├── .gitignore
+├── CHANGELOG.md
+├── LICENSE
+├── Makefile
+├── Pipfile
+├── Pipfile.lock
+├── README.md
+└── version.txt
+```
 
 This is a suggested App development repository structure for a Chalice project:
 
@@ -335,18 +446,11 @@ This is a suggested App development repository structure for a Chalice project:
 │   ├── deployments
 │   ├── dynamodb_cf_template.yaml
 │   └── policy-qa.json
-├── .env
-├── .env.example
-├── .gitignore
-├── CHANGELOG.md
-├── LICENSE
-├── Makefile
-├── Pipfile
-├── Pipfile.lock
-├── README.md
-├── app.py
 ├── chalicelib
 │   └── endpoints
+│       ├── items.py
+│       ├── users.py
+│       ├── admin.py
 │       └── __init__.py
 ├── lib
 │   ├── .gitignore
@@ -369,15 +473,25 @@ This is a suggested App development repository structure for a Chalice project:
 │       └── utilities
 ├── logs
 │   └── .gitignore
-├── package-lock.json
-├── package.json
-├── requirements.txt
 ├── tests
 │   ├── .env.for_test
 │   ├── __init__.py
 │   ├── assets
 │   ├── conftest.py
 │   └── pytest.ini
+├── .env
+├── .env.example
+├── .gitignore
+├── app.py
+├── CHANGELOG.md
+├── LICENSE
+├── Makefile
+├── package-lock.json
+├── package.json
+├── Pipfile
+├── Pipfile.lock
+├── README.md
+├── requirements.txt
 └── version.txt
 
 ```

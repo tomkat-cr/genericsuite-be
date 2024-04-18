@@ -45,7 +45,7 @@ def generate_blueprints_from_json(
     for definition in definitions:
         bp_name = definition['name']
         url_prefix = f"/{definition.get('url_prefix', bp_name)}"
-        blueprint = BlueprintOne(definition['name'])
+        blueprint = BlueprintOne(bp_name)
 
         if DEBUG:
             log_debug(
@@ -66,7 +66,7 @@ def generate_blueprints_from_json(
             if route_handler_type == "GenericEndpointHelper":
                 route_handler = generic_route_handler
             else:
-                route_handler = route['view_func1']
+                route_handler = route['view_function']
 
             if DEBUG:
                 log_debug(

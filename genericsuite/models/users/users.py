@@ -4,10 +4,8 @@ System users operations (CRUD, login, database test, super-admin creation)
 from typing import Optional
 import json
 
-# from chalice.app import Request, Response
 from genericsuite.util.framework_abs_layer import Request, Response
 
-# from genericsuite.util.blueprint_one import BlueprintOne
 from genericsuite.util.db_abstractor import (
     set_db_request,
     test_connection,
@@ -17,7 +15,6 @@ from genericsuite.util.generic_db_helpers import (
 )
 from genericsuite.util.app_logger import log_debug
 from genericsuite.util.jwt import (
-    # request_authentication,
     token_encode,
     get_basic_auth,
     AuthorizedRequest,
@@ -35,18 +32,10 @@ from genericsuite.config.config_from_db import app_context_and_set_env
 from genericsuite.constants.const_tables import get_constant
 
 
-# bp = BlueprintOne(__name__)
-
-
 HEADER_CREDS_ENTRY_NAME = 'Authorization'
 DEBUG = False
 
 
-# @bp.route(
-#     '/',
-#     methods=['GET', 'POST', 'PUT', 'DELETE'],
-#     authorizor=request_authentication(),
-# )
 def users_crud(request: AuthorizedRequest,
     other_params: Optional[dict] = None) -> Response:
     """ User's CRUD operations (create, read, update, delete) """
@@ -67,10 +56,6 @@ def users_crud(request: AuthorizedRequest,
     return ep_helper.generic_crud_main()
 
 
-# @bp.route(
-#     '/test',
-#     authorizor=request_authentication(),
-# )
 def test_connection_handler(request: Request,
     other_params: Optional[dict] = None) -> Response:
     """Connection handler test"""
@@ -84,10 +69,6 @@ def test_connection_handler(request: Request,
     return return_resultset_jsonified_or_exception(result)
 
 
-# @bp.route(
-#     '/login',
-#     methods=['GET', 'POST']
-# )
 def login_user(request: Request,
     other_params: Optional[dict] = None) -> Response:
     """User login"""
@@ -100,20 +81,25 @@ def login_user(request: Request,
         # log_debug('login_user | bp.current_request.to_dict(): ' +
         #           f'{bp.current_request.to_dict()}')
     result = get_default_resultset()
-    basic_auth_data = get_basic_auth(
-        request.headers.get(HEADER_CREDS_ENTRY_NAME, '')
-    )
-    if DEBUG:
-        log_debug(f'login_user | basic_auth_data: {basic_auth_data}')
-    if basic_auth_data['error']:
-        # 'Could not verify [L1]'
-        result['error_message'] = basic_auth_data['error_message']
-        return return_resultset_jsonified_or_exception(
-            result=result,
-            http_error=basic_auth_data['status_code']
+    if other_params.get('username') and other_params.get('password'):
+        username = other_params.get('username')
+        password = other_params.get('password')
+    else:
+        basic_auth_data = get_basic_auth(
+            request.headers.get(HEADER_CREDS_ENTRY_NAME, '')
         )
-    username = basic_auth_data['resultset']['user']
-    password = basic_auth_data['resultset']['password']
+        if DEBUG:
+            log_debug(f'login_user | basic_auth_data: {basic_auth_data}')
+        if basic_auth_data['error']:
+            # 'Could not verify [L1]'
+            result['error_message'] = basic_auth_data['error_message']
+            return return_resultset_jsonified_or_exception(
+                result=result,
+                http_error=basic_auth_data['status_code']
+            )
+        username = basic_auth_data['resultset']['user']
+        password = basic_auth_data['resultset']['password']
+
     user = dbo.fetch_row_by_entryname_raw('email', username)
     if user['error']:
         return return_resultset_jsonified_or_exception(user)
@@ -148,10 +134,6 @@ def login_user(request: Request,
     return return_resultset_jsonified_or_exception(result, 401)
 
 
-# @bp.route(
-#     '/supad-create',
-#     methods=['POST']
-# )
 def super_admin_create(request: Request,
     other_params: Optional[dict] = None) -> Response:
     """Super admin user emergency creation"""
@@ -167,20 +149,26 @@ def super_admin_create(request: Request,
     psw_class = Passwords()
     dbo = GenericDbHelper(json_file="users", request=request)
     result = get_default_resultset()
-    basic_auth_data = get_basic_auth(
-        request.headers.get(HEADER_CREDS_ENTRY_NAME, '')
-    )
-    if DEBUG:
-        log_debug(f'supad-create | basic_auth_data: {basic_auth_data}')
-    if basic_auth_data['error']:
-        result['error_message'] = basic_auth_data['error_message']
-        return return_resultset_jsonified_or_exception(
-            result=result,
-            http_error=basic_auth_data['status_code']
-        )
 
-    username = basic_auth_data['resultset']['user']
-    password = basic_auth_data['resultset']['password']
+    if other_params.get('username') and other_params.get('password'):
+        username = other_params.get('username')
+        password = other_params.get('password')
+    else:
+        basic_auth_data = get_basic_auth(
+            request.headers.get(HEADER_CREDS_ENTRY_NAME, '')
+        )
+        if DEBUG:
+            log_debug(f'supad-create | basic_auth_data: {basic_auth_data}')
+        if basic_auth_data['error']:
+            result['error_message'] = basic_auth_data['error_message']
+            return return_resultset_jsonified_or_exception(
+                result=result,
+                http_error=basic_auth_data['status_code']
+            )
+
+        username = basic_auth_data['resultset']['user']
+        password = basic_auth_data['resultset']['password']
+
     if not username or not password:
         result['error_message'] = 'Could not verify [SAC1]'
     elif username != settings.APP_SUPERADMIN_EMAIL:
@@ -219,29 +207,4 @@ def super_admin_create(request: Request,
                 request_body[field] = ''
         result = dbo.create_row(request_body)
 
-    return return_resultset_jsonified_or_exception(result)
-
-
-# @bp.route(
-#     '/pas-enc',
-#     methods=['POST'],
-#     # authorizor=request_authentication(),
-# )
-def password_encripted(request: Request,
-    other_params: Optional[dict] = None) -> Response:
-    """Returns the given string as a encrypted password
-    """
-    if not other_params:
-        other_params = {}
-    psw_class = Passwords()
-    request_body = get_request_body(request)
-    result = get_default_resultset()
-    result['resultset'] = {}
-    if request_body.get('passwd', None) is not None:
-        result['resultset'] = {
-            # 'orig_pass': request_body.get('passwd'),
-            'enc_pass': psw_class.encrypt_password(request_body.get('passwd'))
-        }
-    else:
-        result['error_message'] = 'Parameter not received [PSEN1]'
     return return_resultset_jsonified_or_exception(result)

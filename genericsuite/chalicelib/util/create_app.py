@@ -22,7 +22,6 @@ framework_class = importlib.import_module("chalice")
 DEBUG = False
 
 
-# def create_app(app_name: str, framework_class: Any, cors_config_class: Any,
 def create_app(app_name: str, settings = None) -> Any:
     """ Create the Chalice App """
 

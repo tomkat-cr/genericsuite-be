@@ -6,6 +6,7 @@ from typing import Callable
 import datetime
 
 import jwt
+from pydantic import BaseModel
 
 from genericsuite.util.framework_abs_layer import Request
 
@@ -25,7 +26,7 @@ EXPIRATION_MINUTES = 30
 DEBUG = False
 
 
-class AuthTokenPayload:
+class AuthTokenPayload(BaseModel):
     """
     Represents the user's payload structure of the JWT token.
     """
@@ -53,43 +54,56 @@ def request_authentication() -> Callable[[Request], AuthorizedRequest]:
         request authentication.
     """
     def create_auth_request(request: Request) -> AuthorizedRequest:
-        if settings.HEADER_TOKEN_ENTRY_NAME not in request.headers:
-            return standard_error_return('A valid token is missing')
-        try:
-            token_raw = request.headers[settings.HEADER_TOKEN_ENTRY_NAME]
-            jwt_token = token_raw.replace('Bearer ', '')
-            if DEBUG:
-                log_debug('||| REQUEST_AUTHENTICATION' +
-                    '\n | HEADER_TOKEN_ENTRY_NAME: ' +
-                    f'{settings.HEADER_TOKEN_ENTRY_NAME}' +
-                    f'\n | token_raw: {token_raw}' +
-                    f'\n | jwt_token: {jwt_token}' +
-                    # f'\n | settings.APP_SECRET_KEY: {settings.APP_SECRET_KEY}' +
-                    '\n')
-            jws_token_data = jwt.decode(
-                jwt_token,
-                settings.APP_SECRET_KEY,
-                algorithms="HS256",
-            )
-            if DEBUG:
-                log_debug('||| REQUEST_AUTHENTICATION' +
-                    f' | jws_token_data = {jws_token_data}')
-            authorized_request = AuthorizedRequest(
-                # type: ignore[attr-defined]
-                request.to_original_event(),
-                # type: ignore[attr-defined]
-                lambda_context=request.lambda_context
-            )
-            authorized_request.user = jws_token_data
-            if DEBUG:
-                log_debug('||| REQUEST_AUTHENTICATION' +
-                    f' | authorized_request = {authorized_request}')
-        except Exception as err:
-            log_error('REQUEST_AUTHENTICATION' +
-                f' | Exception = {str(err)}')
-            return standard_error_return('Token is invalid')
-        return authorized_request
+        return get_general_authorized_request(request)
     return create_auth_request
+
+
+def get_general_authorized_request(request: Request) -> AuthorizedRequest:
+    """
+    Get the authorized request from the request object.
+
+    Args:
+        request (Request): The request object.
+
+    Returns:
+        AuthorizedRequest: The authorized request.
+    """
+    if settings.HEADER_TOKEN_ENTRY_NAME not in request.headers:
+        return standard_error_return('A valid token is missing')
+    try:
+        token_raw = request.headers[settings.HEADER_TOKEN_ENTRY_NAME]
+        jwt_token = token_raw.replace('Bearer ', '')
+        if DEBUG:
+            log_debug('||| REQUEST_AUTHENTICATION' +
+                '\n | HEADER_TOKEN_ENTRY_NAME: ' +
+                f'{settings.HEADER_TOKEN_ENTRY_NAME}' +
+                f'\n | token_raw: {token_raw}' +
+                f'\n | jwt_token: {jwt_token}' +
+                # f'\n | settings.APP_SECRET_KEY: {settings.APP_SECRET_KEY}' +
+                '\n')
+        jws_token_data = jwt.decode(
+            jwt_token,
+            settings.APP_SECRET_KEY,
+            algorithms="HS256",
+        )
+        if DEBUG:
+            log_debug('||| REQUEST_AUTHENTICATION' +
+                f' | jws_token_data = {jws_token_data}')
+        authorized_request = AuthorizedRequest(
+            # type: ignore[attr-defined]
+            event_dict=request.to_original_event(),
+            # type: ignore[attr-defined]
+            lambda_context=request.lambda_context,
+            user = jws_token_data,
+        )
+        if DEBUG:
+            log_debug('||| REQUEST_AUTHENTICATION' +
+                f' | authorized_request = {authorized_request}')
+    except Exception as err:
+        log_error('REQUEST_AUTHENTICATION' +
+            f' | Exception = {str(err)}')
+        return standard_error_return('Token is invalid')
+    return authorized_request
 
 
 def token_encode(user):
