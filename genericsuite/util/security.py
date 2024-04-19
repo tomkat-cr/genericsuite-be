@@ -165,10 +165,10 @@ def verify_user_filter(app_context: AppContext) -> dict:
     """
     request = app_context.get_request()
     vuf_response = get_default_resultset()
-    if request.method in ['GET', 'DELETE']:
+    if request.method.upper() in ['GET', 'DELETE']:
         query_params = get_query_params(request)
         user_id = query_params.get('user_id')
-    else:  # request.method in ['POST', 'PUT']:
+    else:  # request.method.upper() in ['POST', 'PUT']:
         form_data = get_request_body(request)
         user_id = form_data.get('user_id')
     if DEBUG:

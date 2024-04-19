@@ -33,6 +33,10 @@ Replace "users" specific CRUD endpoint handler with the JSON configured one.
 Change "get_curr_user_id" to use "request.user.public_id" instead of "request.user.get("public_id")" [FA-122].
 Change "jwt.py" to have a separate def "get_general_authorized_request" to abstract it functionality between frameworks [FA-122].
 Change "jwt.py" to call "AuthorizedRequest()" passing the 1st parameter as named "event_dict=request.to_original_event()" [FA-122]. 
+Change: README with main image from the official documentation site [FA-246].
+
+### Fixes
+Fix "generic_endpoint_helpers.py" and "security.py" to upper() the request.method because FastAPI send it in lower case.
 
 ### Breaks
 Remove "pas-enc" endpoint for security reasons.
