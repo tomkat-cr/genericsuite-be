@@ -186,6 +186,7 @@ def create_endpoint_function(other_params: dict) -> callable:
     async def generic_get(
         current_user: str = Depends(get_current_user),
         _id: str = Query(None, min_length=3, max_length=50, alias="id"),
+        user_id: Union[str, None] = Query(None),
         limit: Union[int, None] = Query(None, ge=1, le=100000),
         page: Union[int, None] = Query(None, ge=1, le=100000),
         like_param: str = Query(None),
@@ -214,6 +215,7 @@ def create_endpoint_function(other_params: dict) -> callable:
                 "page": page,
                 "like_param": like_param,
                 "comb_param": comb_param,
+                "user_id": user_id,
             },
             headers={
                 "current_user": current_user,
@@ -274,6 +276,7 @@ def create_endpoint_function(other_params: dict) -> callable:
     async def generic_delete(
         current_user: str = Depends(get_current_user),
         _id: str = Query(None, min_length=3, max_length=50, alias="id"),
+        json_body: Optional[Union[dict, None]] = Body(...),
     ):
         """
         Handles generic DELETE requests, to delete one row by id.
@@ -285,10 +288,11 @@ def create_endpoint_function(other_params: dict) -> callable:
             Response: The response from the GET operation.
         """
         request = build_request(
-            method="get",
+            method="delete",
             query_params={
                 "id": _id,
             },
+            json_body=json_body,
             headers={
                 "current_user": current_user,
             },

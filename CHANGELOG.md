@@ -26,17 +26,20 @@ Add basic endpoints for menu_options and users (test, login, supad-create) for t
 
 ### Changes
 "view_func1" renamed as "view_function" in "endpoints.json" configuration file.
-Fix Response and Request objects in FastAPI framework abstraction layer [FA-246].
 AWS_API_GATEWAY_STAGE env. var. removed.
 AWS_LAMBDA_FUNCTION_ROLE env. var. replaced by AWS_LAMBDA_FUNCTION_ROLE_QA, AWS_LAMBDA_FUNCTION_ROLE_STAGINNG, AWS_LAMBDA_FUNCTION_ROLE_DEMO and AWS_LAMBDA_FUNCTION_ROLE_PROD.
 Replace "users" specific CRUD endpoint handler with the JSON configured one.
-Change "get_curr_user_id" to use "request.user.public_id" instead of "request.user.get("public_id")" [FA-122].
-Change "jwt.py" to have a separate def "get_general_authorized_request" to abstract it functionality between frameworks [FA-122].
+Change: "get_curr_user_id" to use "request.user.public_id" instead of "request.user.get("public_id")" [FA-122].
+Change: "jwt.py" to have a separate def "get_general_authorized_request" to abstract it functionality between frameworks [FA-122].
 Change "jwt.py" to call "AuthorizedRequest()" passing the 1st parameter as named "event_dict=request.to_original_event()" [FA-122]. 
 Change: README with main image from the official documentation site [FA-246].
+Change: Homepage pointed to "https://genericsuite.carlosjramirez.com/Backend-Development/GenericSuite-Core/" [FA-257].
 
 ### Fixes
-Fix "generic_endpoint_helpers.py" and "security.py" to upper() the request.method because FastAPI send it in lower case.
+Fix: FastAPI Response and Request objects to make it work with the framework abstraction layer standards [FA-246].
+Fix: "generic_endpoint_helpers.py" and "security.py" to upper() the request.method because FastAPI send it in lower case.
+Fix: /options endpoint to avoid redirectorion.
+Fix: add "user_id" to the generic endpoint generator GET request method, and add "json_body" to the DELETE method to be compatible with array CRUDs.
 
 ### Breaks
 Remove "pas-enc" endpoint for security reasons.

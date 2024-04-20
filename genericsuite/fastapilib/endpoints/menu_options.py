@@ -26,7 +26,7 @@ class MenuElementRequest(BaseModel):
 router = APIRouter()
 
 
-@router.get('/')
+@router.get('')
 async def menu_options_get(
     current_user: str = Depends(get_current_user),
 ) -> Response:
