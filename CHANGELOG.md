@@ -17,7 +17,14 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## Unreleased
+## 0.1.5 (2024-04-20)
+---
+
+### Changes
+License changed to ISC in "pyproject.toml" [FA-244].
+
+
+## 0.1.4 (2024-04-20)
 ---
 
 ### New
@@ -38,7 +45,7 @@ Change: Homepage pointed to "https://genericsuite.carlosjramirez.com/Backend-Dev
 ### Fixes
 Fix: FastAPI Response and Request objects to make it work with the framework abstraction layer standards [FA-246].
 Fix: "generic_endpoint_helpers.py" and "security.py" to upper() the request.method because FastAPI send it in lower case.
-Fix: /options endpoint to avoid redirectorion.
+Fix: /options endpoint to avoid redirection.
 Fix: add "user_id" to the generic endpoint generator GET request method, and add "json_body" to the DELETE method to be compatible with array CRUDs.
 
 ### Breaks

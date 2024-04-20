@@ -9,7 +9,7 @@ readme = "README.md"
 requires-python = ">=3.9,<4.0"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: ISC License",
     "Operating System :: OS Independent",
 ]
 
@@ -22,9 +22,10 @@ name = "genericsuite"
 version = "0.1.4"
 description = "The GenericSuite for Python (backend version)"
 authors = ["Carlos J. Ramirez <tomkat_cr@yahoo.com>"]
-license = "MIT"
+license = "ISC"
 readme = "README.md"
 repository = "https://github.com/tomkat-cr/genericsuite-be.git"
+homepage = "https://genericsuite.carlosjramirez.com/Backend-Development/GenericSuite-Core/"
 packages = [
     { include = "genericsuite" }
 ]
