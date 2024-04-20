@@ -8,6 +8,7 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
 
 from genericsuite.util.app_logger import log_info
 # from genericsuite.util.app_logger import log_debug
@@ -21,12 +22,15 @@ from genericsuite.fastapilib.endpoints import users
 from genericsuite.fastapilib.endpoints import menu_options
 
 # framework_class = importlib.import_module("fastapi")
+# handler_wrapper_class = importlib.import_module("mangum")
 
 DEBUG = False
 
 
 def create_app(app_name: str, settings = None) -> Any:
-    """ Create the Chalice App """
+    """
+    Create the FastAPI App
+    """
 
     if settings is None:
         settings = Config()
@@ -90,3 +94,11 @@ def set_cors_config(fastapi_app, settings):
             # 'Content-Disposition',
         ],
     )
+
+
+def create_handler(app_object):
+    """
+    Returns the FastAPI App as a valid AWS Lambda Function handler
+    """
+    # return handler_wrapper_class.Mangum(app_object, lifespan="off")
+    return Mangum(app_object, lifespan="off")

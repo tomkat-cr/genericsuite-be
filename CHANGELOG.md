@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ---
 
 ### Changes
+Add: "mangum" to make FastAPI work on AWS Lambda 
 License changed to ISC in "pyproject.toml" [FA-244].
 
 
