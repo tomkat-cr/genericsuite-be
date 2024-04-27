@@ -1155,7 +1155,8 @@ class GenericDbHelper:
         Returns:
             str: the current user Id from the JWT Request
         """
-        return self.request.user["public_id"]
+        # return self.request.user["public_id"]
+        return self.request.user.public_id
 
     def replace_special_vars(self, params: dict) -> dict:
         """

@@ -17,6 +17,13 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## Unreleased
+---
+
+### Fixes
+Change: "generic_db_helpers.get_current_user" use "request.user.public_id" instead of "self.request.user["public_id"]" [FA-122].
+
+
 ## 0.1.5 (2024-04-20)
 ---
 
