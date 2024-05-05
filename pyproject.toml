@@ -1,6 +1,6 @@
 [project]
 name = "genericsuite"
-version = "0.1.5"
+version = "0.1.6"
 authors = [
     { name="Carlos J. Ramirez", email="<tomkat_cr@yahoo.com>" }
 ]

@@ -74,25 +74,13 @@ def set_cors_config(fastapi_app, settings):
     """
     Sets the CORS configuration for the API.
     """
+    origins = [settings.CORS_ORIGIN]
     fastapi_app.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.CORS_ORIGIN],
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
-        allow_headers=[
-            "*",
-            # settings.HEADER_TOKEN_ENTRY_NAME,
-            # 'Access-Control-Allow-Origin',
-            # 'Content-Type',
-            # 'Access-Control-Allow-Headers',
-        ],
-        expose_headers=[
-            "*",
-            # settings.HEADER_TOKEN_ENTRY_NAME,
-            # 'Access-Control-Allow-Origin',
-            # 'Content-Type',
-            # 'Content-Disposition',
-        ],
+        allow_headers=["*"],
     )
 
 

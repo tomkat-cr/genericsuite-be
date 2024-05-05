@@ -5,14 +5,14 @@ from typing import Optional, Union, Dict, Any
 
 import os
 import importlib
-
-from fastapi import HTTPException
-# from fastapi import Request as FastAPIRequest
-from fastapi import Response as FastAPIResponse
-# from fastapi import Blueprint as FastAPIBlueprint
-
-from pydantic import BaseModel, model_serializer
 import json
+
+# from fastapi import HTTPException
+# from fastapi import Request as FastAPIRequest
+# from fastapi import Blueprint as FastAPIBlueprint
+from fastapi import Response as FastAPIResponse
+
+from pydantic import BaseModel
 
 DEBUG = True
 
@@ -82,9 +82,17 @@ if FRAMEWORK == 'fastapi':
                 """
                 if isinstance(body, dict):
                     body = json.dumps(body)
+
                 headers = headers if headers else {}
                 if 'Content-Type' not in headers:
                     headers['Content-Type'] = 'application/json'
+                if 'Access-Control-Allow-Origin' not in headers:
+                    headers["Access-Control-Allow-Origin"] = os.environ.get('APP_CORS_ORIGIN', '*')
+                if 'Access-Control-Allow-Methods' not in headers:
+                    headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+                if 'Access-Control-Allow-Headers' not in headers:
+                    headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+
                 if DEBUG:
                     print('FastAPI abstraction' +
                           f'\n| body: {body}' +

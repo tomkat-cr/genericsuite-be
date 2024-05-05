@@ -17,11 +17,15 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## Unreleased
+## 0.1.6 (2024-05-04)
 ---
 
+### Changes
+Redirect README instructions to the GenericSuite Documentation [GS-73].
+
 ### Fixes
-Fix "TypeError: 'AuthTokenPayload' object is not subscriptable" error in "generic_db_helpers.get_current_user" by using "request.user.public_id" instead of "self.request.user["public_id"]" [FA-122].
+Fix "TypeError: 'AuthTokenPayload' object is not subscriptable" error in "generic_db_helpers.get_current_user" by using "request.user.public_id" instead of "self.request.user['public_id']" [FA-122].
+Fix the CORS header Access-Control-Allow-Origin missing in FastAPI in Firefox [GS-69].
 
 
 ## 0.1.5 (2024-04-20)
