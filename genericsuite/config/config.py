@@ -87,7 +87,12 @@ class Config():
         self.APP_SUPERADMIN_EMAIL = \
             os.environ.get('APP_SUPERADMIN_EMAIL')
 
+        self.APP_HOST_NAME = os.environ.get('APP_HOST_NAME')
+        self.STORAGE_URL_SEED = os.environ.get('STORAGE_URL_SEED')
+
         self.GIT_SUBMODULE_LOCAL_PATH = os.environ.get('GIT_SUBMODULE_LOCAL_PATH')
+
+        self.TEMP_DIR = os.environ.get('TEMP_DIR', '/tmp')
 
         # ............................
 

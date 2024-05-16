@@ -2,51 +2,34 @@
 Blueprint wrapper to add authorization, other data and schema validation
 to requests.
 """
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional
 from functools import partial, wraps
-from logging import Logger
 
-from marshmallow import Schema, ValidationError
+from chalice.app import Blueprint, Request
+# from genericsuite.util.framework_abs_layer import Blueprint, Request
+from genericsuite.util.app_logger import log_debug
+from genericsuite.util.schema_utilities import Schema, schema_verification
 
-from genericsuite.util.framework_abs_layer import Blueprint, Request
-from genericsuite.util.utilities import log_debug
 
 DEBUG = False
-
-
-def schema_verification(
-    json_body: dict,
-    schema_validator: Schema,
-    app_logger: Logger,
-) -> Union[dict, None]:
-    """
-    Validate the input data against the provided schema.
-
-    Args:
-        json_body (dict): The input data to be validated.
-        schema (Schema): The schema to validate input data.
-        app_logger (Logger): The logger to log validation errors.
-
-    Returns:
-        Union[dict, None]: The validated data or None if the input data
-            does not conform to the schema.
-    """
-    try:
-        return schema_validator.load(json_body)
-    except ValidationError as error:
-        app_logger.error(f'Query error: {error.messages}')
-    return None
 
 
 class BlueprintOne(Blueprint):
     """
     Class to register a new route with optional schema validation and authorization.
     """
+
     def get_current_app(self) -> Any:
         """
         Get the current App object. It must be called inside a router function.
         """
         return self.current_app
+
+    def get_current_request(self) -> Any:
+        """
+        Get the current App object. It must be called inside a router function.
+        """
+        return self.current_app.current_request
 
     def route(
         self,
@@ -74,8 +57,8 @@ class BlueprintOne(Blueprint):
         def route_wrapper(register: Callable, route: Callable) -> Callable:
             @wraps(route)
             def route_processor(*args: Any, **kwargs: Any) -> Callable:
-                current_app = self.current_app
-                current_request = current_app.current_request
+                current_app = self.get_current_app()
+                current_request = self.get_current_request()
                 if DEBUG:
                     log_debug(
                         'Request was made to: ' +

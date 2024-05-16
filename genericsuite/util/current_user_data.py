@@ -1,6 +1,8 @@
 """
 Current user data module
 """
+from typing import Any
+from genericsuite.util.framework_abs_layer import get_current_framework
 from genericsuite.util.generic_db_helpers import GenericDbHelper
 from genericsuite.util.jwt import AuthorizedRequest
 from genericsuite.util.utilities import (
@@ -16,8 +18,10 @@ def get_curr_user_id(request: AuthorizedRequest) -> str:
     user_id = None
     authorized_request = hasattr(request, 'user') and request.user
     if authorized_request:
-        # user_id = request.user.get("public_id")
-        user_id = request.user.public_id
+        if get_current_framework() == 'chalice':
+            user_id = request.user.get("public_id")
+        else:
+            user_id = request.user.public_id
     else:
         # Is a non-authorization request, so returns the identificator
         # 'N/A/R' meaning "Non-Authorization Request"
@@ -25,7 +29,10 @@ def get_curr_user_id(request: AuthorizedRequest) -> str:
     return user_id
 
 
-def get_curr_user_data(request: AuthorizedRequest) -> dict:
+def get_curr_user_data(
+    request: AuthorizedRequest,
+    blueprint: Any
+) -> dict:
     """Get the current user data."""
     user_response = get_default_resultset()
     user_id = get_curr_user_id(request)
@@ -37,6 +44,6 @@ def get_curr_user_data(request: AuthorizedRequest) -> dict:
         # the 'resultset' as a empty dict and no error
         pass
     else:
-        dbo = GenericDbHelper(json_file="users", request=request)
+        dbo = GenericDbHelper(json_file="users", request=request, blueprint=blueprint)
         user_response = dbo.fetch_row_raw(user_id, {'passcode': 0})
     return user_response

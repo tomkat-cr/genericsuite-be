@@ -42,6 +42,7 @@ class GenericEndpointHelper:
         self.data["url_prefix"] = url_prefix
         self.dbo = GenericDbHelper(json_file=json_file,
                                    request=self.request,
+                                   blueprint=app_context.get_blueprint(),
                                    db_type=db_type)
         if isinstance(self.dbo.cnf_db, list):
             self.data["title"] = f'{json_file}s'

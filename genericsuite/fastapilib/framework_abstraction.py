@@ -11,10 +11,13 @@ import json
 # from fastapi import Request as FastAPIRequest
 # from fastapi import Blueprint as FastAPIBlueprint
 from fastapi import Response as FastAPIResponse
-
 from pydantic import BaseModel
 
-DEBUG = True
+from genericsuite.fastapilib.util.blueprint_one import (
+    BlueprintOne as FaBlueprintOne
+)
+
+DEBUG = False
 
 FRAMEWORK_LOADED = False
 FRAMEWORK = os.environ.get('CURRENT_FRAMEWORK', '').lower()
@@ -55,7 +58,7 @@ if FRAMEWORK == 'fastapi':
                     "headers": self.headers,
                 }
 
-            def to_original_event(self) -> Dict[str, Any]:
+            def to_original_event(self) -> Union[Dict[str, Any], None]:
                 """
                 Returns the original event dictionary.
                 """
@@ -109,6 +112,11 @@ if FRAMEWORK == 'fastapi':
             """
             Blueprint class cloned from the selected Blueprint framework super class.
             This class is the one to be imported by the project modules
+            """
+
+        class BlueprintOne(FaBlueprintOne):
+            """
+            Class to register a new route with optional schema validation and authorization.
             """
 
     except ImportError as err:

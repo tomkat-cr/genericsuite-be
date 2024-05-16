@@ -1,15 +1,13 @@
 """
 Menu options access
 """
-from typing import Optional
-
 from fastapi import APIRouter, Depends, Body
 from pydantic import BaseModel
 
 from genericsuite.util.framework_abs_layer import Response
+from genericsuite.fastapilib.util.blueprint_one import BlueprintOne
 from genericsuite.fastapilib.util.dependencies import (
     get_current_user,
-    # build_request,
     get_default_fa_request,
 )
 from genericsuite.models.menu_options.menu_options import (
@@ -23,7 +21,8 @@ class MenuElementRequest(BaseModel):
     element: str
 
 
-router = APIRouter()
+# router = APIRouter()
+router = BlueprintOne()
 
 
 @router.get('')
@@ -32,7 +31,8 @@ async def menu_options_get(
 ) -> Response:
     """ Get authorized menu options """
     request, other_params = get_default_fa_request(current_user)
-    return menu_options_get_model(request, other_params)
+    return menu_options_get_model(request=request, blueprint=router,
+        other_params=other_params)
 
 
 @router.post(
@@ -46,4 +46,5 @@ async def menu_options_element(
     """ Get menu element configuration """
     request, other_params = get_default_fa_request(current_user,
         json_body=json_body.model_dump())
-    return menu_options_element_model(request, other_params)
+    return menu_options_element_model(request=request, blueprint=router,
+        other_params=other_params)

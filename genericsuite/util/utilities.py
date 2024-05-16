@@ -1,7 +1,7 @@
 """
 General Utilities
 """
-from typing import Optional, Match, AnyStr, Any
+from typing import Optional, Match, AnyStr, Any, Union
 import os
 import re
 import sys
@@ -117,11 +117,12 @@ def return_resultset_jsonified_or_exception(
     if not headers:
         headers = {}
     if result['error'] or result['error_message']:
-        log_debug(
-            'return_resultset_jsonified_or_exception |' +
-            f' ERROR error_message: {result["error_message"]}' +
-            f' | http_error: {http_error}'
-        )
+        if DEBUG:
+            log_debug(
+                'return_resultset_jsonified_or_exception |' +
+                f' ERROR error_message: {result["error_message"]}' +
+                f' | http_error: {http_error}'
+            )
         return standard_error_return(
             error_message=result['error_message'],
             error_code=http_error,
@@ -131,8 +132,8 @@ def return_resultset_jsonified_or_exception(
 
 
 def get_standard_base_exception_msg(
-    err: str,
-    message_code: str = 'NO_E_CODE'
+    err: Any,
+    message_code: Optional[Union[str, None]] = 'NO_E_CODE'
 ) -> str:
     """
     When a BaseException is fired, use this method to return
@@ -415,7 +416,7 @@ def get_valid_extensions(extension_type: str = None) -> list:
     return flatten_list
 
 
-def get_url_query_args(url: str) -> str:
+def get_url_query_args(url: str) -> dict:
     """
     Returns a dict with the key=value pairs in a URL query string
     """
@@ -519,4 +520,3 @@ def is_under_test() -> bool:
     Returns True if the current environment is under test.
     """
     return 'PYTEST_CURRENT_TEST' in os.environ
-

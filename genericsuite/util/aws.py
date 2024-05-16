@@ -1,26 +1,54 @@
 """
 AWS Utilities
 """
+from typing import Optional, Union, Any
 from datetime import datetime
 import os
-import requests
 import json
+from urllib.parse import urlparse
+
+import requests
 
 import boto3
 from botocore.exceptions import NoCredentialsError
 
+from genericsuite.config.config_from_db import app_context_and_set_env
+from genericsuite.util.framework_abs_layer import Request
 from genericsuite.util.app_logger import log_debug
+from genericsuite.util.utilities import (
+    get_default_resultset,
+    error_resultset,
+    get_mime_type,
+)
+from genericsuite.util.encryption import decrypt_string, encrypt_string
+from genericsuite.config.config import Config
 
-DEBUG = False
+DEBUG = True
+
+STORAGE_URL_SEPARATOR = '||'
+STORAGE_ENCRYPTION = True
+
+
+def s3_base_url(bucket_name: str) -> str:
+    """
+    Returns the S3 base URL.
+
+    Args:
+        bucket_name (str): The base path of the S3 bucket.
+
+    Returns:
+        str: The S3 base URL.
+    """
+    return f"https://{bucket_name}.s3.amazonaws.com"
 
 
 def upload_nodup_file_to_s3(
     file_path: str,
     original_filename: str,
     bucket_name: str,
-    sub_dir: str = None,
+    sub_dir: Optional[Union[str, None]] = None,
     public_file: bool = False,
-):
+) -> dict:
     """
     Uploads a local file to an S3 bucket.
 
@@ -64,7 +92,7 @@ def upload_file_to_s3(
     source_path: str,
     dest_path: str,
     public_file: bool = False
-):
+) -> dict:
     """
     Uploads a local file to an S3 bucket.
 
@@ -75,11 +103,14 @@ def upload_file_to_s3(
         public_file (bool): True to make the file public (ACL public-read)
 
     Returns:
-        str: The S3 URL of the uploaded file.
-        str: the final filename (with a date/time prefix)
-        str: The eventual error message
+        dict: a Dict with the following elements:
+            public_url (str): The S3 (or encrypted) URL of the uploaded file.
+            final_filename (str): the final filename (with a date/time prefix)
+            error (bool): True if there was any error.
+            error_message (str): The eventual error message
     """
     error = None
+    result = get_default_resultset()
 
     # Initialize S3 client
     s3_client = boto3.client('s3')
@@ -136,9 +167,12 @@ def upload_file_to_s3(
             log_debug("")
             log_debug(error)
 
-    # Return the public S3 URL of the uploaded file
-    # public_url = f"https://s3.amazonaws.com/{bucket_name}/{dest_path}"
-    public_url = f"https://{bucket_name}.s3.amazonaws.com/{dest_path}"
+    if STORAGE_ENCRYPTION:
+        # Return the encrypted S3 URL of the uploaded file
+        public_url = get_storage_masked_url(bucket_name, dest_path)
+    else:
+        # Return the public S3 URL of the uploaded file
+        public_url = f"{s3_base_url(bucket_name)}/{dest_path}"
 
     # Final filanme is the file name in the S3 destination path.
     final_filename = os.path.basename(dest_path)
@@ -148,7 +182,12 @@ def upload_file_to_s3(
     log_debug(f"Error: {error}")
     log_debug("")
 
-    return public_url, final_filename, error
+    result['public_url'] = public_url
+    result['final_filename'] = final_filename
+    result['error'] = error is not None
+    result['error_message'] = error
+    return result
+    # return public_url, final_filename, error
 
 
 def s3_nodup_filename(file_name):
@@ -177,7 +216,8 @@ def save_file_from_url(
     bucket_name: str,
     sub_dir: str = None,
     original_filename: str = None
-) -> (str, str, int, str):
+) -> dict:
+# ) -> (str, str, int, str):
     """
     Save an image from a URL to AWS S3
 
@@ -196,25 +236,35 @@ def save_file_from_url(
         file_size (int): the file size in bytes.
         error (str): the eventual error message or None if no errors
     """
+    settings = Config()
+    result = get_default_resultset()
     if not original_filename:
         original_filename = url.split('/')[-1]
     response = requests.get(url, timeout=10)    # 10 seconds timeout
-    tmp_file_path = '/tmp/' + original_filename
+    tmp_file_path = settings.TEMP_DIR + '/' + original_filename
     with open(tmp_file_path, 'wb') as f_handler:
         f_handler.write(response.content)
-    file_size = os.stat(tmp_file_path).st_size
-    public_url, final_filename, error = upload_nodup_file_to_s3(
+    # file_size = os.stat(tmp_file_path).st_size
+    result['file_size'] = os.stat(tmp_file_path).st_size
+    # public_url, final_filename, error = upload_nodup_file_to_s3(
+    upload_result = upload_nodup_file_to_s3(
         file_path=tmp_file_path,
         original_filename=original_filename,
         bucket_name=bucket_name,
         sub_dir=sub_dir,
     )
-    attachment_url = public_url
+    # attachment_url = public_url
     os.remove(tmp_file_path)  # Clean up the temporary file
-    return attachment_url, final_filename, file_size, error
+
+    result['attachment_url'] = upload_result['public_url']
+    result['final_filename'] = upload_result['final_filename']
+    result['error'] = upload_result['error']
+    result['error_message'] = upload_result['error_message']
+    return result
+    # return attachment_url, final_filename, file_size, error
 
 
-def remove_from_s3(bucket_name: str, key: str):
+def remove_from_s3(bucket_name: str, key: str) -> dict:
     """
     Remove an object from an S3 bucket.
 
@@ -222,7 +272,143 @@ def remove_from_s3(bucket_name: str, key: str):
         bucket_name (str): The base path of the S3 bucket.
         key (str): The S3 key of the object to be removed.
     """
-    s3 = boto3.client('s3')
-    s3.delete_object(Bucket=bucket_name, Key=key)
-    log_debug(f"Object removed from S3: {bucket_name}/{key}")
-    return
+    result = get_default_resultset()
+    try:
+        s3 = boto3.client('s3')
+        s3.delete_object(Bucket=bucket_name, Key=key)
+        log_debug(f"Object removed from S3: {bucket_name}/{key}")
+    except Exception as err:
+        result['error'] = True
+        result['error_message'] = f"Failed to remove object from S3: {err}"
+        log_debug(result['error_message'])
+    return result
+
+
+def get_s3_object(bucket_name: str, key: str) -> dict:
+    """
+    Get an object from an S3 bucket.
+
+    Args:
+        bucket_name (str): The base path of the S3 bucket.
+        key (str): The S3 key of the object to be retrieved.
+
+    Returns:
+        dict: The object as a standard resultset dictionary,
+            with the file content in the 'content' element
+            or error/error_message elements.
+    """
+    result = get_default_resultset()
+    try:
+        s3 = boto3.client('s3')
+        obj = s3.get_object(Bucket=bucket_name, Key=key)
+        # result['content'] = obj['Body'].read().decode('utf-8')
+        result['content'] = obj['Body'].read()
+        log_debug(f"Object retrieved from S3: {bucket_name}/{key}")
+    except Exception as err:
+        result['error'] = True
+        result['error_message'] = f"Failed to retrieve object from S3: {err}"
+        log_debug(result['error_message'])
+    return result
+
+
+def get_storage_masked_url(bucket_name: str, key: str,
+    hostname: Optional[Union[str, None]] = None):
+    """
+    Get S3 bucket masked URL
+    Args:
+        bucket_name (str): The base path of the S3 bucket.
+        key (str): The S3 key of the object to be retrieved.
+    Returns:
+        str: The S3 bucket masked URL
+    """
+    settings = Config()
+    if hostname:
+        # If hostname is provided, it's a development environment.
+        # Use it instead of the default hostname
+        protocol = os.environ.get('URL_MASK_EXTERNAL_PROTOCOL')
+        protocol = protocol or os.environ.get('RUN_PROTOCOL', 'https')
+    else:
+        hostname = settings.APP_HOST_NAME
+        protocol ='https'
+    extension = key.split('.')[-1] if '.' in key else ''
+    extension = '.' + extension if extension else ''
+    key = key.rsplit('.', 1)[0] if '.' in key else key
+    return protocol + '://' + hostname + "/asset/" + \
+        encrypt_string(
+            settings.STORAGE_URL_SEED,
+            bucket_name + STORAGE_URL_SEPARATOR + key
+        ) + \
+        extension
+
+
+def storage_retieval(
+    request: Request,
+    blueprint: Any,
+    item_id: Union[str, None],
+    other_params: Optional[dict] = None,
+) -> dict:
+    """
+    Get S3 bucket content from encrypted item_id
+    Args:
+        request (Request): the request object.
+        blueprint (Any): the blueprint object,
+        other_params (dict, optional): Other parameters. Defaults to None.
+        item_id (str, optional): The item_id with the encrypted elements
+            (bucket_name, separator and key). Defaults to None.
+    Returns:
+        dict: The object as a standard resultset dictionary,
+            with the file content in the 'content' element,
+            the mime type in the 'mime_type' element,
+            the file name in the 'filename' element,
+            or error/error_message elements.
+    """
+    if other_params is None:
+        other_params = {}
+    # Set environment variables from the database configurations.
+    app_context = app_context_and_set_env(request=request, blueprint=blueprint)
+    if app_context.has_error():
+        return app_context.get_error_resultset()
+    settings = Config(app_context)
+    if not item_id:
+        return error_resultset("Item ID is required", "ASR-E1010")
+    # Decrypt item_id to get the bucket_name and key (filespec)
+    extension = item_id.split('.')[-1] if '.' in item_id else ''
+    extension = '.' + extension if extension else ''
+    raw_item_id = item_id.rsplit('.', 1)[0] if '.' in item_id else item_id
+    decripted_item_id = decrypt_string(settings.STORAGE_URL_SEED, raw_item_id)
+    if not decripted_item_id:
+        return error_resultset("Invalid asset", "ASR-E1020")
+    # Get bucket name and file path
+    bucket_name, key = decripted_item_id.split(STORAGE_URL_SEPARATOR)
+    key = key+extension
+    # Get the file content
+    if DEBUG:
+        log_debug(f">> bucket_name: {bucket_name} | key: {key}")
+    retrieval_resultset = get_s3_object(bucket_name=bucket_name, key=key)
+    if retrieval_resultset.get('error'):
+        # return retrieval_resultset
+        return error_resultset("Retrieve failure", "ASR-E1030")
+    retrieval_resultset['mime_type'] = get_mime_type(key)
+    retrieval_resultset['filename'] = key
+    return retrieval_resultset
+
+
+def prepare_asset_url(public_url):
+    """
+    Prepares the asset (image, sound, file) URL for the GPT4 vision message
+    content. If DEV_MASK_EXT_HOSTNAME is set, it will be prepended to the URL.
+    Args:
+        public_url (str): The public URL of the image.
+    Returns:
+        str: The prepared image URL.
+    """
+    dev_mask_ext_hostname = os.environ.get('DEV_MASK_EXT_HOSTNAME')
+    final_public_url = public_url
+    if dev_mask_ext_hostname and STORAGE_ENCRYPTION:
+        parsed_url = urlparse(public_url)
+        final_public_url = dev_mask_ext_hostname + parsed_url.path
+        if DEBUG:
+            log_debug(f"prepare_asset_url | dev_mask_ext_hostname: {dev_mask_ext_hostname}"
+                      f" | parsed_url: {parsed_url}"
+                      f" | final_public_url: {final_public_url}")
+    return final_public_url

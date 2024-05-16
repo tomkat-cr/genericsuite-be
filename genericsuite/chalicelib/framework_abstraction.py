@@ -1,9 +1,11 @@
 """
 Chalice abstraction layer
 """
-# from chalice import Request as ChaliceRequest, Response as ChaliceResponse
+# from chalice.app import Request as ChaliceRequest, Response as ChaliceResponse
 import os
 import importlib
+
+from genericsuite.chalicelib.util.blueprint_one import BlueprintOne as ChaliceBlueprintOne
 
 DEBUG = False
 FRAMEWORK_LOADED = False
@@ -40,6 +42,12 @@ if FRAMEWORK == 'chalice':
             """
             Blueprint class cloned from the selected Blueprint framework super class.
             This class is the one to be imported by the project modules
+            """
+
+
+        class BlueprintOne(ChaliceBlueprintOne):
+            """
+            Class to register a new route with optional schema validation and authorization.
             """
 
     except ImportError as err:

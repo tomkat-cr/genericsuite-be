@@ -44,6 +44,7 @@ pyjwt = "^2.8.0"
 werkzeug = "^3.0.1"
 dnspython = "^2.6.0rc1"
 pymongo = "^4.6.0"
+cryptography = "^42.0.7"
 
 [tool.poetry.group.dev.dependencies]
 changelog-cli = "^0.7.1"

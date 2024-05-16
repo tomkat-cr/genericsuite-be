@@ -20,8 +20,19 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ## 0.1.6 (2024-05-04)
 ---
 
+### New
+Mask the S3 URL and avoid AWS over-billing attacks [GS-72].
+Add file uploads support to FastAPI [FA-246].
+Add STORAGE_URL_SEED and APP_HOST_NAME env. vars. [GS-72].
+Add "cryptography" dependency [GS-72].
+Save all general and user's parameters read from DB in a /tmp/params_[user_id].json file for each user to speed up all API [GS-79].
+Add specific functions to GenericDbHelper [GS-79].
+
 ### Changes
 Redirect README instructions to the GenericSuite Documentation [GS-73].
+BlueprintOne abstraction [GS-79].
+Split GenericDbHelper and create GenericDbHelperSuper.
+"blueprint" as mandatory parameter to GenericDbHelper, AppContext and app_context_and_set_env(), to make posible the specific functions to GenericDbHelper [GS-79].
 
 ### Fixes
 Fix "TypeError: 'AuthTokenPayload' object is not subscriptable" error in "generic_db_helpers.get_current_user" by using "request.user.public_id" instead of "self.request.user['public_id']" [FA-122].
@@ -32,7 +43,7 @@ Fix the CORS header Access-Control-Allow-Origin missing in FastAPI in Firefox [G
 ---
 
 ### Changes
-Add: "mangum" to make FastAPI work on AWS Lambda 
+Add: "mangum" to make FastAPI work on AWS Lambda [FA-246].
 License changed to ISC in "pyproject.toml" [FA-244].
 
 

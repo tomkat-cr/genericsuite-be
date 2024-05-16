@@ -11,6 +11,7 @@ from pydantic import BaseModel
 # from genericsuite.util.framework_abs_layer import FrameworkClass as FastAPI
 # from genericsuite.util.framework_abs_layer import Response
 from genericsuite.fastapilib.framework_abstraction import Response
+from genericsuite.fastapilib.util.blueprint_one import BlueprintOne
 from genericsuite.fastapilib.util.dependencies import (
     get_current_user,
     build_request,
@@ -156,7 +157,7 @@ def generic_route_handler(
         )
 
     # Set environment variables from the database configurations.
-    app_context = app_context_and_set_env(request)
+    app_context = app_context_and_set_env(request=request, blueprint=BlueprintOne())
     if app_context.has_error():
         return return_resultset_jsonified_or_exception(
             app_context.get_error_resultset()

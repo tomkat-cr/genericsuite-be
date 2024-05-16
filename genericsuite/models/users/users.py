@@ -1,7 +1,7 @@
 """
 System users operations (CRUD, login, database test, super-admin creation)
 """
-from typing import Optional
+from typing import Optional, Any
 import json
 
 from genericsuite.util.framework_abs_layer import Request, Response
@@ -23,7 +23,6 @@ from genericsuite.util.passwords import Passwords
 from genericsuite.util.utilities import (
     return_resultset_jsonified_or_exception,
     get_default_resultset,
-    get_request_body,
     get_id_as_string,
 )
 from genericsuite.config.config import Config
@@ -36,13 +35,16 @@ HEADER_CREDS_ENTRY_NAME = 'Authorization'
 DEBUG = False
 
 
-def users_crud(request: AuthorizedRequest,
-    other_params: Optional[dict] = None) -> Response:
+def users_crud(
+    request: AuthorizedRequest,
+    blueprint: Any,
+    other_params: Optional[dict] = None
+) -> Response:
     """ User's CRUD operations (create, read, update, delete) """
     if not other_params:
         other_params = {}
     # Set environment variables from the database configurations.
-    app_context = app_context_and_set_env(request)
+    app_context = app_context_and_set_env(request=request, blueprint=blueprint)
     if app_context.has_error():
         return return_resultset_jsonified_or_exception(
             app_context.get_error_resultset()
@@ -56,8 +58,10 @@ def users_crud(request: AuthorizedRequest,
     return ep_helper.generic_crud_main()
 
 
-def test_connection_handler(request: Request,
-    other_params: Optional[dict] = None) -> Response:
+def test_connection_handler(
+    request: Request,
+    other_params: Optional[dict] = None
+) -> Response:
     """Connection handler test"""
     if not other_params:
         other_params = {}
@@ -69,13 +73,16 @@ def test_connection_handler(request: Request,
     return return_resultset_jsonified_or_exception(result)
 
 
-def login_user(request: Request,
-    other_params: Optional[dict] = None) -> Response:
+def login_user(
+    request: Request,
+    blueprint: Any,
+    other_params: Optional[dict] = None
+) -> Response:
     """User login"""
     if not other_params:
         other_params = {}
     psw_class = Passwords()
-    dbo = GenericDbHelper(json_file="users", request=request)
+    dbo = GenericDbHelper(json_file="users", request=request, blueprint=blueprint)
     if DEBUG:
         log_debug(f'login_user | request: {request}')
         # log_debug('login_user | bp.current_request.to_dict(): ' +
@@ -134,20 +141,24 @@ def login_user(request: Request,
     return return_resultset_jsonified_or_exception(result, 401)
 
 
-def super_admin_create(request: Request,
-    other_params: Optional[dict] = None) -> Response:
+def super_admin_create(
+    request: Request,
+    blueprint: Any,
+    other_params: Optional[dict] = None
+) -> Response:
     """Super admin user emergency creation"""
     # Set environment variables from the database configurations.
-    app_context = app_context_and_set_env(request)
+    app_context = app_context_and_set_env(request=request, blueprint=blueprint)
     if app_context.has_error():
         return return_resultset_jsonified_or_exception(
             app_context.get_error_resultset()
         )
+    request = app_context.get_request()
     settings = Config(app_context)
     if not other_params:
         other_params = {}
     psw_class = Passwords()
-    dbo = GenericDbHelper(json_file="users", request=request)
+    dbo = GenericDbHelper(json_file="users", request=request, blueprint=blueprint)
     result = get_default_resultset()
 
     if other_params.get('username') and other_params.get('password'):

@@ -1,7 +1,7 @@
 """
 Menu options access
 """
-from typing import Optional
+from typing import Optional, Any
 
 from genericsuite.util.framework_abs_layer import Response
 
@@ -22,13 +22,14 @@ from genericsuite.config.config_from_db import app_context_and_set_env
 
 def menu_options_get(
     request: AuthorizedRequest,
+    blueprint: Any,
     other_params: Optional[dict] = None
 ) -> Response:
     """ Get authorized menu options """
     if other_params is None:
         other_params = {}
     # Set environment variables from the database configurations.
-    app_context = app_context_and_set_env(request)
+    app_context = app_context_and_set_env(request=request, blueprint=blueprint)
     if app_context.has_error():
         return return_resultset_jsonified_or_exception(
             app_context.get_error_resultset()
@@ -44,18 +45,21 @@ def menu_options_get(
 
 def menu_options_element(
     request: AuthorizedRequest,
+    blueprint: Any,
     other_params: Optional[dict] = None
 ) -> Response:
     """ Get menu element configuration """
     if other_params is None:
         other_params = {}
     # Set environment variables from the database configurations.
-    app_context = app_context_and_set_env(request)
+    # app_context = app_context_and_set_env(request)
+    app_context = app_context_and_set_env(request=request, blueprint=blueprint)
     if app_context.has_error():
         return return_resultset_jsonified_or_exception(
             app_context.get_error_resultset()
         )
     # Read parameters
+    request = app_context.get_request()
     params = get_request_body(request)
     element = params.get('element')
     oa_response = get_default_resultset()

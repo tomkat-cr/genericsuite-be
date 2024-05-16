@@ -1,26 +1,24 @@
 """
 System users operations (CRUD, login, database test, super-admin creation)
 """
-from fastapi import APIRouter, Depends, Body
+from fastapi import APIRouter, Depends
 # from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-from pydantic import BaseModel
-
 from genericsuite.util.framework_abs_layer import Response
+from genericsuite.fastapilib.util.blueprint_one import BlueprintOne
 from genericsuite.fastapilib.util.dependencies import (
     get_current_user,
-    # build_request,
     get_default_fa_request,
 )
 from genericsuite.models.users.users import (
-    # users_crud as users_crud_model,
     test_connection_handler as test_connection_handler_model,
     login_user as login_user_model,
     super_admin_create as super_admin_create_model,
 )
 
-router = APIRouter()
+# router = APIRouter()
+router = BlueprintOne()
 
 # Set up Basic Authentication
 security = HTTPBasic()
@@ -46,7 +44,8 @@ async def login_user(
     request, other_params = get_default_fa_request()
     other_params['username'] = credentials.username
     other_params['password'] = credentials.password
-    return login_user_model(request, other_params)
+    return login_user_model(request=request, blueprint=router,
+        other_params=other_params)
 
 
 @router.post('/supad-create', tags='super-admin')
@@ -58,4 +57,5 @@ async def super_admin_create(
     request, other_params = get_default_fa_request()
     other_params['username'] = credentials.username
     other_params['password'] = credentials.password
-    return super_admin_create_model(request, other_params)
+    return super_admin_create_model(request=request, blueprint=router,
+        other_params=other_params)

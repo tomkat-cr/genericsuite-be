@@ -6,6 +6,13 @@ import importlib
 
 DEFAULT_FRAMEWORK = ''
 
+def get_current_framework():
+    """
+    Get the current framework
+    """
+    return os.environ.get('CURRENT_FRAMEWORK', DEFAULT_FRAMEWORK)
+
+
 framework = os.environ.get('CURRENT_FRAMEWORK', DEFAULT_FRAMEWORK).lower()
 if framework not in ['chalice', 'fastapi', 'flask']:
     raise ValueError("Unsupported or undefined CURRENT_FRAMEWORK:" +
@@ -63,4 +70,11 @@ class Blueprint(framework_module.Blueprint):
     """
     Blueprint class cloned from the selected Blueprint framework super class.
     This class is the one to be imported by the project modules.
+    """
+
+
+class BlueprintOne(framework_module.BlueprintOne):
+    """
+    Blueprint wrapper to add authorization, other data and schema validation
+    to requests.
     """

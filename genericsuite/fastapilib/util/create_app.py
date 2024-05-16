@@ -1,7 +1,7 @@
 """
 App main module (create_app) for FastAPI
 """
-from typing import Any
+from typing import Any, Optional, Union
 
 # import importlib
 # import logging
@@ -18,8 +18,12 @@ from genericsuite.config.config import Config
 from genericsuite.fastapilib.util.generic_endpoint_builder import (
     generate_blueprints_from_json
 )
-from genericsuite.fastapilib.endpoints import users
-from genericsuite.fastapilib.endpoints import menu_options
+from genericsuite.fastapilib.endpoints import (
+    users,
+    menu_options,
+    storage_retrieval,
+)
+from genericsuite.config.config_from_db import set_init_custom_data
 
 # framework_class = importlib.import_module("fastapi")
 # handler_wrapper_class = importlib.import_module("mangum")
@@ -37,8 +41,12 @@ def create_app(app_name: str, settings = None) -> Any:
 
     # fastapi_app = framework_class.FastAPI(title=app_name)
     fastapi_app = FastAPI(title=app_name)
-   
+
     fastapi_app.debug = settings.DEBUG
+
+    # Custom data, to be used to store a dict for
+    # GenericDbHelper specific functions
+    fastapi_app.custom_data = set_init_custom_data()
 
     # App wide log level
     # if not settings.DEBUG:
@@ -55,6 +63,7 @@ def create_app(app_name: str, settings = None) -> Any:
     # Register generic endpoints
     fastapi_app.include_router(menu_options.router, prefix='/menu_options')
     fastapi_app.include_router(users.router, prefix='/users')
+    fastapi_app.include_router(storage_retrieval.router, prefix='/asset')
 
     # Register generic endpoints (from the "endpoints.json" file)
     generate_blueprints_from_json(fastapi_app, 'endpoints')

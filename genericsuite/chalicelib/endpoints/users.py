@@ -4,9 +4,8 @@ System users operations (CRUD, login, database test, super-admin creation)
 from typing import Optional
 
 # from chalice.app import Request, Response
-from genericsuite.util.framework_abs_layer import Request, Response
-
-from genericsuite.util.blueprint_one import BlueprintOne
+# from genericsuite.util.blueprint_one import BlueprintOne
+from genericsuite.util.framework_abs_layer import Request, Response, BlueprintOne
 
 from genericsuite.util.jwt import (
     request_authentication,
@@ -52,17 +51,25 @@ def test_connection_handler(request: Request,
     '/login',
     methods=['GET', 'POST']
 )
-def login_user(request: Request,
-    other_params: Optional[dict] = None) -> Response:
+def login_user(
+    request: Request,
+    other_params: Optional[dict] = None
+) -> Response:
     """User login"""
-    return login_user_model(request, other_params)
+    # return login_user_model(request, other_params)
+    return login_user_model(request=request, blueprint=bp,
+        other_params=other_params)
 
 
 @bp.route(
     '/supad-create',
     methods=['POST']
 )
-def super_admin_create(request: Request,
-    other_params: Optional[dict] = None) -> Response:
+def super_admin_create(
+    request: Request,
+    other_params: Optional[dict] = None
+) -> Response:
     """Super admin user emergency creation"""
-    return super_admin_create_model(request, other_params)
+    # return super_admin_create_model(request, other_params)
+    return super_admin_create_model(request=request, blueprint=bp,
+        other_params=other_params)

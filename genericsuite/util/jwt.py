@@ -1,6 +1,7 @@
 """
 JWT Library
 """
+import os
 import base64
 from typing import Callable
 import datetime
@@ -8,7 +9,8 @@ import datetime
 import jwt
 from pydantic import BaseModel
 
-from genericsuite.util.framework_abs_layer import Request
+from genericsuite.util.framework_abs_layer import (
+    Request, get_current_framework)
 
 from genericsuite.util.app_logger import log_debug, log_error
 from genericsuite.util.utilities import (
@@ -89,13 +91,26 @@ def get_general_authorized_request(request: Request) -> AuthorizedRequest:
         if DEBUG:
             log_debug('||| REQUEST_AUTHENTICATION' +
                 f' | jws_token_data = {jws_token_data}')
-        authorized_request = AuthorizedRequest(
-            # type: ignore[attr-defined]
-            event_dict=request.to_original_event(),
-            # type: ignore[attr-defined]
-            lambda_context=request.lambda_context,
-            user = jws_token_data,
-        )
+
+        if get_current_framework() == 'chalice':
+            authorized_request = AuthorizedRequest(
+                # type: ignore[attr-defined]
+                event_dict=request.to_original_event(),
+                # type: ignore[attr-defined]
+                lambda_context=request.lambda_context,
+            )
+            # Authentication token data
+            authorized_request.user = jws_token_data
+        else:
+            authorized_request = AuthorizedRequest(
+                # type: ignore[attr-defined]
+                event_dict=request.to_original_event(),
+                # type: ignore[attr-defined]
+                lambda_context=request.lambda_context,
+                # Authentication token data
+                user=jws_token_data,
+            )
+
         if DEBUG:
             log_debug('||| REQUEST_AUTHENTICATION' +
                 f' | authorized_request = {authorized_request}')
