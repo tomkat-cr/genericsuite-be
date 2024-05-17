@@ -1,7 +1,6 @@
 """
 JWT Library
 """
-import os
 import base64
 from typing import Callable
 import datetime

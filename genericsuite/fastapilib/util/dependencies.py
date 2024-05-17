@@ -61,9 +61,6 @@ def build_request(
             query_params=query_params_reduced,
             json_body=json_body if json_body else {},
             headers=headers_reduced)
-    # request = FaRequest(scope={})
-    # new_request.current_app = request.app
-    # new_request.current_request = request
     return new_request
 
 
@@ -93,7 +90,7 @@ def get_default_fa_request(
     preserve_nones: bool = False,
 ):
     """
-    Builds the default FA (FastAPI)) Authentication request object.
+    Builds the default FA (FastAPI) Authentication request object.
     """
     params = {
         "json_body": json_body if json_body else {},

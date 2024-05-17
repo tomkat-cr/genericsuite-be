@@ -1,7 +1,8 @@
 """
 Menu options access
 """
-from fastapi import APIRouter, Depends, Body
+# from fastapi import APIRouter, Depends, Body
+from fastapi import Depends, Body, Request as FaRequest
 from pydantic import BaseModel
 
 from genericsuite.util.framework_abs_layer import Response
@@ -27,11 +28,13 @@ router = BlueprintOne()
 
 @router.get('')
 async def menu_options_get(
+    request: FaRequest,
     current_user: str = Depends(get_current_user),
 ) -> Response:
     """ Get authorized menu options """
-    request, other_params = get_default_fa_request(current_user)
-    return menu_options_get_model(request=request, blueprint=router,
+    gs_request, other_params = get_default_fa_request(current_user)
+    router.set_current_request(request, gs_request)
+    return menu_options_get_model(request=gs_request, blueprint=router,
         other_params=other_params)
 
 
@@ -40,11 +43,13 @@ async def menu_options_get(
     tags=['element'],
 )
 async def menu_options_element(
+    request: FaRequest,
     current_user: str = Depends(get_current_user),
     json_body: MenuElementRequest = Body(...),
 ) -> Response:
     """ Get menu element configuration """
-    request, other_params = get_default_fa_request(current_user,
+    gs_request, other_params = get_default_fa_request(current_user,
         json_body=json_body.model_dump())
-    return menu_options_element_model(request=request, blueprint=router,
+    router.set_current_request(request, gs_request)
+    return menu_options_element_model(request=gs_request, blueprint=router,
         other_params=other_params)

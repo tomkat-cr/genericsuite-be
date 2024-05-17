@@ -9,6 +9,8 @@ from genericsuite.util.app_context import (
     AppContext,
     ParamsFile,
     delete_params_file,
+    PARAMS_FILE_ENABLED,
+    PARAMS_FILE_GENERAL_FILENAME
 )
 from genericsuite.util.app_logger import log_debug, log_error
 from genericsuite.util.generic_db_middleware import (
@@ -101,6 +103,53 @@ def get_config_from_db_raw(app_context: AppContext) -> dict:
                   f' resultset: {resultset}')
     return resultset
 
+def get_all_params(app_context: AppContext):
+    """
+    Get all dynamic parameters (general and user's). First try from the json
+    cache files, if not found, get it from the database.
+    """
+    if PARAMS_FILE_ENABLED != '1':
+        return get_config_from_db_raw(app_context)
+
+    pfc = ParamsFile(app_context.get_user_id())
+
+    # Try general params from the json file
+    params = get_default_resultset()
+    filename = pfc.get_params_file_path(PARAMS_FILE_GENERAL_FILENAME)
+    load_result = pfc.load_params_file(filename)
+    if load_result["found"] and load_result['resultset']:
+        params['resultset'].update(load_result['resultset'])
+        _ = DEBUG and log_debug('GCFD-4) app_context_and_set_env |' +
+            f' General parameters loaded from file: {load_result["resultset"]}')
+    else:
+        # Get general params from json
+        load_result = get_general_config(app_context)
+        if load_result["error"]:
+            return load_result
+        params['resultset'].update(load_result['resultset'])
+        # Save general params to json
+        pfc.save_params_file(filename, load_result['resultset'])
+
+    # Try user's config from json file
+    filename = pfc.get_params_filename()
+    load_result = pfc.load_params_file(filename)
+    if load_result["found"] and load_result['resultset']:
+        params['resultset'].update(
+            {r["config_name"]: r["config_value"]
+            for r in load_result['resultset'].get("users_config", [])}
+        )
+        _ = DEBUG and log_debug('GCFD-5) app_context_and_set_env |' +
+            ' User\'s parameters loaded from file:' +
+            f' {load_result["resultset"].get("users_config", [])}')
+    else:
+        # Get user's config from db
+        load_result = get_users_config(app_context)
+        if load_result["error"]:
+            return load_result
+        params['resultset'].update(dict(load_result['resultset'].items()))
+        # Does not save the json file because it's a job for AppContex...
+    return params
+
 
 def app_context_and_set_env(request: AuthorizedRequest, blueprint: Any) -> AppContext:
     """
@@ -118,32 +167,24 @@ def app_context_and_set_env(request: AuthorizedRequest, blueprint: Any) -> AppCo
     """
     app_context = AppContext()
     app_context.set_context_from_blueprint(blueprint=blueprint, request=request)
-    pfc = ParamsFile(app_context.get_user_id())
     if app_context.has_error():
         log_error('GCFD-0) app_context_and_set_env ERROR:'
                   f' {app_context.get_error()}')
         return app_context
-    if DEBUG:
+    _ = DEBUG and \
         log_debug('GCFD-1) app_context_and_set_env')
-    params = pfc.load_params_file()
-    if params["found"] and params['resultset'].get('params'):
-        if DEBUG:
-            log_debug('GCFD-4) app_context_and_set_env |' +
-                      f' Parameters loaded from file: {params["resultset"]}')
-    else:
-        params = get_config_from_db_raw(app_context)
-        if params["error"]:
-            log_debug('GCFD-3) ERROR: app_context_and_set_env |' +
-                    f' params: {params}')
-            app_context.set_error(params["error_message"])
-            return app_context
-        params = pfc.save_params_file(params['resultset'], app_context.get_user_data())
-    for key, value in params['resultset']['params'].items():
+    params = get_all_params(app_context=app_context)
+    if params["error"]:
+        log_debug('GCFD-3) ERROR: app_context_and_set_env |' +
+                f' params: {params}')
+        app_context.set_error(params["error_message"])
+        return app_context
+    for key, value in params['resultset'].items():
         # Set the environmet variable in the app_context
         # Previously it was "os.environ[key] = value" but it
         # carries a lot of issues...
         app_context.set_env_var(var_name=key, value=value)
-    if DEBUG:
+    _ = DEBUG and \
         log_debug('GCFD-2) app_context_and_set_env |' +
                   f' Parameters set as os.environ(): {params["resultset"]}')
     return app_context
@@ -153,10 +194,9 @@ def set_init_custom_data(data: Optional[Union[dict, None]] = None):
     """
     Sets the custom data for the FastAPI/Flask/Chalice App.
     """
-    data = data or {}
-    result = data.copy()
+    result = dict(data.items()) if data else {}
     # Standard GenericDbHelper specific functions registry
     result['delete_params_file'] = delete_params_file
     if DEBUG:
-        log_debug(f"Custom data: {result}")
+        log_debug(f"//// Custom data: {result}")
     return result

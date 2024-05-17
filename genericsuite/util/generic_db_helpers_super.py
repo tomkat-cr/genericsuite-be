@@ -451,6 +451,7 @@ class GenericDbHelperSuper:
             action_data = {
                 'action': action,
                 'resultset': resultset,
+                'cnf_db': self.cnf_db,
             }
             resultset = specific_func(self.blueprint, action_data)
         return resultset

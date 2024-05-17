@@ -5,7 +5,7 @@ from typing import Union, Optional
 from typing import Any
 import io
 
-# from fastapi import APIRouter
+from fastapi import Request as FaRequest
 from fastapi.responses import StreamingResponse
 
 from genericsuite.util.framework_abs_layer import Request, Response
@@ -24,36 +24,42 @@ router = BlueprintOne()
 
 @router.get('/')
 async def storage_retrieval_no_item_id_endpoint(
+    request: FaRequest,
 ) -> Any:
     """ Get authorized menu options """
-    request, other_params = get_default_fa_request()
+    gs_request, other_params = get_default_fa_request()
+    router.set_current_request(request, gs_request)
     # Report the error ASR-E1010
     item_id = None
-    return storage_retieval_fa(request=request, blueprint=router,
+    return storage_retieval_fa(request=gs_request, blueprint=router,
         item_id=item_id, other_params=other_params)
 
 
 @router.get('/{item_id}')
 async def storage_retrieval_endpoint(
+    request: FaRequest,
     item_id: str,
 ) -> Any:
     """ Get authorized menu options """
-    request, other_params = get_default_fa_request()
+    gs_request, other_params = get_default_fa_request()
+    router.set_current_request(request, gs_request)
     other_params['response_type'] = other_params.get('response_type') or "streaming"
-    return storage_retieval_fa(request=request, blueprint=router,
+    return storage_retieval_fa(request=gs_request, blueprint=router,
         item_id=item_id, other_params=other_params)
 
 
 @router.get('/{item_id}/{response_type}')
 async def storage_retrieval_with_response_type_endpoint(
+    request: FaRequest,
     # It's optional to eventually report the error ASR-E1010
     item_id: str,
     response_type: str,
 ) -> Any:
     """ Get authorized menu options """
-    request, other_params = get_default_fa_request()
+    gs_request, other_params = get_default_fa_request()
+    router.set_current_request(request, gs_request)
     other_params['response_type'] = response_type or "streaming"
-    return storage_retieval_fa(request=request, blueprint=router,
+    return storage_retieval_fa(request=gs_request, blueprint=router,
         item_id=item_id, other_params=other_params)
 
 

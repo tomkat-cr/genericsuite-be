@@ -6,6 +6,7 @@ from typing import Optional, Union
 from pprint import pprint
 
 from fastapi import FastAPI, Query, Body, Depends
+from fastapi import Request as FaRequest
 from pydantic import BaseModel
 
 # from genericsuite.util.framework_abs_layer import FrameworkClass as FastAPI
@@ -140,12 +141,12 @@ def generic_route_handler(
     """
     other_params = kwargs["other_params"]
     request = kwargs["request"]
+    blueprint = kwargs["blueprint"]
 
     if DEBUG:
         log_debug(
             "generic_route_handler |" +
-            f" | kwargs: {kwargs}" +
-            f" event: {request}:"
+            f" | kwargs: {kwargs}"
         )
         pprint(request.to_dict())
 
@@ -157,7 +158,7 @@ def generic_route_handler(
         )
 
     # Set environment variables from the database configurations.
-    app_context = app_context_and_set_env(request=request, blueprint=BlueprintOne())
+    app_context = app_context_and_set_env(request=request, blueprint=blueprint)
     if app_context.has_error():
         return return_resultset_jsonified_or_exception(
             app_context.get_error_resultset()
@@ -184,7 +185,10 @@ def create_endpoint_function(other_params: dict) -> callable:
     Returns:
         callable: The endpoint function.
     """
+    router = BlueprintOne()
+
     async def generic_get(
+        request: FaRequest,
         current_user: str = Depends(get_current_user),
         _id: str = Query(None, min_length=3, max_length=50, alias="id"),
         user_id: Union[str, None] = Query(None),
@@ -208,7 +212,7 @@ def create_endpoint_function(other_params: dict) -> callable:
         Returns:
             Response: The response from the GET operation.
         """
-        request = build_request(
+        gs_request = build_request(
             method="get",
             query_params={
                 "id": _id,
@@ -222,9 +226,12 @@ def create_endpoint_function(other_params: dict) -> callable:
                 "current_user": current_user,
             }
         )
-        return generic_route_handler(other_params=other_params, request=request)
+        router.set_current_request(request, gs_request)
+        return generic_route_handler(other_params=other_params,
+            request=gs_request, blueprint=router)
 
     async def generic_post(
+        request: FaRequest,
         current_user: str = Depends(get_current_user),
         json_body: dict = Body(...),
     ):
@@ -237,16 +244,19 @@ def create_endpoint_function(other_params: dict) -> callable:
         Returns:
             Response: The response from the GET operation.
         """
-        request = build_request(
+        gs_request = build_request(
             method="post",
             json_body=json_body,
             headers={
                 "current_user": current_user,
             },
         )
-        return generic_route_handler(other_params=other_params, request=request)
+        router.set_current_request(request, gs_request)
+        return generic_route_handler(other_params=other_params,
+            request=gs_request, blueprint=router)
 
     async def generic_put(
+        request: FaRequest,
         current_user: str = Depends(get_current_user),
         json_body: dict = Body(...),
         update_item: str = Query(None),
@@ -262,7 +272,7 @@ def create_endpoint_function(other_params: dict) -> callable:
         Returns:
             Response: The response from the GET operation.
         """
-        request = build_request(
+        gs_request = build_request(
             method="put",
             query_params={
                 "update_item": update_item,
@@ -272,9 +282,12 @@ def create_endpoint_function(other_params: dict) -> callable:
                 "current_user": current_user,
             },
         )
-        return generic_route_handler(other_params=other_params, request=request)
+        router.set_current_request(request, gs_request)
+        return generic_route_handler(other_params=other_params,
+            request=gs_request, blueprint=router)
 
     async def generic_delete(
+        request: FaRequest,
         current_user: str = Depends(get_current_user),
         _id: str = Query(None, min_length=3, max_length=50, alias="id"),
         json_body: Optional[Union[dict, None]] = Body(...),
@@ -288,7 +301,7 @@ def create_endpoint_function(other_params: dict) -> callable:
         Returns:
             Response: The response from the GET operation.
         """
-        request = build_request(
+        gs_request = build_request(
             method="delete",
             query_params={
                 "id": _id,
@@ -298,7 +311,9 @@ def create_endpoint_function(other_params: dict) -> callable:
                 "current_user": current_user,
             },
         )
-        return generic_route_handler(other_params=other_params, request=request)
+        router.set_current_request(request, gs_request)
+        return generic_route_handler(other_params=other_params,
+            request=gs_request, blueprint=router)
 
     if other_params["method"] == 'post':
         return generic_post

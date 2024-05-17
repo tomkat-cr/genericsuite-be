@@ -16,8 +16,14 @@ from genericsuite.util.utilities import get_default_resultset, get_id_as_string
 from genericsuite.util.app_logger import log_debug
 
 
-DEBUG = False
+DEBUG = True
 TEMP_DIR = os.environ.get('TEMP_DIR', '/tmp')
+
+PARAMS_FILE_ENABLED = os.environ.get('PARAMS_FILE_ENABLED', '1')
+PARAMS_FILE_USER_FILENAME_TEMPLATE = os.environ.get(
+    'PARAMS_FILE_USER_FILENAME_TEMPLATE', 'params_[user_id].json')
+PARAMS_FILE_GENERAL_FILENAME = os.environ.get(
+    'PARAMS_FILE_GENERAL_FILENAME', 'params_GENERAL.json')
 
 
 class ParamsFile():
@@ -27,26 +33,38 @@ class ParamsFile():
     def __init__(self, user_id: str):
         self.user_id = user_id
 
-    def get_params_filename(self) -> str:
+    def get_params_file_path(self, filename: str):
+        """
+        Get the path of the file.
+        """
+        return os.path.join(TEMP_DIR, filename)
+
+    def get_params_filename(self) -> Union[str, None]:
         """
         Get the filename where the parameters are stored.
         """
-        filename = os.path.join(TEMP_DIR,
-            f'params_{self.user_id}.json')
-        if NON_AUTH_REQUEST_USER_ID in filename:
+        if self.user_id == NON_AUTH_REQUEST_USER_ID:
             # For the un-authenticated endpoint calls file
-            filename = filename.replace(NON_AUTH_REQUEST_USER_ID, 'GENERAL')
+            filename = None
+        else:
+            filename = self.get_params_file_path(
+                PARAMS_FILE_USER_FILENAME_TEMPLATE.replace(
+                    '[user_id]', self.user_id))
         _ = DEBUG and \
-            log_debug(f'PF-1) get_params_filename | filename: {filename}')
+            log_debug('PF-1) get_params_filename |' +
+                f' self.user_id: {self.user_id} | filename: {filename}')
         return filename
 
-    def load_params_file(self) -> Union[dict, None]:
+    def load_params_file(self, filename: str) -> dict:
         """
         Load the parameters from a file.
         """
-        filename = self.get_params_filename()
         result = get_default_resultset()
         result['found'] = False
+        if PARAMS_FILE_ENABLED != '1':
+            return result
+        if not filename:
+            return result
         if not os.path.exists(filename):
             return result
         with open(filename, 'r', encoding='utf-8') as f:
@@ -54,21 +72,20 @@ class ParamsFile():
             result['resultset'] = json.load(f)
         return result
 
-    def save_params_file(self, params: dict, user_data: dict) -> dict:
+    def save_params_file(self, filename: str, data_to_save: dict) -> dict:
         """
         Store the parameters in a file.
         """
-        filename = self.get_params_filename()
-        if '_id' in user_data:
-            user_data['_id'] = get_id_as_string(user_data)
-        data_to_save = {
-            "user_data": user_data,
-            "params": params,
-        }
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(data_to_save, f)
         result = get_default_resultset()
         result['resultset'] = data_to_save
+        if PARAMS_FILE_ENABLED != '1':
+            return result
+        if '_id' in data_to_save:
+            data_to_save['_id'] = get_id_as_string(data_to_save)
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(data_to_save, f)
+        log_debug(f'PF-2) save_params_file | filename: {filename} |' +
+                  f' content: {data_to_save}')
         return result
 
 
@@ -76,7 +93,11 @@ class AppContext:
     """
     Context manager class to preserve data between GPT functions
     """
-    def __init__(self, request: AuthorizedRequest = None, blueprint: Any = None):
+    def __init__(
+        self,
+        request: Optional[Union[AuthorizedRequest, None]] = None,
+        blueprint: Optional[Any] = None
+    ):
         # AuthorizedRequest object received from the endpoit handler
         self.request = request
         # Blueprint object received from the endpoit handler
@@ -147,18 +168,23 @@ class AppContext:
 
     def get_user_data(self, check_params_file: Optional[bool] = True):
         """
-        Get current user data verifying the params file existence
+        Get current user data verifying the params json cache file existence
         """
         if not self.user_data:
-            if check_params_file:
+            if check_params_file and PARAMS_FILE_ENABLED == '1':
                 pfc = ParamsFile(self.get_user_id())
-                params_file_result = pfc.load_params_file()
-                if params_file_result['found']:
-                    self.user_data = params_file_result['resultset']['user_data']
-                else:
+                filename = pfc.get_params_filename()
+                if not filename:
                     self.get_user_data_raw()
-                    if '_id' in self.user_data:
-                        pfc.save_params_file({}, self.user_data)
+                else:
+                    params_file_result = pfc.load_params_file(filename)
+                    if params_file_result['found']:
+                        # self.user_data = params_file_result['resultset']['user_data']
+                        self.user_data = params_file_result['resultset']
+                    else:
+                        self.get_user_data_raw()
+                        if '_id' in self.user_data:
+                            pfc.save_params_file(filename, self.user_data)
             else:
                 self.get_user_data_raw()
         _ = DEBUG and log_debug("AppContext | GET_USER_DATA" +
@@ -289,23 +315,30 @@ def delete_params_file(app_context_or_blueprint: Any,
     Args:
         app_context (AppContext): the application context object
         action_data (dict, optional): the action data. Defaults to None.
-            If it's not None, it must have:
-            "action" key: "create", "read", "update" or "delete"
-            "resultset" key: resultset for data to be stored, delete or
+            If it's not None, it must have the following keys (attributes):
+            "action": "list", "read", "create", "update" or "delete"
+            "resultset": resultset for data to be stored, delete or
                 retrieved with the keys: resultset, error, error_message.
+            "cnf_db": the table configuration. E.g. tablename is cnf_db['tablename']
     """
     app_context = get_app_context(app_context_or_blueprint)
     pfc = ParamsFile(app_context.get_user_id())
     action_data = action_data or {}
-    # if action_data.get("action") != "delete":
-    #     return resultset
-    filenames = [
-        # For the current authenticated user file
-        pfc.get_params_filename(),
-        # For the un-authenticated endpoint calls file
-        'params_GENERAL.json'
-    ]
-    for filename in filenames:
+    tablename = action_data.get("cnf_db", {}).get("table_name")
+
+    _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
+        f"\n | action_data: {action_data}" +
+        f"\n | tablename: {tablename}")
+    if action_data.get("action") in ["read", "list"]:
+        return action_data['resultset']
+    if tablename:
+        filename = pfc.get_params_file_path(PARAMS_FILE_GENERAL_FILENAME) \
+            if tablename == 'general_config' \
+            else pfc.get_params_filename()
+        _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
+            f"\n | filename: {filename}")
         if os.path.exists(filename):
             os.remove(filename)
+            _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
+                f"\n | File deleted: {filename}")
     return action_data['resultset']

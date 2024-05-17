@@ -1,7 +1,7 @@
 """
 System users operations (CRUD, login, database test, super-admin creation)
 """
-from fastapi import APIRouter, Depends
+from fastapi import Request as FaRequest, Depends
 # from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
@@ -29,33 +29,40 @@ DEBUG = False
 
 @router.get('/test', tags='test')
 async def test_connection_handler(
+    request: FaRequest,
     current_user: str = Depends(get_current_user),
 ) -> Response:
     """Connection handler test"""
-    request, other_params = get_default_fa_request(current_user)
-    return test_connection_handler_model(request, other_params)
+    gs_request, other_params = get_default_fa_request(current_user)
+    router.set_current_request(request, gs_request)
+    return test_connection_handler_model(gs_request, other_params)
+
 
 @router.post('/login', tags='login')
 async def login_user(
+    request: FaRequest,
     # form_data: OAuth2PasswordRequestForm = Depends()
     credentials: HTTPBasicCredentials = Depends(security)
 ) -> Response:
     """User login"""
-    request, other_params = get_default_fa_request()
+    gs_request, other_params = get_default_fa_request()
+    router.set_current_request(request, gs_request)
     other_params['username'] = credentials.username
     other_params['password'] = credentials.password
-    return login_user_model(request=request, blueprint=router,
+    return login_user_model(request=gs_request, blueprint=router,
         other_params=other_params)
 
 
 @router.post('/supad-create', tags='super-admin')
 async def super_admin_create(
+    request: FaRequest,
     # form_data: OAuth2PasswordRequestForm = Depends()
     credentials: HTTPBasicCredentials = Depends(security)
 ) -> Response:
     """Super admin user emergency creation"""
-    request, other_params = get_default_fa_request()
+    gs_request, other_params = get_default_fa_request()
+    router.set_current_request(request, gs_request)
     other_params['username'] = credentials.username
     other_params['password'] = credentials.password
-    return super_admin_create_model(request=request, blueprint=router,
+    return super_admin_create_model(request=gs_request, blueprint=router,
         other_params=other_params)
