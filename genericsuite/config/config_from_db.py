@@ -19,7 +19,7 @@ from genericsuite.util.generic_db_middleware import (
 from genericsuite.util.jwt import AuthorizedRequest
 from genericsuite.util.utilities import get_default_resultset
 
-DEBUG = True
+DEBUG = False
 USE_DB_PARAMS_DEFAULT = os.environ.get('USE_DB_PARAMS_DEFAULT', "1")
 # USE_DB_PARAMS_DEFAULT = "0"     # Usefull when local dev environment becomes slow
 

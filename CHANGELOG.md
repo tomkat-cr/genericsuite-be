@@ -33,6 +33,7 @@ Redirect README instructions to the GenericSuite Documentation [GS-73].
 BlueprintOne abstraction [GS-79].
 Split GenericDbHelper and create GenericDbHelperSuper.
 "blueprint" as mandatory parameter to GenericDbHelper, AppContext and app_context_and_set_env(), to make posible the specific functions to GenericDbHelper [GS-79].
+"Config.formatted_log_message" loads APP_DB_NAME with "os.environ.get()" to report errors even when this env. var. is not set.
 
 ### Fixes
 Fix "TypeError: 'AuthTokenPayload' object is not subscriptable" error in "generic_db_helpers.get_current_user" by using "request.user.public_id" instead of "self.request.user['public_id']" [FA-122].

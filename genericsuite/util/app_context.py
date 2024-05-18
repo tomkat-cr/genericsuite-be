@@ -16,7 +16,7 @@ from genericsuite.util.utilities import get_default_resultset, get_id_as_string
 from genericsuite.util.app_logger import log_debug
 
 
-DEBUG = True
+DEBUG = False
 TEMP_DIR = os.environ.get('TEMP_DIR', '/tmp')
 
 PARAMS_FILE_ENABLED = os.environ.get('PARAMS_FILE_ENABLED', '1')

@@ -23,7 +23,7 @@ import datetime
 
 def formatted_log_message(message: str) -> str:
     """ Returns a formatted message with database name and date/time """
-    return f"[{os.environ['APP_DB_NAME']}]" + \
+    return f"[{os.environ.get('APP_DB_NAME', 'APP_DB_NAME not set')}]" + \
         f" {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}" + \
         f" | {message}"
 
