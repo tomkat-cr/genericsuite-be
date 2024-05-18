@@ -117,7 +117,7 @@ def get_all_params(app_context: AppContext):
     params = get_default_resultset()
     filename = pfc.get_params_file_path(PARAMS_FILE_GENERAL_FILENAME)
     load_result = pfc.load_params_file(filename)
-    if load_result["found"] and load_result['resultset']:
+    if load_result["found"]: # and load_result['resultset']:
         params['resultset'].update(load_result['resultset'])
         _ = DEBUG and log_debug('GCFD-4) app_context_and_set_env |' +
             f' General parameters loaded from file: {load_result["resultset"]}')
@@ -133,7 +133,7 @@ def get_all_params(app_context: AppContext):
     # Try user's config from json file
     filename = pfc.get_params_filename()
     load_result = pfc.load_params_file(filename)
-    if load_result["found"] and load_result['resultset']:
+    if load_result["found"]:  # and load_result['resultset']:
         params['resultset'].update(
             {r["config_name"]: r["config_value"]
             for r in load_result['resultset'].get("users_config", [])}
@@ -197,6 +197,5 @@ def set_init_custom_data(data: Optional[Union[dict, None]] = None):
     result = dict(data.items()) if data else {}
     # Standard GenericDbHelper specific functions registry
     result['delete_params_file'] = delete_params_file
-    if DEBUG:
-        log_debug(f"//// Custom data: {result}")
+    _ = DEBUG and log_debug(f"//// Custom data: {result}")
     return result

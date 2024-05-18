@@ -39,11 +39,13 @@ class ParamsFile():
         """
         return os.path.join(TEMP_DIR, filename)
 
-    def get_params_filename(self) -> Union[str, None]:
+    def get_params_filename(self, user_id: Optional[str] = None) -> Union[str, None]:
         """
         Get the filename where the parameters are stored.
         """
-        if self.user_id == NON_AUTH_REQUEST_USER_ID:
+        if not user_id:
+            user_id = self.user_id
+        if user_id == NON_AUTH_REQUEST_USER_ID:
             # For the un-authenticated endpoint calls file
             filename = None
         else:
@@ -51,7 +53,7 @@ class ParamsFile():
                 PARAMS_FILE_USER_FILENAME_TEMPLATE.replace(
                     '[user_id]', self.user_id))
         _ = DEBUG and \
-            log_debug('PF-1) get_params_filename |' +
+            log_debug('GET_FILENAME-1) get_params_filename |' +
                 f' self.user_id: {self.user_id} | filename: {filename}')
         return filename
 
@@ -60,16 +62,22 @@ class ParamsFile():
         Load the parameters from a file.
         """
         result = get_default_resultset()
-        result['found'] = False
+        result['found'] = True
         if PARAMS_FILE_ENABLED != '1':
-            return result
+            result['error_message'] = "Params. file flag disabled"
+            result['found'] = False
         if not filename:
-            return result
+            result['error_message'] = "Filename is null"
+            result['found'] = False
         if not os.path.exists(filename):
-            return result
-        with open(filename, 'r', encoding='utf-8') as f:
-            result['found'] = True
-            result['resultset'] = json.load(f)
+            result['error_message'] = f"Filename does not exist: {filename}"
+            result['found'] = False
+        if result['found']:
+            with open(filename, 'r', encoding='utf-8') as fhdlr:
+                result['resultset'] = json.load(fhdlr)
+        _ = DEBUG and \
+            log_debug(f'LOAD_PF-1) load_params_file | File: {filename}' +
+            f' | {result["resultset"]}')
         return result
 
     def save_params_file(self, filename: str, data_to_save: dict) -> dict:
@@ -84,8 +92,8 @@ class ParamsFile():
             data_to_save['_id'] = get_id_as_string(data_to_save)
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data_to_save, f)
-        log_debug(f'PF-2) save_params_file | filename: {filename} |' +
-                  f' content: {data_to_save}')
+        _ = DEBUG and log_debug(f'PF-2) save_params_file | filename: {filename} |' +
+            f' content: {data_to_save}')
         return result
 
 
@@ -329,14 +337,22 @@ def delete_params_file(app_context_or_blueprint: Any,
     _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
         f"\n | action_data: {action_data}" +
         f"\n | tablename: {tablename}")
+    # Only delete the params file if the action is not read or list
     if action_data.get("action") in ["read", "list"]:
         return action_data['resultset']
     if tablename:
+        # Get the user ID if it's not the general table
+        if tablename == 'general_config':
+            user_id = None
+        else:
+            user_id = get_id_as_string(action_data['resultset'].get('resultset', {}))
+        # Get the filename according to the table name
         filename = pfc.get_params_file_path(PARAMS_FILE_GENERAL_FILENAME) \
             if tablename == 'general_config' \
-            else pfc.get_params_filename()
+            else pfc.get_params_filename(user_id)
         _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
             f"\n | filename: {filename}")
+        # Delete params file if exists
         if os.path.exists(filename):
             os.remove(filename)
             _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +

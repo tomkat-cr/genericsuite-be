@@ -26,13 +26,13 @@ Add file uploads support to FastAPI [FA-246].
 Add STORAGE_URL_SEED and APP_HOST_NAME env. vars. [GS-72].
 Add "cryptography" dependency [GS-72].
 Save all general and user's parameters read from DB in a /tmp/params_[user_id].json file for each user to speed up all API [GS-79].
-Add specific functions to GenericDbHelper [GS-79].
+Add specific functions to GenericDbHelper [GS-81].
 
 ### Changes
 Redirect README instructions to the GenericSuite Documentation [GS-73].
 BlueprintOne abstraction [GS-79].
 Split GenericDbHelper and create GenericDbHelperSuper.
-"blueprint" as mandatory parameter to GenericDbHelper, AppContext and app_context_and_set_env(), to make posible the specific functions to GenericDbHelper [GS-79].
+"blueprint" as mandatory parameter to GenericDbHelper, AppContext and app_context_and_set_env(), to make posible the specific functions to GenericDbHelper [GS-81].
 "Config.formatted_log_message" loads APP_DB_NAME with "os.environ.get()" to report errors even when this env. var. is not set.
 
 ### Fixes
