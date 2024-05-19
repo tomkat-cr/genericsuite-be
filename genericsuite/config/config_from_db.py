@@ -10,7 +10,8 @@ from genericsuite.util.app_context import (
     ParamsFile,
     delete_params_file,
     PARAMS_FILE_ENABLED,
-    PARAMS_FILE_GENERAL_FILENAME
+    PARAMS_FILE_GENERAL_FILENAME,
+    NON_AUTH_REQUEST_USER_ID
 )
 from genericsuite.util.app_logger import log_debug, log_error
 from genericsuite.util.generic_db_middleware import (
@@ -111,7 +112,8 @@ def get_all_params(app_context: AppContext):
     if PARAMS_FILE_ENABLED != '1':
         return get_config_from_db_raw(app_context)
 
-    pfc = ParamsFile(app_context.get_user_id())
+    user_id = app_context.get_user_id()
+    pfc = ParamsFile(user_id)
 
     # Try general params from the json file
     params = get_default_resultset()
@@ -131,23 +133,24 @@ def get_all_params(app_context: AppContext):
         pfc.save_params_file(filename, load_result['resultset'])
 
     # Try user's config from json file
-    filename = pfc.get_params_filename()
-    load_result = pfc.load_params_file(filename)
-    if load_result["found"]:  # and load_result['resultset']:
-        params['resultset'].update(
-            {r["config_name"]: r["config_value"]
-            for r in load_result['resultset'].get("users_config", [])}
-        )
-        _ = DEBUG and log_debug('GCFD-5) app_context_and_set_env |' +
-            ' User\'s parameters loaded from file:' +
-            f' {load_result["resultset"].get("users_config", [])}')
-    else:
-        # Get user's config from db
-        load_result = get_users_config(app_context)
-        if load_result["error"]:
-            return load_result
-        params['resultset'].update(dict(load_result['resultset'].items()))
-        # Does not save the json file because it's a job for AppContex...
+    if user_id != NON_AUTH_REQUEST_USER_ID:
+        filename = pfc.get_params_filename()
+        load_result = pfc.load_params_file(filename)
+        if load_result["found"]:  # and load_result['resultset']:
+            params['resultset'].update(
+                {r["config_name"]: r["config_value"]
+                for r in load_result['resultset'].get("users_config", [])}
+            )
+            _ = DEBUG and log_debug('GCFD-5) app_context_and_set_env |' +
+                ' User\'s parameters loaded from file:' +
+                f' {load_result["resultset"].get("users_config", [])}')
+        else:
+            # Get user's config from db
+            load_result = get_users_config(app_context)
+            if load_result["error"]:
+                return load_result
+            params['resultset'].update(dict(load_result['resultset'].items()))
+            # Does not save the json file because it's a job for AppContex...
     return params
 
 

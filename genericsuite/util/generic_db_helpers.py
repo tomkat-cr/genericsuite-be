@@ -392,6 +392,8 @@ class GenericDbHelper(GenericDbHelperSuper):
                     {'$set': updated_record}
                 ).modified_count
             resultset['resultset']['rows_affected'] = str(op_result)
+            # Ensure the _id is returned for the specific function
+            resultset['resultset']['_id'] = str(record['_id'])
         except BaseException as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'UU2')
@@ -432,6 +434,8 @@ class GenericDbHelper(GenericDbHelperSuper):
                     {'_id': ObjectId(remove_id)}
                 ).deleted_count
             )
+            # Ensure the _id is returned for the specific function
+            resultset['resultset']['_id'] = str(remove_id)
         except BaseException as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'DU2')
@@ -593,6 +597,7 @@ class GenericDbHelper(GenericDbHelperSuper):
             a new item will be inserted in the array with the
             values of 'food_moment_id', 'calories_value' and
             'calories_unit'.
+
             {'daily_meal_id': 'XXXX',
              'meal_ingredients':
                 {'food_moment_id': 'YYYY',
@@ -648,6 +653,8 @@ class GenericDbHelper(GenericDbHelperSuper):
                     {'$addToSet': add_to_set}
                 ).modified_count
             )
+            # Ensure the _id is returned for the specific function
+            resultset['resultset']['_id'] = str(parent_keys['_id'])
         except BaseException as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'AFTTU1')
@@ -661,6 +668,7 @@ class GenericDbHelper(GenericDbHelperSuper):
         configuration (see get_parent_keys())
 
         E.g. 'data' given is:
+
             {'daily_meal_id': 'XXXX',
              'meal_ingredients':
                 {'food_moment_id': 'YYYY',
@@ -677,9 +685,11 @@ class GenericDbHelper(GenericDbHelperSuper):
                  'quantity': 2, ...
                 }
             }
+
         The self.array_field configuration is "meal_ingredients",
         "meal_ingredients_old" exist in 'data', and
         self.array_field_key configuration is "id",
+
         So it will $pull (remove) the element 'id': 'ZZZZ'
         as pull_element will be:
             pull_element={'meal_ingredients': {'id': 'ZZZZ'}}
@@ -726,6 +736,8 @@ class GenericDbHelper(GenericDbHelperSuper):
                     {'$pull': pull_element}
                 ).modified_count
             )
+            # Ensure the _id is returned for the specific function
+            resultset['resultset']['_id'] = str(parent_keys['_id'])
         except BaseException as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'RFTTU')

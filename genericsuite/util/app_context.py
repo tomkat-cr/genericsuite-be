@@ -16,7 +16,7 @@ from genericsuite.util.utilities import get_default_resultset, get_id_as_string
 from genericsuite.util.app_logger import log_debug
 
 
-DEBUG = False
+DEBUG = True
 TEMP_DIR = os.environ.get('TEMP_DIR', '/tmp')
 
 PARAMS_FILE_ENABLED = os.environ.get('PARAMS_FILE_ENABLED', '1')
@@ -51,10 +51,10 @@ class ParamsFile():
         else:
             filename = self.get_params_file_path(
                 PARAMS_FILE_USER_FILENAME_TEMPLATE.replace(
-                    '[user_id]', self.user_id))
+                    '[user_id]', user_id))
         _ = DEBUG and \
             log_debug('GET_FILENAME-1) get_params_filename |' +
-                f' self.user_id: {self.user_id} | filename: {filename}')
+                f' user_id: {user_id} | filename: {filename}')
         return filename
 
     def load_params_file(self, filename: str) -> dict:
@@ -66,10 +66,10 @@ class ParamsFile():
         if PARAMS_FILE_ENABLED != '1':
             result['error_message'] = "Params. file flag disabled"
             result['found'] = False
-        if not filename:
+        elif not filename:
             result['error_message'] = "Filename is null"
             result['found'] = False
-        if not os.path.exists(filename):
+        elif not os.path.exists(filename):
             result['error_message'] = f"Filename does not exist: {filename}"
             result['found'] = False
         if result['found']:
@@ -340,21 +340,42 @@ def delete_params_file(app_context_or_blueprint: Any,
     # Only delete the params file if the action is not read or list
     if action_data.get("action") in ["read", "list"]:
         return action_data['resultset']
+    # Verify if any error
+    if action_data['resultset']['error']:
+        return action_data['resultset']
     if tablename:
-        # Get the user ID if it's not the general table
-        if tablename == 'general_config':
-            user_id = None
-        else:
-            user_id = get_id_as_string(action_data['resultset'].get('resultset', {}))
         # Get the filename according to the table name
-        filename = pfc.get_params_file_path(PARAMS_FILE_GENERAL_FILENAME) \
-            if tablename == 'general_config' \
-            else pfc.get_params_filename(user_id)
+        if tablename == 'general_config':
+            filename = pfc.get_params_file_path(PARAMS_FILE_GENERAL_FILENAME)
+        else:
+            # Get the user ID if it's not the general table
+
+            # Get the database item resultset
+            db_item = action_data['resultset']['resultset']
+            if isinstance(db_item, str):
+                db_item = json.loads(db_item)
+            _ = DEBUG and log_debug('DB SPECIFIC FUNCTION: delete_params_file' +
+                f" | db_item: {db_item}")
+            # Inconsistency If _id not in resultset...
+            if '_id' not in db_item:
+                return action_data['resultset']
+
+            # Get the user ID from the resultset
+            user_id = get_id_as_string(db_item)
+            _ = DEBUG and log_debug('DB SPECIFIC FUNCTION: delete_params_file' +
+                f" | user_id: {user_id}")
+
+            filename = pfc.get_params_filename(user_id)
+
         _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
             f"\n | filename: {filename}")
+
         # Delete params file if exists
         if os.path.exists(filename):
             os.remove(filename)
             _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
                 f"\n | File deleted: {filename}")
+        else:
+            _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
+                f"\n | File not found: {filename}")
     return action_data['resultset']

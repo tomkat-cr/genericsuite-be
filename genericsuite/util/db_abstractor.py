@@ -1,5 +1,5 @@
 """
-Database abstraction layer for MongoDb and DynamoDb
+DbAbstractor: Database abstraction layer for MongoDb and DynamoDb
 """
 from __future__ import annotations
 from decimal import Decimal
