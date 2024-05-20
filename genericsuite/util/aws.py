@@ -26,7 +26,7 @@ from genericsuite.config.config import Config
 DEBUG = True
 
 STORAGE_URL_SEPARATOR = '||'
-STORAGE_ENCRYPTION = os.environ.get('STORAGE_ENCRYPTION', '1')   # Defaults to True
+STORAGE_ENCRYPTION = os.environ.get('STORAGE_ENCRYPTION', '') == '1'   # Defaults to True
 
 
 def s3_base_url(bucket_name: str) -> str:
