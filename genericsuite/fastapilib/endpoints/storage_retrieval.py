@@ -20,6 +20,7 @@ from genericsuite.util.aws import storage_retieval
 from genericsuite.util.app_logger import log_debug
 from genericsuite.util.utilities import (
     return_resultset_jsonified_or_exception,
+    send_file_text_text,
 )
 from genericsuite.config.config import Config
 
@@ -124,16 +125,25 @@ def storage_retieval_fa(
             resultset
         )
 
-    if other_params.get('response_type') == "fastapi":
-        # Return the file content the standard FastAPI way
-        # https://fastapi.tiangolo.com/advanced/custom-response/#fileresponse
-        _ = DEBUG and log_debug("Returning file content as FileResponse")
+    if other_params.get('response_type') in ["fastapi", "gs"]:
         file_path = os.path.join(settings.TEMP_DIR,
             os.path.basename(resultset['filename']))
         background_tasks.add_task(remove_temp_file, file_path=file_path)
         with open(file_path, 'wb') as file:
             file.write(resultset['content'])
-            return FileResponse(file_path, media_type=resultset['mime_type'])
+            _ = DEBUG and log_debug(f"Temp file written | file_path {file_path}")
+
+    if other_params.get('response_type') == "gs":
+        # Return the file content as GenericSuite way
+        # (the one that woorked for audio file and the ai_chatbot)
+        _ = DEBUG and log_debug("Returning file content the Genericsuite way")
+        return send_file_text_text(file_path)
+
+    if other_params.get('response_type') == "fastapi":
+        # Return the file content the standard FastAPI way
+        # https://fastapi.tiangolo.com/advanced/custom-response/#fileresponse
+        _ = DEBUG and log_debug("Returning file content as FileResponse")
+        return FileResponse(file_path, media_type=resultset['mime_type'])
 
     if other_params.get('response_type') == "streaming":
         # Return the file content as a Streaming Response
@@ -143,7 +153,7 @@ def storage_retieval_fa(
 
     content_disposition_method = "inline"
     if other_params.get('response_type') == "attachment":
-        content_disposition_method = "attachment"
+        content_disposition_method = "inline"
 
     # Return the file content as a normal Response
     headers = {
@@ -152,7 +162,7 @@ def storage_retieval_fa(
             f'"{resultset["filename"]}"',
     }
     _ = DEBUG and log_debug("Returning file content as Response" +
-        f'| headers: {headers}')
+        f' | headers: {headers}')
     return Response(
         body=resultset['content'],
         status_code=200,
