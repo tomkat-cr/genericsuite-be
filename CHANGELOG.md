@@ -30,6 +30,8 @@ Save all general and user's parameters read from DB in a /tmp/params_[user_id].j
 Add specific functions to GenericDbHelper [GS-81].
 Add "temp_filename()" to centralice the temporary filename path generation [GS-72].
 Add "download_s3_object()" to download the file from the bucket and return the local path, instead of its content [GS-72].
+Add requirements.txt generation to Makefile on publish.
+Add ".PHONY" entries for all labels in Makefile.
 
 ### Changes
 Redirect README instructions to the GenericSuite Documentation [GS-73].
