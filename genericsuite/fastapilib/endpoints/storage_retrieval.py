@@ -22,7 +22,7 @@ from genericsuite.util.utilities import (
     return_resultset_jsonified_or_exception,
     send_file_text_text,
 )
-from genericsuite.config.config import Config
+# from genericsuite.config.config import Config
 
 DEBUG = True
 
@@ -116,8 +116,17 @@ def storage_retieval_fa(
         Union[Response, StreamingResponse]: The object as streaming response
             or error response.
     """
-    settings = Config()
+    # settings = Config()
     other_params = other_params or {}
+
+    if not other_params.get('response_type'):
+        other_params['response_type'] = "fastapi"
+
+    if other_params.get('response_type') in ["fastapi", "gs"]:
+        other_params['mode'] = 'download'
+    else:
+        other_params['mode'] = 'get'
+
     resultset = storage_retieval(request=request, blueprint=blueprint,
         item_id=item_id, other_params=other_params)
     if resultset.get('error'):
@@ -126,16 +135,13 @@ def storage_retieval_fa(
         )
 
     if other_params.get('response_type') in ["fastapi", "gs"]:
-        file_path = os.path.join(settings.TEMP_DIR,
-            os.path.basename(resultset['filename']))
+        file_path = resultset['local_file_path']
         background_tasks.add_task(remove_temp_file, file_path=file_path)
-        with open(file_path, 'wb') as file:
-            file.write(resultset['content'])
-            _ = DEBUG and log_debug(f"Temp file written | file_path {file_path}")
+        _ = DEBUG and log_debug(f"Temp file written | file_path {file_path}")
 
     if other_params.get('response_type') == "gs":
         # Return the file content as GenericSuite way
-        # (the one that woorked for audio file and the ai_chatbot)
+        # (the one that worked for audio file and the ai_chatbot)
         _ = DEBUG and log_debug("Returning file content the Genericsuite way")
         return send_file_text_text(file_path)
 

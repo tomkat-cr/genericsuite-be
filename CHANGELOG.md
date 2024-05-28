@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## Unreleased
 ## 0.1.6 (2024-05-04)
 ---
 
@@ -27,6 +28,8 @@ Add STORAGE_URL_SEED and APP_HOST_NAME env. vars. [GS-72].
 Add "cryptography" dependency [GS-72].
 Save all general and user's parameters read from DB in a /tmp/params_[user_id].json file for each user to speed up all API [GS-79].
 Add specific functions to GenericDbHelper [GS-81].
+Add "temp_filename()" to centralice the temporary filename path generation [GS-72].
+Add "download_s3_object()" to download the file from the bucket and return the local path, instead of its content [GS-72].
 
 ### Changes
 Redirect README instructions to the GenericSuite Documentation [GS-73].

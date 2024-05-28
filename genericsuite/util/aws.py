@@ -14,13 +14,15 @@ from botocore.exceptions import NoCredentialsError
 
 from genericsuite.config.config_from_db import app_context_and_set_env
 from genericsuite.util.framework_abs_layer import Request
-from genericsuite.util.app_logger import log_debug
+from genericsuite.util.app_logger import log_debug, log_error
 from genericsuite.util.utilities import (
     get_default_resultset,
     error_resultset,
     get_mime_type,
+    get_file_extension,
 )
 from genericsuite.util.encryption import decrypt_string, encrypt_string
+from genericsuite.util.file_utilities import temp_filename
 from genericsuite.config.config import Config
 
 DEBUG = True
@@ -214,8 +216,8 @@ def s3_nodup_filename(file_name):
 def save_file_from_url(
     url: str,
     bucket_name: str,
-    sub_dir: str = None,
-    original_filename: str = None
+    sub_dir: Optional[str] = None,
+    original_filename: Optional[str] = None
 ) -> dict:
 # ) -> (str, str, int, str):
     """
@@ -307,7 +309,39 @@ def get_s3_object(bucket_name: str, key: str) -> dict:
     except Exception as err:
         result['error'] = True
         result['error_message'] = f"Failed to retrieve object from S3: {err}"
-        log_debug(result['error_message'])
+        log_error(result['error_message'])
+    return result
+
+
+def download_s3_object(bucket_name: str, key: str,
+                       local_file_path: Optional[str] = None) -> dict:
+    """
+    Download an object from an S3 bucket in a temporary path.
+
+    Args:
+        bucket_name (str): The base path of the S3 bucket.
+        key (str): The S3 key of the object to be retrieved.
+        local_file_path (str, optional): The temporary path to download the file.
+            If None, it will use a random-generated temporary path.
+            Defaults to None.
+
+    Returns:
+        dict: The object as a standard resultset dictionary,
+            with the file temp_path/filename in the 'local_file_path' element
+            or error/error_message elements.
+    """
+    result = get_default_resultset()
+    if not local_file_path:
+        local_file_path = temp_filename(get_file_extension(file_path=key))
+    try:
+        s3_client = boto3.client('s3')
+        s3_client.download_file(bucket_name, key, local_file_path)
+        result['local_file_path'] = local_file_path
+        log_debug(f"Object downloaded from S3: {bucket_name}/{key}")
+    except Exception as err:
+        result['error'] = True
+        result['error_message'] = f"ERROR-DS3O-010 - Failed to download object: {err}"
+        log_error(result['error_message'])
     return result
 
 
@@ -359,11 +393,15 @@ def storage_retieval(
         dict: The object as a standard resultset dictionary,
             with the file content in the 'content' element,
             the mime type in the 'mime_type' element,
-            the file name in the 'filename' element,
+            the file name in the 'filename' element (S3 key),
+            the downloaded local file path in 'local_file_path' element,
             or error/error_message elements.
     """
     if other_params is None:
         other_params = {}
+    if not other_params.get('mode'):
+        # Default mode is 'get', the other option is 'download'
+        other_params['mode'] = 'get'
     # Set environment variables from the database configurations.
     app_context = app_context_and_set_env(request=request, blueprint=blueprint)
     if app_context.has_error():
@@ -384,10 +422,13 @@ def storage_retieval(
     # Get the file content
     if DEBUG:
         log_debug(f">> bucket_name: {bucket_name} | key: {key}")
-    retrieval_resultset = get_s3_object(bucket_name=bucket_name, key=key)
+    if other_params['mode'] == 'get':
+        retrieval_resultset = get_s3_object(bucket_name=bucket_name, key=key)
+    else:
+        retrieval_resultset = download_s3_object(bucket_name=bucket_name, key=key)
     if retrieval_resultset.get('error'):
         # return retrieval_resultset
-        return error_resultset("Retrieve failure", "ASR-E1030")
+        return error_resultset(retrieval_resultset['error_message'], "ASR-E1030")
     retrieval_resultset['mime_type'] = get_mime_type(key)
     retrieval_resultset['filename'] = key
     return retrieval_resultset

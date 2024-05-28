@@ -3,14 +3,13 @@ The parse_multipart module handles the multipart form-data parsing,
 and get content like upoaded files.
 """
 import os
-from uuid import uuid4
 
 from requests_toolbelt import MultipartDecoder
 
 from genericsuite.util.app_logger import log_debug
 from genericsuite.util.utilities import return_resultset_jsonified_or_exception
 from genericsuite.util.app_context import AppContext
-from genericsuite.config.config import Config
+from genericsuite.util.file_utilities import temp_filename
 
 DEBUG = False
 
@@ -140,9 +139,7 @@ def download_file(file_data: bytes, extension: str) -> str:
     :param file_data: The file data to download.
     :return: The path to the downloaded file.
     """
-    settings = Config()
-    filename = f"{uuid4().hex}.{extension}"
-    file_path = os.path.join(settings.TEMP_DIR, filename)
+    file_path = temp_filename(extension)
     with open(file_path, 'wb') as file:
         file.write(file_data)
     return file_path
