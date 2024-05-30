@@ -2,15 +2,26 @@
 name = "genericsuite"
 version = "0.1.6"
 authors = [
-    { name="Carlos J. Ramirez", email="<tomkat_cr@yahoo.com>" }
+    { name="Carlos J. Ramirez", email="tomkat_cr@yahoo.com" }
 ]
 description = "The GenericSuite for Python (backend version)"
 readme = "README.md"
 requires-python = ">=3.9,<4.0"
 classifiers = [
-    "Programming Language :: Python :: 3",
+    'Development Status :: 3 - Alpha',
+    'Environment :: Console',
+    'Intended Audience :: Developers',
     "License :: OSI Approved :: ISC License",
+    "Programming Language :: Python :: 3",
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
     "Operating System :: OS Independent",
+    'Topic :: Software Development',
+]
+dynamic = [
+    "license",
 ]
 
 [project.urls]
@@ -19,7 +30,7 @@ Issues = "https://github.com/tomkat-cr/genericsuite-be/issues"
 
 [tool.poetry]
 name = "genericsuite"
-version = "0.1.5"
+version = "0.1.6"
 description = "The GenericSuite for Python (backend version)"
 authors = ["Carlos J. Ramirez <tomkat_cr@yahoo.com>"]
 license = "ISC"
