@@ -81,6 +81,12 @@ class Config():
 
         # Database configuration
 
+        if os.environ.get('AWS_SAM_LOCAL') == 'true':
+            # Handles the \@ issue in environment variables values when runs by "sam local start-api"
+            os.environ['APP_DB_URI'] = os.environ['APP_DB_URI'].replace('\\@', '@')
+            os.environ['APP_SUPERADMIN_EMAIL'] = \
+                os.environ['APP_SUPERADMIN_EMAIL'].replace('\\@', '@')
+
         self.DB_CONFIG = {
             'mongodb_uri': os.environ['APP_DB_URI'],
             'mongodb_db_name': os.environ['APP_DB_NAME'],

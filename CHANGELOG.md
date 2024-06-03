@@ -43,6 +43,7 @@ Split GenericDbHelper and create GenericDbHelperSuper.
 ### Fixes
 Fix "TypeError: 'AuthTokenPayload' object is not subscriptable" error in "generic_db_helpers.get_current_user" by using "request.user.public_id" instead of "self.request.user['public_id']" [FA-122].
 Fix the CORS header Access-Control-Allow-Origin missing in FastAPI in Firefox [GS-69].
+Handles the \@ issue in environment variables values when runs by "sam local start-api"
 
 
 ## 0.1.5 (2024-04-20)
