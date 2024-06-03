@@ -49,7 +49,11 @@ async def storage_retrieval_no_item_id_endpoint(
         item_id=item_id, other_params=other_params,
         background_tasks=background_tasks)
 
-# ) -> Union[Response, FileResponse, StreamingResponse]:
+# Why these endpoint definitions return type is "-> Any": and not:
+# "-> Union[Response, FileResponse, StreamingResponse]":
+#
+# Because this error:
+#
 # fastapi.exceptions.FastAPIError: Invalid args for response field! Hint: check
 # that typing.Union[genericsuite.util.framework_abs_layer.Response,
 # starlette.responses.FileResponse, starlette.responses.StreamingResponse] is a
@@ -57,6 +61,7 @@ async def storage_retrieval_no_item_id_endpoint(
 # not a valid Pydantic field (e.g. Union[Response, dict, None]) you can disable
 # generating the response model from the type annotation with the path operation
 # decorator parameter response_model=None.
+#
 # Read more: https://fastapi.tiangolo.com/tutorial/response-model/
 
 
@@ -137,7 +142,7 @@ def storage_retieval_fa(
     if other_params.get('response_type') in ["fastapi", "gs"]:
         file_path = resultset['local_file_path']
         background_tasks.add_task(remove_temp_file, file_path=file_path)
-        _ = DEBUG and log_debug(f"Temp file written | file_path {file_path}")
+        _ = DEBUG and log_debug(f"Temp file read | file_path: {file_path}")
 
     if other_params.get('response_type') == "gs":
         # Return the file content as GenericSuite way
@@ -149,7 +154,8 @@ def storage_retieval_fa(
         # Return the file content the standard FastAPI way
         # https://fastapi.tiangolo.com/advanced/custom-response/#fileresponse
         _ = DEBUG and log_debug("Returning file content as FileResponse")
-        return FileResponse(file_path, media_type=resultset['mime_type'])
+        # return FileResponse(file_path, media_type=resultset['mime_type'])
+        return FileResponse(file_path)
 
     if other_params.get('response_type') == "streaming":
         # Return the file content as a Streaming Response
