@@ -12,9 +12,12 @@ from genericsuite.config.config import Config
 
 from genericsuite.chalicelib.endpoints import users
 from genericsuite.chalicelib.endpoints import menu_options
+from genericsuite.chalicelib.endpoints import storage_retrieval
 from genericsuite.chalicelib.util.generic_endpoint_builder import (
     generate_blueprints_from_json
 )
+
+from genericsuite.config.config_from_db import set_init_custom_data
 
 # from chalice import Chalice
 framework_class = importlib.import_module("chalice")
@@ -22,7 +25,6 @@ framework_class = importlib.import_module("chalice")
 DEBUG = False
 
 
-# def create_app(app_name: str, framework_class: Any, cors_config_class: Any,
 def create_app(app_name: str, settings = None) -> Any:
     """ Create the Chalice App """
 
@@ -33,6 +35,10 @@ def create_app(app_name: str, settings = None) -> Any:
     chalice_app.experimental_feature_flags.update(['BLUEPRINTS'])
 
     chalice_app.debug = settings.DEBUG
+
+    # Custom data, to be used to store a dict for
+    # GenericDbHelper specific functions
+    chalice_app.custom_data = set_init_custom_data()
 
     # App wide log level
     if not settings.DEBUG:
@@ -48,9 +54,13 @@ def create_app(app_name: str, settings = None) -> Any:
     chalice_app.api.binary_types.append("multipart/form-data")
     # log_debug(f'1) chalice_app.api.binary_types: {chalice_app.api.binary_types}')
 
-    # Register generic endpoints
+    # Register general endpoints
     chalice_app.register_blueprint(menu_options.bp, url_prefix='/menu_options')
+    # log_info("Registered menu_options blueprint")
     chalice_app.register_blueprint(users.bp, url_prefix='/users')
+    # log_info("Registered users blueprint")
+    chalice_app.register_blueprint(storage_retrieval.bp, url_prefix='/asset')
+    # log_info("Registered storage_retrieval blueprint")
 
     # Register generic endpoints (from the "endpoints.json" file)
     generate_blueprints_from_json(chalice_app, 'endpoints')

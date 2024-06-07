@@ -1,5 +1,5 @@
 # Desc: Helper functions for config_dbdef
-from typing import Optional
+from typing import Optional, Union
 import json
 import os
 
@@ -13,9 +13,11 @@ settings = Config()
 def get_json_def(
     json_file_name: str,
     dir_name: str = '',
-    default_value: Optional[dict] = None
-) -> dict:
-    """Get JSON definition from file.
+    default_value: Optional[Union[dict, list, None]] = None
+# ) -> dict:
+) -> Union[dict, list]:
+    """
+    Get JSON definition from file.
 
     Args:
         json_file_name (str): Name of the JSON file.
@@ -28,7 +30,6 @@ def get_json_def(
     if not default_value:
         default_value = {}
 
-    # app_path = os.path.dirname(__file__)
     app_path = os.getcwd()
     filename = f'{app_path}/{dir_name}/{json_file_name}.json'
     if not os.path.isfile(filename):
@@ -61,4 +62,5 @@ def get_json_def_both(json_file_name: str) -> dict:
             cnf_db += second_json
     if not cnf_db:
         cnf_db = {}
+    # log_debug(f'>>> CNF_DB\n| json_file_name: {json_file_name}\n| cnf_db: {cnf_db}')
     return cnf_db

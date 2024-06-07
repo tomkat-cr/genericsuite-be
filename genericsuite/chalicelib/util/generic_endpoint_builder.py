@@ -7,9 +7,9 @@ from pprint import pprint
 from genericsuite.util.framework_abs_layer import FrameworkClass as Chalice
 
 # from chalice.app import Response
-from genericsuite.util.framework_abs_layer import Response
+# from genericsuite.util.blueprint_one import BlueprintOne
+from genericsuite.util.framework_abs_layer import Response, BlueprintOne
 
-from genericsuite.util.blueprint_one import BlueprintOne
 from genericsuite.util.config_dbdef_helpers import get_json_def
 from genericsuite.util.generic_endpoint_helpers import GenericEndpointHelper
 from genericsuite.util.jwt import (
@@ -45,7 +45,7 @@ def generate_blueprints_from_json(
     for definition in definitions:
         bp_name = definition['name']
         url_prefix = f"/{definition.get('url_prefix', bp_name)}"
-        blueprint = BlueprintOne(definition['name'])
+        blueprint = BlueprintOne(bp_name)
 
         if DEBUG:
             log_debug(
@@ -66,7 +66,7 @@ def generate_blueprints_from_json(
             if route_handler_type == "GenericEndpointHelper":
                 route_handler = generic_route_handler
             else:
-                route_handler = route['view_func1']
+                route_handler = route['view_function']
 
             if DEBUG:
                 log_debug(
@@ -126,7 +126,10 @@ def generic_route_handler(
         )
 
     # Set environment variables from the database configurations.
-    app_context = app_context_and_set_env(request)
+    app_context = app_context_and_set_env(
+        request=request,
+        blueprint=BlueprintOne(other_params.get('name'))
+    )
     if app_context.has_error():
         return return_resultset_jsonified_or_exception(
             app_context.get_error_resultset()

@@ -42,6 +42,7 @@ class GenericEndpointHelper:
         self.data["url_prefix"] = url_prefix
         self.dbo = GenericDbHelper(json_file=json_file,
                                    request=self.request,
+                                   blueprint=app_context.get_blueprint(),
                                    db_type=db_type)
         if isinstance(self.dbo.cnf_db, list):
             self.data["title"] = f'{json_file}s'
@@ -90,44 +91,55 @@ class GenericEndpointHelper:
             return error_resultset(self.dbo.error_message)
 
         row_id = self.query_params.get('id')
-        additional_query_params = self.dbo.cnf_db.get('additional_query_params')
         like_param = self.get_like_param()
         comb_param = self.get_comb_param()
+
+        additional_query_params = self.dbo.cnf_db.get('additional_query_params')
 
         (limit, skip, page) = get_navigation_params(self.request)
 
         _ = DEBUG and log_debug(f' | row_id: {row_id}' +
             f' | additional_query_params: {additional_query_params}' +
             f' | limit: {limit} | skip: {skip} | page: {page}' + 
+            f' | like_param: {like_param} | comb_param: {comb_param}' + 
             f'\n | request_body: {self.request_body}')
 
-        if self.request.method == 'POST':
+        if self.request.method.upper() == 'POST':
             # Create
+            _ = DEBUG and \
+                log_debug(f'GCM-1.1) CREATE {self.data["name"]}...')
             result = self.dbo.create_row(self.request_body)
             _ = DEBUG and \
-                log_debug(f'GCM-1) CREATE {self.data["name"]}' +
+                log_debug(f'GCM-1.2) CREATE {self.data["name"]}' +
                 f'\n | request_body: {self.request_body}' +
                 f'\n | result: {result}')
-        elif self.request.method == 'PUT':
+        elif self.request.method.upper() == 'PUT':
             # Update
+            _ = DEBUG and log_debug(f'GCM-2.1) UPDATE {self.data["name"]}...')
             options = {"update_item": self.query_params.get("update_item", "0")}
             result = self.dbo.update_row(record=self.request_body,
                                          options=options)
-            _ = DEBUG and log_debug(f'GCM-2) UPDATE {self.data["name"]}' +
+            _ = DEBUG and log_debug(f'GCM-2.2) UPDATE {self.data["name"]}' +
                 f'\n | request_body: {self.request_body}' +
                 f'\n | result: {result}')
-        elif self.request.method == 'DELETE' and row_id is not None:
+        elif self.request.method.upper() == 'DELETE' and row_id is not None:
             # Delete
+            _ = DEBUG and log_debug(f'GCM-3.1) DELETE {self.data["name"]}' +
+                f' | row_id: {row_id}...')
             result = self.dbo.delete_row(row_id)
-            _ = DEBUG and log_debug(f'GCM-3) DELETE {self.data["name"]}' +
+            _ = DEBUG and log_debug(f'GCM-3.2) DELETE {self.data["name"]}' +
                 f' | row_id: {row_id}\n | result: {result}')
         elif row_id is not None:
             # Get one row by _id
+            _ = DEBUG and log_debug(f'GCM-4.1) GET ROW {self.data["name"]}' +
+                f' BY ID: {row_id}...')
             result = self.dbo.fetch_row(row_id)
-            _ = DEBUG and log_debug(f'GCM-4) GET ROW {self.data["name"]}' +
+            _ = DEBUG and log_debug(f'GCM-4.2) GET ROW {self.data["name"]}' +
                 f' BY ID: {row_id}\n | result: {result}')
         elif like_param == "1":
             # Like Search
+            _ = DEBUG and log_debug(f'GCM-5.1) LIKE SEARCH {self.data["name"]}' +
+                f'\n | {like_query_params}...')
             like_query_params = self.get_like_query_params()
             result = self.dbo.fetch_list(
                 skip=skip,
@@ -139,12 +151,15 @@ class GenericEndpointHelper:
                 result = error_resultset(
                     f'Error: {self.data["name"]} {like_query_params} ' + \
                     "doesn't exist", "GEM3")
-            _ = DEBUG and log_debug(f'GCM-5) LIKE SEARCH {self.data["name"]}' +
+            _ = DEBUG and log_debug(f'GCM-5.2) LIKE SEARCH {self.data["name"]}' +
                 f'\n | {like_query_params}\n | result: {result}')
         elif additional_query_params is not None and \
              all(param in self.query_params
              for param in additional_query_params):
             # Get one row by additional_query_params
+            _ = DEBUG and log_debug('GCM-6.1) SEARCH BY ATTRIBUTE' +
+                f' {self.data["name"]} BY {param_name}: {param_value}' +
+                '...')
             result = get_default_resultset()
             param_name = None
             param_value = None
@@ -164,13 +179,16 @@ class GenericEndpointHelper:
                 else:
                     result['resultset'] = dumps(result['resultset'])
                 break
-            _ = DEBUG and log_debug('GCM-6) SEARCH BY ATTRIBUTE' +
+            _ = DEBUG and log_debug('GCM-6.2) SEARCH BY ATTRIBUTE' +
                 f' {self.data["name"]} BY {param_name}: {param_value}' +
                 f'\n | result: {result}')
         else:
             # Fetch row list
+            _ = DEBUG and log_debug(f'GCM-7.1) {self.data["name"]} list |' +
+                f' skip: {skip}, limit: {limit}, page: {page}' +
+                f'...')
             result = self.dbo.fetch_list(skip, limit, self.query_params)
-            _ = DEBUG and log_debug(f'GCM-7) {self.data["name"]} list |' +
+            _ = DEBUG and log_debug(f'GCM-7.2) {self.data["name"]} list |' +
                 f' skip: {skip}, limit: {limit}, page: {page}' +
                 f'\n | result {result}')
         return return_resultset_jsonified_or_exception(result)
@@ -210,17 +228,17 @@ class GenericEndpointHelper:
         comb_param = self.get_comb_param()
         result = None
         # Create
-        if self.request.method == 'POST':
+        if self.request.method.upper() == 'POST':
             _ = DEBUG and log_debug(f'>>> {self.data["name"]}_crud | ' +
                 f'PUT request_body = {self.request_body}')
             result = self.dbo.add_array_item_to_row(self.request_body)
         # Delete
-        elif self.request.method == 'DELETE':
+        elif self.request.method.upper() == 'DELETE':
             _ = DEBUG and log_debug(f'>>> {self.data["name"]}_crud | ' +
                 f'DELETE request_body = {self.request_body}')
             result = self.dbo.remove_array_item_from_row(self.request_body)
         # Modify
-        elif self.request.method == 'PUT':
+        elif self.request.method.upper() == 'PUT':
             # When one element needs to be modified, first remove it,
             # then add it again
             _ = DEBUG and log_debug(f'>>> {self.data["name"]}_crud | ' +
@@ -232,7 +250,7 @@ class GenericEndpointHelper:
             else:
                 result = self.dbo.add_array_item_to_row(self.request_body)
         # List
-        elif self.request.method == 'GET':
+        elif self.request.method.upper() == 'GET':
             # Get the list (paginated) or one especific element
             like_query_params = (
                 self.get_like_query_params() if like_param == "1" else {})

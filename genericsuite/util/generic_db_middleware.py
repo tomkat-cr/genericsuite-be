@@ -18,8 +18,8 @@ def fetch_all_from_db(
     json_file: str,
     like_query_params: Optional[dict] = None,
     combinator: Optional[str] = None,
-    order_param: str = None,
-) -> List[dict]:
+    order_param: Optional[str] = None,
+) -> dict:
     """
     Fetches all items from the database table using the GenericDbHelper class.
 
@@ -35,7 +35,8 @@ def fetch_all_from_db(
     """
     dbo = GenericDbHelper(
         json_file=json_file,
-        request=app_context.get_request()
+        request=app_context.get_request(),
+        blueprint=app_context.get_blueprint(),
     )
     result = dbo.fetch_list(
         skip=0,
@@ -73,7 +74,8 @@ def get_item_from_db(
     """
     dbo = GenericDbHelper(
         json_file=json_file,
-        request=app_context.get_request()
+        request=app_context.get_request(),
+        blueprint=app_context.get_blueprint(),
     )
     filters = {}
     if user_id:
@@ -116,7 +118,8 @@ def modify_item_in_db(
     """
     dbo = GenericDbHelper(
         json_file=json_file,
-        request=app_context.get_request()
+        request=app_context.get_request(),
+        blueprint=app_context.get_blueprint(),
     )
     result = dbo.update_row(data)
     if result['error']:
@@ -147,7 +150,8 @@ def add_item_to_db(
     filters = {} if not filters else filters
     dbo = GenericDbHelper(
         json_file=json_file,
-        request=app_context.get_request()
+        request=app_context.get_request(),
+        blueprint=app_context.get_blueprint(),
     )
     result = dbo.create_row(data, filters)
     if result['error']:
@@ -165,7 +169,8 @@ def fetch_all_from_db_array(
     like_query_params: Optional[dict] = None,
     combinator: Optional[str] = None,
     order_param: str = None,
-) -> List[dict]:
+# ) -> List[dict]:
+) -> dict:
     """
     Fetches all items in a row's array from the database table
     using the GenericDbHelper class.
@@ -183,7 +188,8 @@ def fetch_all_from_db_array(
     """
     dbo = GenericDbHelper(
         json_file=json_file,
-        request=app_context.get_request()
+        request=app_context.get_request(),
+        blueprint=app_context.get_blueprint(),
     )
     result = dbo.fetch_array_rows(
         row_id=row_id,

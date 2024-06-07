@@ -1,30 +1,42 @@
 [project]
 name = "genericsuite"
-version = "0.1.3"
+version = "0.1.6"
 authors = [
-    { name="Carlos J. Ramirez", email="<tomkat_cr@yahoo.com>" }
+    { name="Carlos J. Ramirez", email="tomkat_cr@yahoo.com" }
 ]
 description = "The GenericSuite for Python (backend version)"
 readme = "README.md"
 requires-python = ">=3.9,<4.0"
 classifiers = [
+    'Development Status :: 3 - Alpha',
+    'Environment :: Console',
+    'Intended Audience :: Developers',
+    "License :: OSI Approved :: ISC License",
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
     "Operating System :: OS Independent",
+    'Topic :: Software Development',
+]
+dynamic = [
+    "license",
 ]
 
 [project.urls]
-Homepage = "https://github.com/tomkat-cr/genericsuite-be"
+Homepage = "https://genericsuite.carlosjramirez.com/Backend-Development/GenericSuite-Core/"
 Issues = "https://github.com/tomkat-cr/genericsuite-be/issues"
 
 [tool.poetry]
 name = "genericsuite"
-version = "0.1.3"
+version = "0.1.6"
 description = "The GenericSuite for Python (backend version)"
 authors = ["Carlos J. Ramirez <tomkat_cr@yahoo.com>"]
-license = "MIT"
+license = "ISC"
 readme = "README.md"
 repository = "https://github.com/tomkat-cr/genericsuite-be.git"
+homepage = "https://genericsuite.carlosjramirez.com/Backend-Development/GenericSuite-Core/"
 packages = [
     { include = "genericsuite" }
 ]
@@ -43,6 +55,7 @@ pyjwt = "^2.8.0"
 werkzeug = "^3.0.1"
 dnspython = "^2.6.0rc1"
 pymongo = "^4.6.0"
+cryptography = "^42.0.7"
 
 [tool.poetry.group.dev.dependencies]
 changelog-cli = "^0.7.1"

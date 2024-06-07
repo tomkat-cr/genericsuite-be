@@ -2,9 +2,12 @@
 """
 Flask abstraction layer
 """
-# from flask import Request as FlaskRequest, Response as FlaskResponse
 import os
 import importlib
+
+# https://stackoverflow.com/questions/47277374/flask-get-current-blueprint-webroot
+from flask import Blueprint as FlaskBlueprint
+
 
 DEBUG = False
 FRAMEWORK_LOADED = False
@@ -37,18 +40,18 @@ if FRAMEWORK == 'flask':
             """
 
 
-        class Blueprint(framework_module.Blueprint):
+        # class Blueprint(framework_module.Blueprint):
+        class Blueprint(FlaskBlueprint):
             """
             Blueprint class cloned from the selected Blueprint framework super class.
             This class is the one to be imported by the project modules
             """
 
 
-        # class CORSConfig(framework_module.CORS):
-        #     """
-        #     CORSConfig class cloned from the selected CORSConfig framework super class.
-        #     This class is the one to be imported by the project modules.
-        #     """
+        class BlueprintOne(Blueprint):
+            """
+            Class to register a new route with optional schema validation and authorization.
+            """
 
     except ImportError as err:
         raise ImportError(f"Unable to import '{FRAMEWORK}': {err}") from None

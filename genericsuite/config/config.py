@@ -23,17 +23,35 @@ import datetime
 
 def formatted_log_message(message: str) -> str:
     """ Returns a formatted message with database name and date/time """
-    return f"[{os.environ['APP_DB_NAME']}]" + \
+    return f"[{os.environ.get('APP_DB_NAME', 'APP_DB_NAME not set')}]" + \
         f" {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}" + \
         f" | {message}"
 
+def get_config_logger() -> logging.Logger:
+    """
+    Get the logger object.
+    """
+    return logging.getLogger(os.environ.get('APP_NAME'))
 
-def log_config_error(message: str) -> None:
+def config_log_error(message: str) -> None:
     """
     Log a message to the console.
     """
-    logger = logging.getLogger(os.environ.get('APP_NAME'))
-    logger.error("%s", formatted_log_message(message))
+    get_config_logger().error("%s", formatted_log_message(message))
+
+
+def config_log_debug(message: str) -> None:
+    """
+    Log a message to the console.
+    """
+    get_config_logger().debug("%s", formatted_log_message(message))
+
+
+def config_log_info(message: str) -> None:
+    """
+    Log a message to the console.
+    """
+    get_config_logger().debug("%s", formatted_log_message(message))
 
 
 def text_to_dict(text: str) -> Union[dict, None]:
@@ -44,7 +62,7 @@ def text_to_dict(text: str) -> Union[dict, None]:
     try:
         result = json.loads(text)
     except json.JSONDecodeError as e:
-        log_config_error(f'ERROR [C-E010] | converting text to dict: {e}')
+        config_log_error(f'ERROR [C-E010] | converting text to dict: {e}')
     return result
 
 
@@ -63,31 +81,42 @@ class Config():
 
         # Database configuration
 
+        if os.environ.get('AWS_SAM_LOCAL') == 'true':
+            # Handles the \@ issue in environment variables values when runs by "sam local start-api"
+            os.environ['APP_DB_URI'] = os.environ['APP_DB_URI'].replace('\\@', '@')
+            os.environ['APP_SUPERADMIN_EMAIL'] = \
+                os.environ['APP_SUPERADMIN_EMAIL'].replace('\\@', '@')
+
         self.DB_CONFIG = {
-            'mongodb_uri': os.environ.get('APP_DB_URI'),
-            'mongodb_db_name': os.environ.get('APP_DB_NAME'),
-            'dynamdb_prefix': '_test_',
+            'mongodb_uri': os.environ['APP_DB_URI'],
+            'mongodb_db_name': os.environ['APP_DB_NAME'],
+            'dynamdb_prefix': os.environ.get('DYNAMDB_PREFIX', '')  #   '_test_'
         }
         # DB_ENGINE = 'MONGO_DB'
         # DB_ENGINE = 'DYNAMO_DB'
-        self.DB_ENGINE = os.environ.get('APP_DB_ENGINE')
+        self.DB_ENGINE = os.environ['APP_DB_ENGINE']
 
         # App general configuration
 
         self.DEBUG = self.get_env('APP_DEBUG', '0') == '1'
 
-        self.APP_NAME = os.environ.get('APP_NAME')
+        self.APP_NAME = os.environ['APP_NAME']
         self.APP_VERSION = os.environ.get('APP_VERSION', 'N/A')
         self.STAGE = os.environ.get('APP_STAGE')
         self.SECRET_KEY = os.environ.get('SECRET_KEY', str(os.urandom(16)))
 
         # App specific configuration
 
-        self.APP_SECRET_KEY = os.environ.get('APP_SECRET_KEY')
+        self.APP_SECRET_KEY = os.environ['APP_SECRET_KEY']
         self.APP_SUPERADMIN_EMAIL = \
-            os.environ.get('APP_SUPERADMIN_EMAIL')
+            os.environ['APP_SUPERADMIN_EMAIL']
 
-        self.GIT_SUBMODULE_LOCAL_PATH = os.environ.get('GIT_SUBMODULE_LOCAL_PATH')
+        self.APP_HOST_NAME = os.environ['APP_HOST_NAME']
+        self.STORAGE_URL_SEED = os.environ['STORAGE_URL_SEED']
+
+        self.GIT_SUBMODULE_LOCAL_PATH = os.environ['GIT_SUBMODULE_LOCAL_PATH']
+
+        self.TEMP_DIR = os.environ.get('TEMP_DIR', '/tmp')
 
         # ............................
 
