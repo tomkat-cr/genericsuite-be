@@ -233,7 +233,7 @@ def save_file_from_url(
 
     Returns:
         (str, str, int, str): a tuple with the following elements:
-        attachment_url (str): URL for the image.
+        public_url (str): URL for the image.
         final_filename (str): file name of the image with date/time added.
         file_size (int): the file size in bytes.
         error (str): the eventual error message or None if no errors
@@ -258,7 +258,7 @@ def save_file_from_url(
     # attachment_url = public_url
     os.remove(tmp_file_path)  # Clean up the temporary file
 
-    result['attachment_url'] = upload_result['public_url']
+    result['public_url'] = upload_result['public_url']
     result['final_filename'] = upload_result['final_filename']
     result['error'] = upload_result['error']
     result['error_message'] = upload_result['error_message']
