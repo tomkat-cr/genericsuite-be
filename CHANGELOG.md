@@ -17,6 +17,14 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## Unreleased
+## 0.1.7 (2024-06-19)
+---
+
+### New
+Add password and API Keys env. vars. to AWS Secrets [GS-41].
+
+
 ## 0.1.6 (2024-06-06)
 ---
 
@@ -106,7 +114,7 @@ License changed to ISC [FA-244].
 ---
 
 ### New
-Add Makefile with `build`, `publish` and `publish-test` options.
+Add Makefile `build`, `publish` and `publish-test` options.
 
 ### Changes
 README enhanced instructions.

@@ -14,6 +14,9 @@ from genericsuite.util.current_user_data import (
 from genericsuite.util.jwt import AuthorizedRequest
 from genericsuite.util.utilities import get_default_resultset, get_id_as_string
 from genericsuite.util.app_logger import log_debug
+from genericsuite.util.aws_secrets import (
+    get_secrets_cache_filename as get_aws_secrets_filename
+)
 
 
 DEBUG = False
@@ -39,7 +42,8 @@ class ParamsFile():
         """
         return os.path.join(TEMP_DIR, filename)
 
-    def get_params_filename(self, user_id: Optional[str] = None) -> Union[str, None]:
+    def get_params_filename(self, user_id: Optional[str] = None
+                            ) -> Union[str, None]:
         """
         Get the filename where the parameters are stored.
         """
@@ -53,7 +57,8 @@ class ParamsFile():
                 PARAMS_FILE_USER_FILENAME_TEMPLATE.replace(
                     '[user_id]', user_id))
         _ = DEBUG and \
-            log_debug('GET_FILENAME-1) get_params_filename |' +
+            log_debug(
+                'GET_FILENAME-1) get_params_filename |' +
                 f' user_id: {user_id} | filename: {filename}')
         return filename
 
@@ -77,7 +82,7 @@ class ParamsFile():
                 result['resultset'] = json.load(fhdlr)
         _ = DEBUG and \
             log_debug(f'LOAD_PF-1) load_params_file | File: {filename}' +
-            f' | {result["resultset"]}')
+                      f' | {result["resultset"]}')
         return result
 
     def save_params_file(self, filename: str, data_to_save: dict) -> dict:
@@ -92,8 +97,9 @@ class ParamsFile():
             data_to_save['_id'] = get_id_as_string(data_to_save)
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data_to_save, f)
-        _ = DEBUG and log_debug(f'PF-2) save_params_file | filename: {filename} |' +
-            f' content: {data_to_save}')
+        _ = DEBUG and log_debug('PF-2) save_params_file |' +
+                                f' filename: {filename} |' +
+                                f' content: {data_to_save}')
         return result
 
 
@@ -150,7 +156,8 @@ class AppContext:
         Get current user data
         """
         # user_response = get_curr_user_data(self.request)
-        user_response = get_curr_user_data(request=self.request,
+        user_response = get_curr_user_data(
+            request=self.request,
             blueprint=self.blueprint)
         if user_response['error']:
             self.set_error(user_response['error_message'])
@@ -166,12 +173,14 @@ class AppContext:
                 self.user_data = {}
             else:
                 # Inconsistency Error
-                self.set_error(get_constant("ERROR_MESSAGES",
+                self.set_error(get_constant(
+                    "ERROR_MESSAGES",
                     "NO_USER_DATA", "System Error [AC-GUD-E010]" +
                     f" | id: {self.get_user_id()}"))
                 self.user_data = {}
         elif self.user_data.get('status', '1') == '0':
-            self.set_error(get_constant("ERROR_MESSAGES",
+            self.set_error(get_constant(
+                "ERROR_MESSAGES",
                 "ACCOUNT_INACTIVE", "User account inactive [AC-GUD-E020]"))
 
     def get_user_data(self, check_params_file: Optional[bool] = True):
@@ -187,7 +196,8 @@ class AppContext:
                 else:
                     params_file_result = pfc.load_params_file(filename)
                     if params_file_result['found']:
-                        # self.user_data = params_file_result['resultset']['user_data']
+                        # self.user_data = \
+                        #   params_file_result['resultset']['user_data']
                         self.user_data = params_file_result['resultset']
                     else:
                         self.get_user_data_raw()
@@ -195,7 +205,8 @@ class AppContext:
                             pfc.save_params_file(filename, self.user_data)
             else:
                 self.get_user_data_raw()
-        _ = DEBUG and log_debug("AppContext | GET_USER_DATA" +
+        _ = DEBUG and log_debug(
+            "AppContext | GET_USER_DATA" +
             f"\n | self.user_data: {self.user_data}" +
             f"\n | self.error_message: {self.error_message}")
         return self.user_data
@@ -277,7 +288,7 @@ class AppContext:
         var_name: str,
         value: Any,
     ) -> Any:
-        """ Get "other" data element value. """
+        """ Set environment variable value """
         self.env_data[var_name] = value
         return self.env_data[var_name]
 
@@ -314,8 +325,10 @@ def get_app_context(app_context_or_blueprint: Any):
     return app_context
 
 
-def delete_params_file(app_context_or_blueprint: Any,
-    action_data: Optional[Union[dict, None]]) -> None:
+def delete_params_file(
+    app_context_or_blueprint: Any,
+    action_data: Optional[Union[dict, None]]
+) -> None:
     """
     GenericDbHelper specific function to delete the parameters file (e.g. when
     general_config or user's users_config array is changed).
@@ -327,7 +340,8 @@ def delete_params_file(app_context_or_blueprint: Any,
             "action": "list", "read", "create", "update" or "delete"
             "resultset": resultset for data to be stored, delete or
                 retrieved with the keys: resultset, error, error_message.
-            "cnf_db": the table configuration. E.g. tablename is cnf_db['tablename']
+            "cnf_db": the table configuration. E.g. tablename is
+                cnf_db['tablename']
     """
     app_context = get_app_context(app_context_or_blueprint)
     pfc = ParamsFile(app_context.get_user_id())
@@ -335,8 +349,8 @@ def delete_params_file(app_context_or_blueprint: Any,
     tablename = action_data.get("cnf_db", {}).get("table_name")
 
     _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
-        f"\n | action_data: {action_data}" +
-        f"\n | tablename: {tablename}")
+                            f"\n | action_data: {action_data}" +
+                            f"\n | tablename: {tablename}")
     # Only delete the params file if the action is not read or list
     if action_data.get("action") in ["read", "list"]:
         return action_data['resultset']
@@ -346,7 +360,10 @@ def delete_params_file(app_context_or_blueprint: Any,
     if tablename:
         # Get the filename according to the table name
         if tablename == 'general_config':
-            filename = pfc.get_params_file_path(PARAMS_FILE_GENERAL_FILENAME)
+            filenames = [
+                pfc.get_params_file_path(PARAMS_FILE_GENERAL_FILENAME),
+                get_aws_secrets_filename()
+                ]
         else:
             # Get the user ID if it's not the general table
 
@@ -354,28 +371,31 @@ def delete_params_file(app_context_or_blueprint: Any,
             db_item = action_data['resultset']['resultset']
             if isinstance(db_item, str):
                 db_item = json.loads(db_item)
-            _ = DEBUG and log_debug('DB SPECIFIC FUNCTION: delete_params_file' +
-                f" | db_item: {db_item}")
+            _ = DEBUG and log_debug(
+                'DB SPECIFIC FUNCTION:' +
+                f" delete_params_file | db_item: {db_item}")
             # Inconsistency If _id not in resultset...
             if '_id' not in db_item:
                 return action_data['resultset']
 
             # Get the user ID from the resultset
             user_id = get_id_as_string(db_item)
-            _ = DEBUG and log_debug('DB SPECIFIC FUNCTION: delete_params_file' +
-                f" | user_id: {user_id}")
+            _ = DEBUG and log_debug(
+                'DB SPECIFIC FUNCTION:' +
+                f" delete_params_file | user_id: {user_id}")
 
-            filename = pfc.get_params_filename(user_id)
+            filenames = [pfc.get_params_filename(user_id)]
 
         _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
-            f"\n | filename: {filename}")
+                                f"\n | filenames: {filenames}")
 
         # Delete params file if exists
-        if os.path.exists(filename):
-            os.remove(filename)
-            _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
-                f"\n | File deleted: {filename}")
-        else:
-            _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
-                f"\n | File not found: {filename}")
+        for filename in filenames:
+            if os.path.exists(filename):
+                os.remove(filename)
+                _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
+                                        f"\n | File deleted: {filename}")
+            else:
+                _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
+                                        f"\n | File not found: {filename}")
     return action_data['resultset']

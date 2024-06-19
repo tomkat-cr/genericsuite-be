@@ -19,10 +19,11 @@ from genericsuite.util.generic_db_middleware import (
 )
 from genericsuite.util.jwt import AuthorizedRequest
 from genericsuite.util.utilities import get_default_resultset
+from genericsuite.util.aws_secrets import get_cache_secret as get_aws_secrets
 
 DEBUG = False
 USE_DB_PARAMS_DEFAULT = os.environ.get('USE_DB_PARAMS_DEFAULT', "1")
-# USE_DB_PARAMS_DEFAULT = "0"     # Usefull when local dev environment becomes slow
+# USE_DB_PARAMS_DEFAULT = "0"  # Usefull for slow local dev environments
 
 
 def get_general_config(app_context: AppContext) -> dict:
@@ -104,10 +105,39 @@ def get_config_from_db_raw(app_context: AppContext) -> dict:
                   f' resultset: {resultset}')
     return resultset
 
+
+def get_secrets_from_iaas(app_context: AppContext):
+    """
+    Get secrets from the iaas (AWS, GCP, Azure) and set environment variables.
+    """
+    result = get_default_resultset()
+    cloud_provider = os.environ.get("CLOUD_PROVIDER")
+    if not cloud_provider:
+        result["error"] = True
+        result["error_message"] = "ERROR: CLOUD_PROVIDER not set"
+        return result
+    if cloud_provider == "AWS":
+        iaas_secrets = get_aws_secrets(app_context)
+    # elif cloud_provider == "GCP":
+    #     iaas_secrets = get_secrets_from_gcp(app_context)
+    # elif cloud_provider == "AZURE":
+    #     iaas_secrets = get_secrets_from_azure(app_context)
+    else:
+        result["error"] = True
+        result["error_message"] = "ERROR: CLOUD_PROVIDER not supported"
+        return result
+    if iaas_secrets["error"]:
+        return iaas_secrets
+    for key, value in iaas_secrets["resultset"].items():
+        os.environ[key] = value
+    return result
+
+
 def get_all_params(app_context: AppContext):
     """
-    Get all dynamic parameters (general and user's). First try from the json
-    cache files, if not found, get it from the database.
+    Get all dynamic parameters (general and user's).
+    First try from the json cache files, if not found get it from the
+    database.
     """
     if PARAMS_FILE_ENABLED != '1':
         return get_config_from_db_raw(app_context)
@@ -119,10 +149,12 @@ def get_all_params(app_context: AppContext):
     params = get_default_resultset()
     filename = pfc.get_params_file_path(PARAMS_FILE_GENERAL_FILENAME)
     load_result = pfc.load_params_file(filename)
-    if load_result["found"]: # and load_result['resultset']:
+    if load_result["found"]:  # and load_result['resultset']:
         params['resultset'].update(load_result['resultset'])
-        _ = DEBUG and log_debug('GCFD-4) app_context_and_set_env |' +
-            f' General parameters loaded from file: {load_result["resultset"]}')
+        _ = DEBUG and log_debug(
+            'GCFD-4) app_context_and_set_env |' +
+            ' General parameters loaded from file:' +
+            f' {load_result["resultset"]}')
     else:
         # Get general params from json
         load_result = get_general_config(app_context)
@@ -139,9 +171,10 @@ def get_all_params(app_context: AppContext):
         if load_result["found"]:  # and load_result['resultset']:
             params['resultset'].update(
                 {r["config_name"]: r["config_value"]
-                for r in load_result['resultset'].get("users_config", [])}
+                    for r in load_result['resultset'].get("users_config", [])}
             )
-            _ = DEBUG and log_debug('GCFD-5) app_context_and_set_env |' +
+            _ = DEBUG and log_debug(
+                'GCFD-5) app_context_and_set_env |' +
                 ' User\'s parameters loaded from file:' +
                 f' {load_result["resultset"].get("users_config", [])}')
         else:
@@ -154,7 +187,8 @@ def get_all_params(app_context: AppContext):
     return params
 
 
-def app_context_and_set_env(request: AuthorizedRequest, blueprint: Any) -> AppContext:
+def app_context_and_set_env(request: AuthorizedRequest, blueprint: Any
+                            ) -> AppContext:
     """
     Set the Appcontext and get all the parameters
     (general and user's) to dynamic set environment variables
@@ -169,17 +203,26 @@ def app_context_and_set_env(request: AuthorizedRequest, blueprint: Any) -> AppCo
         other object to expapnd the session dat.
     """
     app_context = AppContext()
-    app_context.set_context_from_blueprint(blueprint=blueprint, request=request)
+    app_context.set_context_from_blueprint(blueprint=blueprint,
+                                           request=request)
     if app_context.has_error():
         log_error('GCFD-0) app_context_and_set_env ERROR:'
                   f' {app_context.get_error()}')
         return app_context
     _ = DEBUG and \
         log_debug('GCFD-1) app_context_and_set_env')
+    # Get secrets and set environment variables
+    params = get_secrets_from_iaas(app_context=app_context)
+    if params["error"]:
+        log_debug('GCFD-6) ERROR: app_context_and_set_env |' +
+                  f' Getting Secrets | params: {params}')
+        app_context.set_error(params["error_message"])
+        return app_context
+    # Get all the parameters (general and user's) from dynamic set (database)
     params = get_all_params(app_context=app_context)
     if params["error"]:
         log_debug('GCFD-3) ERROR: app_context_and_set_env |' +
-                f' params: {params}')
+                  f' params: {params}')
         app_context.set_error(params["error_message"])
         return app_context
     for key, value in params['resultset'].items():
