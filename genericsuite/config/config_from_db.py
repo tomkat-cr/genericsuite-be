@@ -116,12 +116,12 @@ def get_secrets_from_iaas(app_context: AppContext):
         result["error"] = True
         result["error_message"] = "ERROR: CLOUD_PROVIDER not set"
         return result
-    if cloud_provider == "AWS":
-        iaas_secrets = get_aws_secrets(app_context)
-    # elif cloud_provider == "GCP":
-    #     iaas_secrets = get_secrets_from_gcp(app_context)
-    # elif cloud_provider == "AZURE":
-    #     iaas_secrets = get_secrets_from_azure(app_context)
+    if cloud_provider.upper() == "AWS":
+        iaas_secrets = get_aws_secrets()
+    # elif cloud_provider.upper() == "GCP":
+    #     iaas_secrets = get_secrets_from_gcp()
+    # elif cloud_provider.upper() == "AZURE":
+    #     iaas_secrets = get_secrets_from_azure()
     else:
         result["error"] = True
         result["error_message"] = "ERROR: CLOUD_PROVIDER not supported"

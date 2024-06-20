@@ -1,7 +1,8 @@
 """
 This module contains functions for interacting with AWS Secrets Manager.
-IMPORTANT: It cannot use configs.py because it is used by config_from_db.py to
-get the secrets.
+IMPORTANT:
+* It cannot use configs.py because it is used by config_from_db.py to
+* It cannot use app_context, to avoid cycling imports.
 """
 import os
 import json
