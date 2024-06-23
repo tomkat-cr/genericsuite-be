@@ -26,6 +26,7 @@ SEND_FILE_AS_BINARY = False
 
 DEBUG = False
 
+
 def check_email(email) -> Optional[Match[AnyStr]]:
     """ Check that an email address is valid"""
     return re.fullmatch(EMAIL_REGEX, email)
@@ -94,8 +95,10 @@ def get_default_resultset() -> dict:
     return resultset
 
 
-def error_resultset(error_message: str,
-    message_code: str = '') -> dict:
+def error_resultset(
+    error_message: str,
+    message_code: str = ''
+) -> dict:
     """
     Return an error resultset.
     """
@@ -163,6 +166,7 @@ def send_file(
         download_name=download_name,
     )
 
+
 def send_file_as_bin(
     file_to_send: str,
     download_name: str = None,
@@ -188,9 +192,9 @@ def send_file_as_bin(
     }
     if DEBUG:
         log_debug("SEND_FILE_AS_BIN" +
-                    f"\n | file_to_send: {file_to_send}" +
-                    f"\n | download_name: {download_name}" +
-                    f"\n | headers: {headers}")
+                  f"\n | file_to_send: {file_to_send}" +
+                  f"\n | download_name: {download_name}" +
+                  f"\n | headers: {headers}")
         # log_debug("2) SEND_FILE | bin_to_b64_to_ascii(file_data):\n" +
         #           f"{bin_to_b64_to_ascii(file_data)}")
 
@@ -199,6 +203,7 @@ def send_file_as_bin(
         status_code=200,
         headers=headers
     )
+
 
 def send_file_text_text(
     file_to_send: str,
@@ -226,9 +231,9 @@ def send_file_text_text(
     }
     if DEBUG:
         log_debug("SEND_FILE_TEXT_TEXT" +
-                    f"\n | file_to_send: {file_to_send}" +
-                    f"\n | download_name: {download_name}" +
-                    f"\n | headers: {headers}")
+                  f"\n | file_to_send: {file_to_send}" +
+                  f"\n | download_name: {download_name}" +
+                  f"\n | headers: {headers}")
         log_debug(f"2) SEND_FILE |file_encoded:\n{file_encoded}")
     return Response(
         body=file_encoded,
@@ -243,7 +248,8 @@ def bin_to_b64_to_ascii(data):
     """
     _ = DEBUG and log_debug(f"BIN_TO_B64_TO_ASCII | data:\n{data}")
     data = base64.b64encode(data)
-    _ = DEBUG and log_debug(f"BIN_TO_B64_TO_ASCII | base64.b64encode(data):\n{data}")
+    _ = DEBUG and log_debug("BIN_TO_B64_TO_ASCII | " +
+                            f"base64.b64encode(data):\n{data}")
     return data.decode('ascii')
 
 

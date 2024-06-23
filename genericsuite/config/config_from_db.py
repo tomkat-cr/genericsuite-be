@@ -19,7 +19,7 @@ from genericsuite.util.generic_db_middleware import (
 )
 from genericsuite.util.jwt import AuthorizedRequest
 from genericsuite.util.utilities import get_default_resultset
-from genericsuite.util.aws_secrets import get_cache_secret as get_aws_secrets
+
 
 DEBUG = False
 USE_DB_PARAMS_DEFAULT = os.environ.get('USE_DB_PARAMS_DEFAULT', "1")
@@ -106,33 +106,6 @@ def get_config_from_db_raw(app_context: AppContext) -> dict:
     return resultset
 
 
-def get_secrets_from_iaas(app_context: AppContext):
-    """
-    Get secrets from the iaas (AWS, GCP, Azure) and set environment variables.
-    """
-    result = get_default_resultset()
-    cloud_provider = os.environ.get("CLOUD_PROVIDER")
-    if not cloud_provider:
-        result["error"] = True
-        result["error_message"] = "ERROR: CLOUD_PROVIDER not set"
-        return result
-    if cloud_provider.upper() == "AWS":
-        iaas_secrets = get_aws_secrets()
-    # elif cloud_provider.upper() == "GCP":
-    #     iaas_secrets = get_secrets_from_gcp()
-    # elif cloud_provider.upper() == "AZURE":
-    #     iaas_secrets = get_secrets_from_azure()
-    else:
-        result["error"] = True
-        result["error_message"] = "ERROR: CLOUD_PROVIDER not supported"
-        return result
-    if iaas_secrets["error"]:
-        return iaas_secrets
-    for key, value in iaas_secrets["resultset"].items():
-        os.environ[key] = value
-    return result
-
-
 def get_all_params(app_context: AppContext):
     """
     Get all dynamic parameters (general and user's).
@@ -211,13 +184,6 @@ def app_context_and_set_env(request: AuthorizedRequest, blueprint: Any
         return app_context
     _ = DEBUG and \
         log_debug('GCFD-1) app_context_and_set_env')
-    # Get secrets and set environment variables
-    params = get_secrets_from_iaas(app_context=app_context)
-    if params["error"]:
-        log_debug('GCFD-6) ERROR: app_context_and_set_env |' +
-                  f' Getting Secrets | params: {params}')
-        app_context.set_error(params["error_message"])
-        return app_context
     # Get all the parameters (general and user's) from dynamic set (database)
     params = get_all_params(app_context=app_context)
     if params["error"]:

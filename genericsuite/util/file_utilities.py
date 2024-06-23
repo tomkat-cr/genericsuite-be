@@ -11,7 +11,7 @@ from genericsuite.config.config import Config
 def temp_filename(extension: Optional[str] = None) -> str:
     """
     Returns a temporary filename with the specified extension.
-    
+
     Args:
     extension (str): The extension of the temporary file.
     If None, the extension is randomly generated.

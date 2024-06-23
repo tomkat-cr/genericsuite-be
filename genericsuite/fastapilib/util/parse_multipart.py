@@ -9,8 +9,10 @@ from genericsuite.util.utilities import get_file_extension
 from genericsuite.util.parse_multipart import download_file
 
 
-async def download_file_fa(file: UploadFile,
-    extension: Optional[str] = None) -> str:
+async def download_file_fa(
+    file: UploadFile,
+    extension: Optional[str] = None
+) -> str:
     """
     Downloads a file from a FastAPI UploadFile object.
     Args:

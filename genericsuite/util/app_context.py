@@ -5,6 +5,7 @@ from typing import Any, Union, Optional
 import os
 import json
 
+from genericsuite.config.config_secrets import get_secrets_cache_filename
 from genericsuite.constants.const_tables import get_constant
 from genericsuite.util.current_user_data import (
     get_curr_user_data,
@@ -14,9 +15,6 @@ from genericsuite.util.current_user_data import (
 from genericsuite.util.jwt import AuthorizedRequest
 from genericsuite.util.utilities import get_default_resultset, get_id_as_string
 from genericsuite.util.app_logger import log_debug
-from genericsuite.util.aws_secrets import (
-    get_secrets_cache_filename as get_aws_secrets_filename
-)
 
 
 DEBUG = False
@@ -362,7 +360,7 @@ def delete_params_file(
         if tablename == 'general_config':
             filenames = [
                 pfc.get_params_file_path(PARAMS_FILE_GENERAL_FILENAME),
-                get_aws_secrets_filename()
+                get_secrets_cache_filename()
                 ]
         else:
             # Get the user ID if it's not the general table
