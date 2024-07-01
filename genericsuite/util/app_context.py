@@ -1,7 +1,7 @@
 """
 Context manager to preserve data between GPT functions
 """
-from typing import Any, Union, Optional
+from typing import Any, Union, Optional, Callable
 import os
 import json
 
@@ -212,7 +212,7 @@ class AppContext:
     def get_other_data(
         self,
         element_name: str,
-        generator_func: callable = None,
+        generator_func: Callable = None,
         generator_params: dict = None,
     ):
         """
@@ -360,8 +360,9 @@ def delete_params_file(
         if tablename == 'general_config':
             filenames = [
                 pfc.get_params_file_path(PARAMS_FILE_GENERAL_FILENAME),
-                get_secrets_cache_filename()
-                ]
+                get_secrets_cache_filename("secrets"),
+                get_secrets_cache_filename("envs"),
+            ]
         else:
             # Get the user ID if it's not the general table
 

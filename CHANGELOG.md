@@ -18,11 +18,19 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 
 ## Unreleased
-## 0.1.7 (2024-06-19)
+## 0.1.7 (2024-07-01)
 ---
 
 ### New
-Add password and API Keys env. vars. to AWS Secrets [GS-41].
+Add password and API Keys to AWS Secrets (encrypted) [GS-41].
+Add plain envvars to AWS Secrets (unencrypted) [GS-96].
+Add GCP and Azure secrets initial code [GS-41].
+Add CLOUD_PROVIDER envvar to .env.example [GS-41].
+Add AWS_DEPLOYMENT_TYPE envvar to .env.example [GS-96].
+
+### Changes
+Change: # APP_STAGE=dev commented in .env.example to allow its value dynamic assignment [GS-41].
+Change: minor linting changes.
 
 
 ## 0.1.6 (2024-06-06)

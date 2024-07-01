@@ -1,6 +1,7 @@
 """
 Secrets config management
 """
+from typing import Callable
 import os
 
 from genericsuite.util.aws_secrets import (
@@ -16,8 +17,10 @@ from genericsuite.util.azure_secrets import (
     get_secrets_cache_filename as get_azure_cache_filename,
 )
 
+DEBUG = False
 
-def get_secrets_from_iaas(get_default_resultset: callable, logger: callable
+
+def get_secrets_from_iaas(get_default_resultset: Callable, logger: Callable
                           ) -> dict:
     """
     Get secrets from the iaas (AWS, GCP, Azure) and set environment variables.
@@ -42,11 +45,12 @@ def get_secrets_from_iaas(get_default_resultset: callable, logger: callable
     if iaas_secrets["error"]:
         return iaas_secrets
     for key, value in iaas_secrets["resultset"].items():
+        _ = DEBUG and logger.debug(f"EnvVar {key} = {value}")
         os.environ[key] = value
     return result
 
 
-def get_secrets_cache_filename() -> str:
+def get_secrets_cache_filename(secret_type: str = "") -> str:
     """
     Get secrets cache filename
     """
@@ -56,11 +60,11 @@ def get_secrets_cache_filename() -> str:
         raise Exception(error_message)
     filename = None
     if cloud_provider.upper() == "AWS":
-        filename = get_aws_cache_filename()
+        filename = get_aws_cache_filename(secret_type)
     elif cloud_provider.upper() == "GCP":
-        filename = get_gcp_cache_filename()
+        filename = get_gcp_cache_filename(secret_type)
     elif cloud_provider.upper() == "AZURE":
-        filename = get_azure_cache_filename()
+        filename = get_azure_cache_filename(secret_type)
     else:
         error_message = "ERROR: CLOUD_PROVIDER not supported [GSCF-E020]"
         raise Exception(error_message)
