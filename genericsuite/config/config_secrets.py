@@ -24,8 +24,27 @@ def get_secrets_from_iaas(get_default_resultset: Callable, logger: Callable
                           ) -> dict:
     """
     Get secrets from the iaas (AWS, GCP, Azure) and set environment variables.
+
+    If the GET_SECRETS_ENABLED environment variable is "1" (default value),
+    there must be environment variables set for:
+        CLOUD_PROVIDER, APP_NAME, APP_STAGE,
+        AWS_REGION or GCP_REGION or AZURE_REGION
+    and the mandatory environment variables must be defined in the cloud
+    provider secrets manager.
+    Check the script "scripts/aws_secrets/aws_secrets_manager.sh" in the
+    GenericSuite Backend Scripts package for more information.
+
+    If GET_SECRETS_ENABLED is not "1", the mandatory environment variables
+    must be set:
+        APP_DB_URI, APP_SUPERADMIN_EMAIL, APP_DB_NAME, APP_DB_ENGINE,
+        APP_NAME, APP_SECRET_KEY, APP_HOST_NAME, STORAGE_URL_SEED,
+        GIT_SUBMODULE_LOCAL_PATH
     """
     result = get_default_resultset()
+    get_secrets_enabled = os.environ.get("GET_SECRETS_ENABLED", "1")
+    if get_secrets_enabled.upper() != "1":
+        _ = DEBUG and logger.debug("GET_SECRETS_ENABLED not set to 1")
+        return result
     cloud_provider = os.environ.get("CLOUD_PROVIDER")
     if not cloud_provider:
         result["error"] = True
