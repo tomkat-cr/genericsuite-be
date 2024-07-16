@@ -23,7 +23,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### New
 Add password and API Keys to AWS Secrets (encrypted) [GS-41].
-Add GET_SECRETS_ENABLED environment variable to enable/disable cloud provider secrets [GS-41].
+Add GET_SECRETS_ENABLED envvars to enable/disable cloud provider secrets [GS-41].
+Add GET_SECRETS_CRITICAL and GET_SECRETS_CRITICAL envvars to fine-grained disabling of cloud secrets manager for critical secrets and plain envvars [GS-41].
 Add plain envvars to AWS Secrets (unencrypted) [GS-96].
 Add GCP and Azure secrets initial code [GS-41].
 Add CLOUD_PROVIDER envvar to .env.example [GS-41].

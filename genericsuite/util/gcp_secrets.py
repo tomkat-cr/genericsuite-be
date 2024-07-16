@@ -64,18 +64,29 @@ def get_cache_secret(get_default_resultset: Callable, logger: Callable
         result['error_message'] = 'ERROR: Missing environment variables' + \
             ' (APP_NAME, APP_STAGE, GCP_REGION) [G-ACF-E020]'
         return result
-    secret_sets = [
-        {
+    secret_sets = []
+    if os.environ.get("GET_SECRETS_CRITICAL", "1") == "1":
+        _ = DEBUG and logger.debug("GET_SECRETS_CRITICAL set to 1..." +
+                                   " getting secrets from the cloud...")
+        secret_sets.append({
             "encrypted": True,
             "secret_name": f'{app_name.lower()}-{app_stage.lower()}-secrets',
             "secrets_cache_filename": get_secrets_cache_filename('secrets')
-        },
-        {
+        })
+    else:
+        _ = DEBUG and logger.debug("GET_SECRETS_CRITICAL set to 0..." +
+                                   " getting secrets from environment...")
+    if os.environ.get("GET_SECRETS_ENVVARS", "1") == "1":
+        _ = DEBUG and logger.debug("GET_SECRETS_ENVVARS set to 1..." +
+                                   " getting envvars from the cloud...")
+        secret_sets.append({
             "encrypted": False,
             "secret_name": f'{app_name.lower()}-{app_stage.lower()}-envs',
             "secrets_cache_filename": get_secrets_cache_filename('envs')
-        },
-    ]
+        })
+    else:
+        _ = DEBUG and logger.debug("GET_SECRETS_ENVVARS set to 0..." +
+                                   " getting envvars from environment...")
     result['resultset'] = {}
     for secret_set in secret_sets:
         secret_name = secret_set["secret_name"]

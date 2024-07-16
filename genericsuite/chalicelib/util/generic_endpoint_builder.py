@@ -60,7 +60,8 @@ def generate_blueprints_from_json(
             route_methods = route['methods']
             route_handler_type = route['handler_type']
             other_params = {
-                "name": bp_name
+                "name": bp_name,
+                "app": app
             }
             other_params["params"] = route['params']
             if route_handler_type == "GenericEndpointHelper":
@@ -126,9 +127,11 @@ def generic_route_handler(
         )
 
     # Set environment variables from the database configurations.
+    bp = BlueprintOne(other_params.get('name'))
+    bp.register(app=other_params['app'], options={})
     app_context = app_context_and_set_env(
         request=request,
-        blueprint=BlueprintOne(other_params.get('name'))
+        blueprint=bp
     )
     if app_context.has_error():
         return return_resultset_jsonified_or_exception(

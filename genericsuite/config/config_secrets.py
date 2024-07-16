@@ -41,9 +41,9 @@ def get_secrets_from_iaas(get_default_resultset: Callable, logger: Callable
         GIT_SUBMODULE_LOCAL_PATH
     """
     result = get_default_resultset()
-    get_secrets_enabled = os.environ.get("GET_SECRETS_ENABLED", "1")
-    if get_secrets_enabled.upper() != "1":
-        _ = DEBUG and logger.debug("GET_SECRETS_ENABLED not set to 1")
+    if os.environ.get("GET_SECRETS_ENABLED", "1") != "1":
+        _ = DEBUG and logger.debug("GET_SECRETS_ENABLED set to 0..." +
+                                   " getting all envvars from environment")
         return result
     cloud_provider = os.environ.get("CLOUD_PROVIDER")
     if not cloud_provider:
