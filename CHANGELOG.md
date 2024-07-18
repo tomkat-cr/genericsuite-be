@@ -17,25 +17,24 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## Unreleased
-## 0.1.7 (2024-07-01)
+## 0.1.7 (2024-07-18)
 ---
 
 ### New
 Add password and API Keys to AWS Secrets (encrypted) [GS-41].
-Add GET_SECRETS_ENABLED envvars to enable/disable cloud provider secrets [GS-41].
-Add GET_SECRETS_CRITICAL and GET_SECRETS_CRITICAL envvars to fine-grained disabling of cloud secrets manager for critical secrets and plain envvars [GS-41].
 Add plain envvars to AWS Secrets (unencrypted) [GS-96].
+Add GET_SECRETS_ENABLED envvars to enable/disable cloud provider secrets [GS-41].
+Add GET_SECRETS_ENVVARS and GET_SECRETS_CRITICAL envvars to fine-grained disabling of cloud secrets manager for critical secrets and plain envvars [GS-41].
+Add CLOUD_PROVIDER envvar to .env.example, to choose the secrets manager cloud provider [GS-41].
 Add GCP and Azure secrets initial code [GS-41].
-Add CLOUD_PROVIDER envvar to .env.example [GS-41].
-Add AWS_DEPLOYMENT_TYPE envvar to .env.example [GS-96].
+Add AWS_DEPLOYMENT_TYPE envvar to .env.example, to have multiple deploying options like lambda, ec2 or fargate [GS-96].
 
 ### Changes
 Change: # APP_STAGE=dev commented in .env.example to allow its value dynamic assignment [GS-41].
 Change: minor linting changes.
 
 
-## 0.1.6 (2024-06-06)
+## 0.1.6 (2024-06-07)
 ---
 
 ### New
