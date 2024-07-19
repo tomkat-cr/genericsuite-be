@@ -33,6 +33,9 @@ Add AWS_DEPLOYMENT_TYPE envvar to .env.example, to have multiple deploying optio
 Change: # APP_STAGE=dev commented in .env.example to allow its value dynamic assignment [GS-41].
 Change: minor linting changes.
 
+### Fixes
+Fix: "Can only access Blueprint.current_app if it's registered to an app." error in Chalice generic endpoint builder when there are specfici DB function [GS-81]
+
 
 ## 0.1.6 (2024-06-07)
 ---
