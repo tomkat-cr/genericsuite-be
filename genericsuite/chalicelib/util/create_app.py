@@ -25,7 +25,7 @@ framework_class = importlib.import_module("chalice")
 DEBUG = False
 
 
-def create_app(app_name: str, settings = None) -> Any:
+def create_app(app_name: str, settings=None) -> Any:
     """ Create the Chalice App """
 
     if settings is None:
@@ -52,7 +52,7 @@ def create_app(app_name: str, settings = None) -> Any:
     # Set Content-type: multipart/form-data as Binary
     # to properly handle image uploads
     chalice_app.api.binary_types.append("multipart/form-data")
-    # log_debug(f'1) chalice_app.api.binary_types: {chalice_app.api.binary_types}')
+    # log_debug(f'api.binary_types: {chalice_app.api.binary_types}')
 
     # Register general endpoints
     chalice_app.register_blueprint(menu_options.bp, url_prefix='/menu_options')

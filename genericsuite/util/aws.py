@@ -28,7 +28,7 @@ from genericsuite.config.config import Config
 DEBUG = True
 
 STORAGE_URL_SEPARATOR = '||'
-STORAGE_ENCRYPTION = os.environ.get('STORAGE_ENCRYPTION', '') == '1'   # Defaults to True
+STORAGE_ENCRYPTION = os.environ.get('STORAGE_ENCRYPTION', '') == '1'
 
 
 def s3_base_url(bucket_name: str) -> str:
@@ -124,19 +124,14 @@ def upload_file_to_s3(
             bucket_name,
             dest_path,
         )
-        log_debug("")
-        log_debug(f"File uploaded successfully S3 Bucket: {bucket_name}" +
+        log_debug(f"\nFile uploaded successfully S3 Bucket: {bucket_name}" +
                   f" | path: {dest_path}")
     except FileNotFoundError:
         error = f"The file {source_path} was not found."
-        log_debug("")
         log_debug(error)
-        # raise
     except NoCredentialsError:
         error = "Credentials not available for S3 upload."
-        log_debug("")
         log_debug(error)
-        # raise
 
     if public_file and not error:
         try:
@@ -166,7 +161,6 @@ def upload_file_to_s3(
         # except s3_client.exceptions.S3Error as e:
         except Exception as err:
             error = f"Failed to set ACL for {dest_path}: {err}"
-            log_debug("")
             log_debug(error)
 
     if STORAGE_ENCRYPTION:
@@ -181,8 +175,7 @@ def upload_file_to_s3(
 
     log_debug(f"Public url: {public_url}")
     log_debug(f"Final filename: {final_filename}")
-    log_debug(f"Error: {error}")
-    log_debug("")
+    log_debug(f"Error: {error}\n")
 
     result['public_url'] = public_url
     result['final_filename'] = final_filename
@@ -219,7 +212,6 @@ def save_file_from_url(
     sub_dir: Optional[str] = None,
     original_filename: Optional[str] = None
 ) -> dict:
-# ) -> (str, str, int, str):
     """
     Save an image from a URL to AWS S3
 
@@ -321,7 +313,8 @@ def download_s3_object(bucket_name: str, key: str,
     Args:
         bucket_name (str): The base path of the S3 bucket.
         key (str): The S3 key of the object to be retrieved.
-        local_file_path (str, optional): The temporary path to download the file.
+        local_file_path (str, optional): The temporary path to download
+            the file.
             If None, it will use a random-generated temporary path.
             Defaults to None.
 
@@ -340,13 +333,16 @@ def download_s3_object(bucket_name: str, key: str,
         log_debug(f"Object downloaded from S3: {bucket_name}/{key}")
     except Exception as err:
         result['error'] = True
-        result['error_message'] = f"ERROR-DS3O-010 - Failed to download object: {err}"
+        result['error_message'] = \
+            f"ERROR-DS3O-010 - Failed to download object: {err}"
         log_error(result['error_message'])
     return result
 
 
-def get_storage_masked_url(bucket_name: str, key: str,
-    hostname: Optional[Union[str, None]] = None):
+def get_storage_masked_url(
+    bucket_name: str, key: str,
+    hostname: Optional[Union[str, None]] = None
+):
     """
     Get S3 bucket masked URL
     Args:
@@ -363,7 +359,7 @@ def get_storage_masked_url(bucket_name: str, key: str,
         protocol = protocol or os.environ.get('RUN_PROTOCOL', 'https')
     else:
         hostname = settings.APP_HOST_NAME
-        protocol ='https'
+        protocol = 'https'
     extension = key.split('.')[-1] if '.' in key else ''
     extension = '.' + extension if extension else ''
     key = key.rsplit('.', 1)[0] if '.' in key else key
@@ -425,10 +421,12 @@ def storage_retieval(
     if other_params['mode'] == 'get':
         retrieval_resultset = get_s3_object(bucket_name=bucket_name, key=key)
     else:
-        retrieval_resultset = download_s3_object(bucket_name=bucket_name, key=key)
+        retrieval_resultset = download_s3_object(bucket_name=bucket_name,
+                                                 key=key)
     if retrieval_resultset.get('error'):
         # return retrieval_resultset
-        return error_resultset(retrieval_resultset['error_message'], "ASR-E1030")
+        return error_resultset(retrieval_resultset['error_message'],
+                               "ASR-E1030")
     retrieval_resultset['mime_type'] = get_mime_type(key)
     retrieval_resultset['filename'] = key
     return retrieval_resultset
@@ -449,7 +447,8 @@ def prepare_asset_url(public_url):
         parsed_url = urlparse(public_url)
         final_public_url = dev_mask_ext_hostname + parsed_url.path
         if DEBUG:
-            log_debug(f"prepare_asset_url | dev_mask_ext_hostname: {dev_mask_ext_hostname}"
+            log_debug("prepare_asset_url" +
+                      f" | dev_mask_ext_hostname: {dev_mask_ext_hostname}"
                       f" | parsed_url: {parsed_url}"
                       f" | final_public_url: {final_public_url}")
     return final_public_url

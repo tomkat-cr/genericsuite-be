@@ -21,17 +21,35 @@ import logging
 import datetime
 
 
+from genericsuite.config.config_secrets import get_secrets_from_iaas
+
+
+def get_default_resultset() -> dict:
+    """Returns an standard base resultset, to be used in the building
+       of responses to the outside world
+    """
+    resultset = {
+        'error': False,
+        'error_message': None,
+        'totalPages': None,
+        'resultset': {}
+    }
+    return resultset
+
+
 def formatted_log_message(message: str) -> str:
     """ Returns a formatted message with database name and date/time """
     return f"[{os.environ.get('APP_DB_NAME', 'APP_DB_NAME not set')}]" + \
         f" {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}" + \
         f" | {message}"
 
+
 def get_config_logger() -> logging.Logger:
     """
     Get the logger object.
     """
     return logging.getLogger(os.environ.get('APP_NAME'))
+
 
 def config_log_error(message: str) -> None:
     """
@@ -74,6 +92,14 @@ class Config():
         # Database (any other place than the App initialization)
         self.app_context = app_context
 
+        # Get secrets and set environment variables
+        params = get_secrets_from_iaas(get_default_resultset,
+                                       get_config_logger())
+        if params["error"]:
+            error_msg = 'CNFG-1) ERROR: Config.__init__() |' + \
+                        f' Getting Secrets | params: {params}'
+            raise Exception(error_msg)
+
         # ............................
 
         # IMPORTANT: these parameters values must be always retrieved
@@ -82,15 +108,17 @@ class Config():
         # Database configuration
 
         if os.environ.get('AWS_SAM_LOCAL') == 'true':
-            # Handles the \@ issue in environment variables values when runs by "sam local start-api"
-            os.environ['APP_DB_URI'] = os.environ['APP_DB_URI'].replace('\\@', '@')
+            # Handles the \@ issue in environment variables values when runs
+            # by "sam local start-api"
+            os.environ['APP_DB_URI'] = \
+                os.environ['APP_DB_URI'].replace('\\@', '@')
             os.environ['APP_SUPERADMIN_EMAIL'] = \
                 os.environ['APP_SUPERADMIN_EMAIL'].replace('\\@', '@')
 
         self.DB_CONFIG = {
             'mongodb_uri': os.environ['APP_DB_URI'],
             'mongodb_db_name': os.environ['APP_DB_NAME'],
-            'dynamdb_prefix': os.environ.get('DYNAMDB_PREFIX', '')  #   '_test_'
+            'dynamdb_prefix': os.environ.get('DYNAMDB_PREFIX', '')  # '_test_'
         }
         # DB_ENGINE = 'MONGO_DB'
         # DB_ENGINE = 'DYNAMO_DB'
@@ -131,7 +159,6 @@ class Config():
         # Languages
 
         self.DEFAULT_LANG = self.get_env('DEFAULT_LANG', 'en')
-
 
     def get_env(self, var_name: str, def_value: Any = None) -> Any:
         """
