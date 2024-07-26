@@ -17,6 +17,16 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## 0.1.8 (2024-07-26)
+---
+
+### New
+Add: ".nvmrc" file to set the repo default node version.
+
+### Fixes
+Fix: audio processing issues in FastAPI Apps by configuring expose_headers=["*"] in fastapi.add_middleware() [GS-95].
+
+
 ## 0.1.7 (2024-07-18)
 ---
 

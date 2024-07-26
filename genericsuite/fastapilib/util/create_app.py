@@ -1,7 +1,7 @@
 """
 App main module (create_app) for FastAPI
 """
-from typing import Any, Optional, Union
+from typing import Any
 
 # import importlib
 # import logging
@@ -31,7 +31,7 @@ from genericsuite.config.config_from_db import set_init_custom_data
 DEBUG = False
 
 
-def create_app(app_name: str, settings = None) -> Any:
+def create_app(app_name: str, settings: Config = None) -> Any:
     """
     Create the FastAPI App
     """
@@ -58,7 +58,8 @@ def create_app(app_name: str, settings = None) -> Any:
     # Set Content-type: multipart/form-data as Binary
     # to properly handle image uploads
     # fastapi_app.api.binary_types.append("multipart/form-data")
-    # log_debug(f'1) fastapi_app.api.binary_types: {fastapi_app.api.binary_types}')
+    # log_debug(f'1) fastapi_app.api.binary_types: ' +
+    #     '{fastapi_app.api.binary_types}')
 
     # Register generic endpoints
     fastapi_app.include_router(menu_options.router, prefix='/menu_options')
@@ -90,6 +91,7 @@ def set_cors_config(fastapi_app, settings):
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["*"],
     )
 
 
