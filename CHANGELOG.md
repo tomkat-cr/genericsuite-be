@@ -23,6 +23,9 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### New
 Add: ".nvmrc" file to set the repo default node version.
 
+### Changes
+Upgrade dependency versions (pymongo==4.7.2 -> pymongo==4.8.0)
+
 ### Fixes
 Fix: audio processing issues in FastAPI Apps by configuring expose_headers=["*"] in fastapi.add_middleware() [GS-95].
 
