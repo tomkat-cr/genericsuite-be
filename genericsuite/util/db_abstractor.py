@@ -29,7 +29,7 @@ from genericsuite.util.request_handler import RequestHandler
 # ----------------------- Factory Methods -----------------------
 
 
-DEBUG = False
+DEBUG = True
 
 DEFAULT_WRITE_CAPACITY_UNITS = 1
 DEFAULT_READ_CAPACITY_UNITS = 1
@@ -168,20 +168,23 @@ class MongodbService(DbAbstract):
             Object: The database connection object.
         """
         _ = DEBUG and \
-            log_debug("DB_ABSTRACTOR | MongodbService | get_db_connection" + 
+            log_debug(
+                "DB_ABSTRACTOR | MongodbService | get_db_connection" +
                 # f"\n | DB_CONFIG: {self._app_config.DB_CONFIG}" +
                 " | Starting...")
         client = pymongo.MongoClient(self._app_config.DB_CONFIG['mongodb_uri'])
         _ = DEBUG and \
-            log_debug("DB_ABSTRACTOR | MongodbService | get_db_connection" +
+            log_debug(
+                "DB_ABSTRACTOR | MongodbService | get_db_connection" +
                 f"\n | client: {client}" +
-                "\n | DB Client OK...") 
+                "\n | DB Client OK...")
         db_connector = client.get_database(
             self._app_config.DB_CONFIG['mongodb_db_name'])
         _ = DEBUG and \
-            log_debug("DB_ABSTRACTOR | MongodbService | get_db_connection" +
+            log_debug(
+                "DB_ABSTRACTOR | MongodbService | get_db_connection" +
                 f"\n | db_connector: {db_connector}" +
-                "\n | DB Connector OK...") 
+                "\n | DB Connector OK...")
         return db_connector
 
     def test_connection(self) -> str:
@@ -371,63 +374,61 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 '>>--> DynamoDbTableAbstract | __init__ | item_structure: ' +
                 str(item_structure)
             )
-        self.set_table_name(item_structure['TableName'])
-        self.set_key_schema(item_structure['KeySchema'])
-        self.set_global_secondary_indexes(
-            item_structure.get('GlobalSecondaryIndexes', [])
-        )
-        self.set_attribute_definitions(item_structure['AttributeDefinitions'])
+        self._prefix = item_structure['prefix']
+        self._table_name = item_structure['TableName']
+        self._key_schema = None
+        self._attribute_definitions = None
+        self._global_secondary_indexes = None
         self._db_conection = db_conection
         self.inserted_id = None
         self.modified_count = None
         self.deleted_count = None
 
-    def set_table_name(self, table_name):
+    def get_table_definitions(self):
         """
-        Set the table name
+        The first time the table is used, get the table definitions
         """
-        self._table_name = table_name
-
-    def set_key_schema(self, key_schema):
-        """
-        Set the table key schema
-        """
-        self._key_schema = key_schema
-
-    def set_attribute_definitions(self, attribute_definitions):
-        """
-        Set the table attribute definitions
-        """
-        self._attribute_definitions = attribute_definitions
-
-    def set_global_secondary_indexes(self, global_secondary_indexes):
-        """
-        Set the table global secondary indexes
-        """
-        self._global_secondary_indexes = global_secondary_indexes
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/client/describe_table.html
+        response = self._db_conection.meta.client.describe_table(
+            TableName=self.get_table_name()
+        )
+        _ = DEBUG and log_debug(f'|||---> get_table_definitions: {response}')
+        item_structure = response['Table']
+        self._key_schema = item_structure['KeySchema']
+        self._attribute_definitions = item_structure['AttributeDefinitions']
+        self._global_secondary_indexes = \
+            item_structure.get('GlobalSecondaryIndexes', [])
 
     def get_table_name(self):
         """
-        Get the table name
+        Get the table name, adding the prefix
         """
-        return self._table_name
+        table_name = f'{self._prefix}{self._table_name}'
+        _ = DEBUG and log_debug(f'|||---> get_table_name: {table_name}')
+        return table_name
 
     def get_key_schema(self):
         """
         Get the table key schema
         """
+        if self._key_schema is None:
+            self.get_table_definitions()
         return self._key_schema
 
     def get_attribute_definitions(self):
         """
         Get the table attribute definitions
         """
+        if self._attribute_definitions is None:
+            self.get_table_definitions()
         return self._attribute_definitions
 
     def get_global_secondary_indexes(self):
         """
         Get the table global secondary indexes
         """
+        if self._global_secondary_indexes is None:
+            self.get_table_definitions()
         return self._global_secondary_indexes
 
     def element_name(self, element_name):
@@ -439,6 +440,154 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         # return element_name['AttributeName'] \
         #   if element_name['AttributeName'] != '_id' else 'id'
         return element_name['AttributeName']
+
+    def get_conditions(self, key, value):
+        conditions = []
+        if not isinstance(value, dict):
+            conditions.append({
+                'key': key,
+                'comp_oper': '=',
+                'value': value,
+            })
+        else:        
+            # https://www.mongodb.com/docs/manual/reference/operator/query-comparison/
+            # https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Query.FilterExpression.html
+            # https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Query.KeyConditionExpressions.html
+            # https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.OperatorsAndFunctions.html#Expressions.OperatorsAndFunctions.Syntax
+            if '$regex' in value:
+                # It's a regex. E.g. 'attribute_name':
+                #     {'$regex': '.*any_value.*', '$options': 'si'}
+                conditions.append({
+                    'attr': key,
+                    'key': f'{key}Rg',
+                    'value': value['$regex'].replace('.*', ''),
+                    'function': f'contains ({key}, :{key}Rg)',
+                })
+            if '$eq' in value:
+                conditions.append({
+                    'attr': key,
+                    'key': f'{key}Eq',
+                    'comp_oper': '=',
+                    'value': value['$eq'],
+                })
+            if '$ne' in value:
+                conditions.append({
+                    'attr': key,
+                    'key': f'{key}Ne',
+                    'comp_oper': '<>',
+                    'value': value['$ne'],
+                })
+            if '$gt' in value:
+                conditions.append({
+                    'attr': key,
+                    'key': f'{key}Gt',
+                    'comp_oper': '>',
+                    'value': value['$gt'],
+                })
+            if '$gte' in value:
+                conditions.append({
+                    'attr': key,
+                    'key': f'{key}Gte',
+                    'comp_oper': '>=',
+                    'value': value['$gt'],
+                })
+            if '$lt' in value:
+                conditions.append({
+                    'attr': key,
+                    'key': f'{key}Lt',
+                    'comp_oper': '<',
+                    'value': value['$lt'],
+                })
+            if '$lte' in value:
+                conditions.append({
+                    'attr': key,
+                    'key': f'{key}Lte',
+                    'comp_oper': '<=',
+                    'value': value['$lte'],
+                })
+            if '$in' in value or '$nin' in value:
+                # https://stackoverflow.com/questions/40283653/how-to-use-in-statement-in-filterexpression-using-array-dynamodb
+                cond_key = '$in' if '$in' in value else '$nin'
+                i = 0
+                values = {}
+                key_list = []
+                for v in value[cond_key]:
+                    i += 1
+                    key = f'{key}In{i}'
+                    key_list.append(f':{key}')
+                    values[key] = v
+                    # values[key] = f'"{v}"' if isinstance(v, str) else v
+                conditions.append({
+                    'value': values,
+                    'function':
+                        ('NOT ' if '$nin' in value else '') +
+                        f"{key} IN ({','.join(key_list)})",
+                })
+                # i = 0
+                # for v in value['$in']:
+                #     i += 1
+                #     conditions.append({
+                #         'attr': key,
+                #         'key': f'{key}In{i}',
+                #         'comp_oper': '=',
+                #         'value': v,
+                #         'separator': 'OR',
+                #         'multiple': True if i != len(value['$in'])
+                #         or i == 1 else False,
+                #     })
+            # if '$nin' in value:
+            #     i = 0
+            #     for v in value['$in']:
+            #         i += 1
+            #         conditions.append({
+            #             'attr': key,
+            #             'key': f'{key}Nin{i}',
+            #             'comp_oper': '<>',
+            #             'value': v,
+            #             'separator': 'AND',
+            #             'multiple': True if i != len(value['$in'])
+            #             or i == 1 else False,
+            #         })
+        return conditions
+
+    def get_cond_exp_val(self, item):
+        condition_values = {}
+        expresion_parts = []
+        for key in item.keys():
+            conditions = self.get_conditions(key, item[key])
+            group_char = ''
+            inner_separator = ''
+            for condition in conditions:
+                attr = condition.get('attr')
+                key = condition.get('key')
+                comp_oper = condition.get('comp_oper')
+                value = condition.get('value')
+                multiple = condition.get('multiple')
+                function = condition.get('function')
+                if multiple is None:
+                    group_char = ''
+                    open_group = ''
+                    close_group = ''
+                elif multiple:
+                    group_char = '(' if group_char == '' else ')'
+                    open_group = '(' if group_char == '(' else ''
+                    close_group = ')' if group_char == ')' else ''
+            if value:
+                if not isinstance(value, dict):
+                    value = {key: value}
+                for key_name, key_value in value.items():
+                    condition_values = condition_values | {':' + key_name: key_value}
+            if function is None:
+                expresion_parts.append(
+                    f'{inner_separator}' +
+                    f'{open_group}{attr} {comp_oper} :{key}{close_group}')
+            else:
+                expresion_parts.append(
+                    f'{inner_separator}' +
+                    f'{open_group}{function}{close_group}')
+            if multiple is not None:
+                inner_separator = condition.get('separator', 'AND') + ' '
+        return condition_values, expresion_parts
 
     def get_condition_expresion_values(self, data_list, separator=' AND '):
         """
@@ -455,59 +604,40 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             tuple: A tuple containing the condition values dictionary and the
                    condition expression string.
         """
-        # condition_values = list(map(lambda item: list(
-        #   map(lambda key: {':'+key: item[key]}, item.keys())
-        # ), data_list))
         condition_values = {}
+        expresion_parts = []
+        _ = DEBUG and log_debug(f'|||---> get_condition_expresion_values | data_list: {data_list} | separator: {separator}')
         for item in data_list:
-            for key in item.keys():
-                condition_values = condition_values | {':' + key: item[key]}
-        expresion_parts = list(
-            map(
-                lambda item:
-                list(map(lambda key: key + ' = :' + key, item.keys())),
-                data_list
-            )
-        )
-        condition_expresion = separator.join(expresion_parts[0])
-        # return condition_values[0][0], condition_expresion
+            _ = DEBUG and log_debug(f'|||---> get_condition_expresion_values | item: {item}')
+            if '$and' in item or '$or' in item:
+                separator = '$or' if '$or' in item else '$and'
+                for subitem in item[separator]:
+                    _ = DEBUG and log_debug(f'|||---> get_condition_expresion_values | subitem: {subitem}')
+                    condition_values, expresion_parts = \
+                        self.get_cond_exp_val(subitem)
+            else:
+                condition_values, expresion_parts = \
+                    self.get_cond_exp_val(item)
+        separator = ' OR ' if '$or' in separator else ' AND ' \
+            if '$and' in separator else separator
+        condition_expresion = separator.join(expresion_parts)
         return condition_values, condition_expresion
 
     def get_primary_keys(self, query_params):
         """
         Look for keys in partition/sort key
         """
-        keys = list(
-            filter(
-                lambda key: query_params.get(
-                    self.element_name(key)
-                    # OJO
-                    # ) != None, self.get_key_schema()
-                ) is not None,
-                self.get_key_schema()
-            )
-        )
-        keys = list(
-            map(
-                lambda key: {
-                    self.element_name(key):
-                        query_params.get(self.element_name(key))
-                }, keys
-            )
-        )
+        keys = list(filter(lambda key:
+                    query_params.get(self.element_name(key)) is not None,
+                    self.get_key_schema()))
+        keys = list(map(lambda key: {self.element_name(key):
+                    query_params.get(self.element_name(key))}, keys))
         return keys[0] if len(keys) > 0 else None
 
     def get_global_secondary_indexes_keys(self, query_params):
         """
         Look for keys in global secondary indexes
         """
-        # reduced_indexes = list(map(lambda global_index: {
-        #     global_index["IndexName"]: list(
-        #       map(lambda key: self.element_name(
-        #           key
-        #       ), global_index["KeySchema"])
-        #     )
-        # }, self.get_global_secondary_indexes()))
         reduced_indexes = [
             {
                 'name': global_index["IndexName"],
@@ -577,20 +707,20 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             response = table.scan()
             return response.get('Items') if response else None
 
-        query_params = self.id_conversion(query_params)
-        keys = self.get_primary_keys(query_params)
+        top_and_or = '$and' in query_params or '$or' in query_params
+        keys = None
 
-        if keys:
-            if DEBUG:
-                log_debug('===> Keys found: ' + str(keys))
-            response = table.get_item(Key=keys)
-            if DEBUG:
-                log_debug(response)
-            return self.remove_decimal_types(
-                response.get('Item')
-            ) if response else None
-
-        keys, index_name = self.get_global_secondary_indexes_keys(query_params)
+        if not top_and_or:
+            query_params = self.id_conversion(query_params)
+            keys = self.get_primary_keys(query_params)
+            if keys:
+                _ = DEBUG and log_debug('===> Keys found: ' + str(keys))
+                response = table.get_item(Key=keys)
+                _ = DEBUG and log_debug(response)
+                return self.remove_decimal_types(response.get('Item')) \
+                    if response else None
+            keys, index_name = \
+                self.get_global_secondary_indexes_keys(query_params)
 
         if not keys:
             condition_values, condition_expresion = \
@@ -607,7 +737,7 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             )
             return self.remove_decimal_types(
                 response.get('Items')[0]
-            ) if response else None
+            ) if response and response.get('Items') else None
 
         if DEBUG:
             log_debug('===> secondary Keys found: ' + str(keys))
@@ -861,19 +991,28 @@ class DynamodbServiceSuper(DbAbstract, DynamoDbUtilities):
     Dynamodb Service super class
     """
     def get_db_connection(self):
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb.html
         self._db = boto3.resource('dynamodb')
-        # self.create_table_name_propeties()
+        self._prefix = self._app_config.DB_CONFIG['dynamdb_prefix']
+        self.create_table_name_propeties()
         return self._db
 
     def create_table_name_propeties(self):
         """
-        Create DynamoDb table name propeties
+        Create DynamoDb table name class propeties so tables can be retrieved
+        as a subscript (like MongoDB tables) using the __getitem__() method.
         """
-        item_list = self.list_collections()
-        for item_props in item_list:
-            item_name = item_props["TableName"]
+        item_list = self.list_collections(prefix=self._prefix)
+        for item_name in item_list:
+            item_props = {
+                "TableName": item_name.replace(self._prefix, ''),
+                "prefix": self._prefix,
+            }
             if DEBUG:
-                log_debug('>>--> Setting property: ' + item_name)
+                log_debug(
+                    '||| create_table_name_propeties' +
+                    f'\n>>--> Setting property: {item_name}' +
+                    f' | item_props: {item_props}')
             setattr(
                 self,
                 item_name,
@@ -889,7 +1028,7 @@ class DynamodbServiceSuper(DbAbstract, DynamoDbUtilities):
     def get_db(self):
         """
         Returns the database object.
-    
+
         Returns:
             Object: The database object. For DynamoDb, it must returns this
                 Class as a whole.
@@ -898,23 +1037,29 @@ class DynamodbServiceSuper(DbAbstract, DynamoDbUtilities):
 
     def test_connection(self):
         """
-        Test the database connection (fake).
+        Test the database connection. If the table list can be retrieved,
+        the connection is OK.
 
         Returns:
-            str: The test result.
+            str: A JSON string with the table list.
         """
-        return dumps(self.list_collection_names())
+        return dumps(self.list_collection_names(prefix=self._prefix))
 
     def create_tables(self):
         """
-        Create the tables in the database.
+        Create the tables in the DynamoDB database.
         """
         default_provisioned_throughput = {
             'ReadCapacityUnits': DEFAULT_READ_CAPACITY_UNITS,
             'WriteCapacityUnits': DEFAULT_WRITE_CAPACITY_UNITS
         }
-        item_list = self.list_collections()
-        for item_props in item_list:
+        item_list = self.list_collections(prefix=self._prefix)
+        for item_name in item_list:
+            # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/client/describe_table.html
+            response = self._db.meta.client.describe_table(TableName=item_name)
+            item_props = response.get('Table')
+            if not item_props:
+                continue
             item_name = item_props["TableName"]
             if DEBUG:
                 log_debug('>>--> Creating Dynamodb Table: ' + item_name)
@@ -965,35 +1110,61 @@ class DynamodbService(DynamodbServiceSuper):
     """
     Class for DynamodbService.
     """
-    def list_collections(self, collection_name: str = None):
+    def list_collections(self, collection_name: str = None,
+                         prefix: str = None):
         """
-        List all collections in the database.
-        """
+        List all or filtered tables in the DynamoDB database.
 
+        Args:
+            collection_name (str): The name of one table to filter by.
+            prefix (str): The prefix of the tables to filter by.
+
+        Returns:
+            list: A list of table names.
+        """
         try:
             # Initialize an empty list to hold table names
             table_names = []
             # Use the DynamoDB client to list tables
+            # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/client/list_tables.html
             response = self._db.meta.client.list_tables()
+            _ = DEBUG and \
+                log_debug(f'||| list_collections | response: {response}')
             # Extract table names from the response and add them to the list
-            table_names.extend(response.get('TableNames', []))
+            table_names.extend(
+                [tn for tn in response.get('TableNames', [])
+                 if not prefix or (prefix and tn.startswith(prefix))]
+            )
             # Check if there are more tables to fetch
             while 'LastEvaluatedTableName' in response:
                 # Fetch more tables starting from the last evaluated table name
                 response = self._db.meta.client.list_tables(
                     ExclusiveStartTableName=response['LastEvaluatedTableName']
                 )
-                # Extract table names and add them to the list
-                table_names.extend(response.get('TableNames', []))
+                # Extract the next set of table names and add them to the list
+                table_names.extend(
+                    [tn for tn in response.get('TableNames', [])
+                     if not prefix or (prefix and tn.startswith(prefix))]
+                )
             # Optionally, filter table names if a collection_name is provided
             if collection_name:
-                table_names = [name for name in table_names if name == collection_name]
+                table_names = [name for name in table_names
+                               if name == collection_name]
             # Return the list of table names
+            _ = DEBUG and \
+                log_debug(f'||| list_collections | table_names: {table_names}')
             return table_names
         except Exception as err:
             # Log the exception and return an empty list in case of an error
             log_debug(f"Error fetching table names: {str(err)}")
             return []
+
+    def __getitem__(self, item_name):
+        table_name = f"{self._prefix}{item_name}"
+        _ = DEBUG and \
+            log_debug(f'||| __getitem__ | item_name: {item_name} |' +
+                      f' table_name: {table_name}')
+        return getattr(self, table_name)
 
 
 class DynamodbServiceBuilder(DbAbstract):
@@ -1024,7 +1195,7 @@ def set_db_request(request):
 
     Args:
         request: The request object.
-    
+
     Returns
         None.
     """
