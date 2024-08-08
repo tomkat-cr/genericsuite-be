@@ -82,7 +82,8 @@ def login_user(
     if not other_params:
         other_params = {}
     psw_class = Passwords()
-    dbo = GenericDbHelper(json_file="users", request=request, blueprint=blueprint)
+    dbo = GenericDbHelper(json_file="users", request=request,
+                          blueprint=blueprint)
     if DEBUG:
         log_debug(f'login_user | request: {request}')
         # log_debug('login_user | bp.current_request.to_dict(): ' +
@@ -110,8 +111,8 @@ def login_user(
     user = dbo.fetch_row_by_entryname_raw('email', username)
     if user['error']:
         return return_resultset_jsonified_or_exception(user)
-    if DEBUG:
-        log_debug(f'login_user | user[resultset]: {user}')
+    _ = DEBUG and \
+        log_debug(f'login_user | user: {user}')
     if user['resultset']:
         if 'passcode' in user['resultset']:
             if psw_class.verify_password(user['resultset']['passcode'],
@@ -136,7 +137,7 @@ def login_user(
             result['error_message'] = 'Inconsistency [L4]'
     else:
         result['error_message'] = 'Could not verify [L2]'
-    if DEBUG:
+    _ = DEBUG and \
         log_debug(f'login_user | FINAL result: {result}')
     return return_resultset_jsonified_or_exception(result, 401)
 
@@ -211,6 +212,7 @@ def super_admin_create(
             "creation_date": 1635033994,
             "update_date": 1635033994,
             "birthday": -131760000,
+            "gender": 'm',
         }
         for field in dbo.get_mandatory_fields(record=request_body,
                                               is_create=True):

@@ -448,8 +448,9 @@ class GenericDbHelperSuper:
         """
         specific_func_name = self.cnf_db.get('specific_function', None)
         if specific_func_name:
-            specific_func = self.blueprint.get_current_app() \
-                .custom_data.get(specific_func_name)
+            specific_func = self.blueprint.get_current_app().custom_data.get(
+                specific_func_name
+            )
             if not specific_func:
                 raise Exception(f"Specific function {specific_func_name}" +
                                 " not found.")

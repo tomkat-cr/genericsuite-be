@@ -21,8 +21,14 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ## 0.1.9 (2024-08-04)
 ---
 
-### Fixes
-Make DynamoDb tables with prefix work with the GS DB Abstraction [GS-102]
+### New
+Add GS_LOCAL_ENVIR envvar to detect a local database running in a docker container [GS-102].
+
+### Changes
+Make DynamoDb tables with prefix work with the GS DB Abstraction [GS-102].
+Add error handling to all GenericDbHelper methods [GS-102].
+DynamoDB abstraction "update_one()" method handles update_one, replace_one, $addToSet and $pull operations [GS-102].
+App logger shows LOCAL condition and database engine.
 
 
 ## 0.1.8 (2024-07-27)

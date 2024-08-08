@@ -13,6 +13,7 @@ from werkzeug.local import LocalProxy
 
 import pymongo
 import boto3
+import botocore
 
 from genericsuite.util.app_logger import (
     log_debug,
@@ -23,7 +24,7 @@ from genericsuite.util.app_logger import (
 #     import dynamodb_table_structures, \
 #     DEFAULT_WRITE_CAPACITY_UNITS, DEFAULT_READ_CAPACITY_UNITS
 
-from genericsuite.config.config import Config
+from genericsuite.config.config import Config, is_local_service
 from genericsuite.util.request_handler import RequestHandler
 
 # ----------------------- Factory Methods -----------------------
@@ -278,19 +279,34 @@ class DynamoDbUtilities:
         """
         return json.loads(json.dumps(item), parse_float=Decimal)
 
-    def remove_decimal_types(self, item):
+    def remove_decimal_types(self, item: dict, projection: dict = None):
         """
         To be used before sending responses to entity
         """
+        if not projection:
+            projection = {}
         if DEBUG:
-            log_debug('====> remove_decimal_types | item BEFORE: ' + str(item))
+            log_debug('====> REMOVE_DECIMAL_TYPES' + 
+                      f' | projection: {projection}' +
+                      f' | item BEFORE: {item}')
         item = self.id_conversion(item)
         # item = json.loads(json.dumps(item, default=str))
         item = json.loads(json.dumps(item, default=float))
         item = self.id_addition(item)
+        item = {k: v for k, v in item.items() if projection.get(k, 1) == 1}
         if DEBUG:
-            log_debug('====> remove_decimal_types | item AFTER: ' + str(item))
+            log_debug('====> REMOVE_DECIMAL_TYPES | item AFTER: ' + str(item))
         return item
+
+    def remove_decimal_types_list(self, items: list, projection: dict = None):
+        """
+        To be used before sending responses to entity as a list
+        """
+        if items is None:
+            _ = DEBUG and \
+                log_debug('remove_decimal_types_list | None result: []')
+            return []
+        return [self.remove_decimal_types(item, projection) for item in items]
 
 
 class DynamoDbFindIterator(DynamoDbUtilities):
@@ -345,6 +361,13 @@ class DynamoDbFindIterator(DynamoDbUtilities):
                 str(self._num) + ' | len(self._data_set): ' +
                 str(len(self._data_set))
             )
+        if isinstance(self._data_set, dict):
+            if self._num > 0:
+                raise StopIteration
+            self._num += 1
+            return self.remove_decimal_types(
+                self.id_addition(self._data_set)
+            )
         if (not self._limit or self._num <= self._limit) and \
            self._data_set and self._num < len(self._data_set):
             # _result = self.prepare_item_with_no_floats(
@@ -362,6 +385,36 @@ class DynamoDbFindIterator(DynamoDbUtilities):
             self._num += 1
             return _result
         raise StopIteration
+
+    def sort(self, column: str, direction: str):
+        if isinstance(self._data_set, dict):
+            return self
+        if self._data_set is None:
+            self._data_set = []
+        else:
+            self._data_set.sort(
+                key=lambda data_set: data_set.get(column),
+                reverse=(direction != 'asc'))
+        return self
+
+
+class DynamoDbFindOne(DynamoDbFindIterator):
+    def get(self, item_name, default_value=None):
+        _ = DEBUG and \
+            log_debug('>>--> DynamoDbFindOne | get()' +
+                      f' | item_name: {item_name}' +
+                      f' | default_value: {default_value} | result: '
+                      f'{self._data_set.get(item_name, default_value)}')
+        return self._data_set.get(item_name, default_value)
+
+    def __getitem__(self, item_name):
+        _ = DEBUG and \
+            log_debug('>>--> DynamoDbFindOne | __getitem__()' +
+                      f' | item_name: {item_name}' +
+                      f' | value: {self._data_set.get(item_name)}')
+        if item_name not in self._data_set:
+            raise KeyError(item_name)
+        return self._data_set[item_name]
 
 
 class DynamoDbTableAbstract(DynamoDbUtilities):
@@ -445,6 +498,7 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         conditions = []
         if not isinstance(value, dict):
             conditions.append({
+                'attr': key,
                 'key': key,
                 'comp_oper': '=',
                 'value': value,
@@ -680,32 +734,56 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             )
         return keys, index_name
 
-    def generic_query(self, query_params, proyection=None):
+    def generic_query(self, query_params: dict, projection: dict = None,
+                      query_type: str = 'find', select: str = None) -> list:
         """
         Perform a query on the DynamoDB table from MongoDb style query params.
 
         Args:
-            query_params (dict): The parameters for the MongoDb query.
-            proyection (dict): The projection for the query. Defaults to an
-            empty dictionary.
+            query_params (dict): The filter for the MongoDb query.
+            projection (dict): The projection for the query.
+                Uses the ProjectionExpression attribute.
+                Defaults to an empty dictionary.
+            query_type (str): query type: 'find' get one or more items,
+                'find_one': get one item.
+            select (str): The select for the query.
+                Possible values: 'ALL_ATTRIBUTES' | 'ALL_PROJECTED_ATTRIBUTES'
+                | 'SPECIFIC_ATTRIBUTES' | 'COUNT'.
+                Defaults to None, meaning ALL_ATTRIBUTES.
 
         Returns:
-            dict: The result of the query.
+            list: The result of the query.
         """
-        if not proyection:
-            proyection = {}
+        if not projection:
+            projection = {}
+        # projection_expression = (",".join([k for k, v
+        #                          in projection.items() if v == 1]))
+        if not select:
+            select = 'ALL_ATTRIBUTES' if not projection \
+                else 'SPECIFIC_ATTRIBUTES'
+        select = select.upper()
         if DEBUG:
             log_debug(
-                '>>--> generic_query() | table: ' + self.get_table_name() +
-                ' | query_params: ' + str(query_params) + ' | proyection: ' +
-                str(proyection)
-            )
+                f'>>--> generic_query() | table: {self.get_table_name()}' +
+                f' | query_params: {query_params}' +
+                f' | projection: {projection}' +
+                f' | query_type: {query_type}' +
+                f' | select: {select}')
 
         table = self._db_conection.Table(self.get_table_name())
 
         if not query_params or len(query_params) == 0:
             response = table.scan()
-            return response.get('Items') if response else None
+            if select == "COUNT":
+                count = len(response.get('Items', []))
+                _ = DEBUG and \
+                    log_debug(f'generic_query | COUNT 4: {count}')
+                return count
+            _ = DEBUG and \
+                log_debug('generic_query | response.get(Items):' +
+                          f' {response.get("Items")}')
+            return self.remove_decimal_types_list(
+                response.get('Items', []), projection)
 
         top_and_or = '$and' in query_params or '$or' in query_params
         keys = None
@@ -714,11 +792,23 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             query_params = self.id_conversion(query_params)
             keys = self.get_primary_keys(query_params)
             if keys:
-                _ = DEBUG and log_debug('===> Keys found: ' + str(keys))
-                response = table.get_item(Key=keys)
+                _ = DEBUG and log_debug('generic_query | ===> Keys found: ' +
+                                        str(keys))
+                # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/table/get_item.html
+                params = {
+                    'Key': keys,
+                }
+                # if projection_expression:
+                #     params['ProjectionExpression'] = projection_expression
+                response = table.get_item(**params)
                 _ = DEBUG and log_debug(response)
-                return self.remove_decimal_types(response.get('Item')) \
-                    if response else None
+                if select == "COUNT":
+                    count = 1 if response and response.get('Item') else 0
+                    _ = DEBUG and \
+                        log_debug(f'generic_query | COUNT 1: {count}')
+                    return count
+                return self.remove_decimal_types(response.get('Item', {}),
+                                                 projection)
             keys, index_name = \
                 self.get_global_secondary_indexes_keys(query_params)
 
@@ -727,42 +817,73 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 self.get_condition_expresion_values([query_params])
             if DEBUG:
                 log_debug(
+                    'generic_query | ' +
                     'No keys found... perform fullscan | condition_values: ' +
                     str(condition_values) + ' | condition_expresion: ' +
                     str(condition_expresion)
                 )
-            response = table.scan(
-                ExpressionAttributeValues=condition_values,
-                FilterExpression=condition_expresion
-            )
-            return self.remove_decimal_types(
-                response.get('Items')[0]
-            ) if response and response.get('Items') else None
+            # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/table/scan.html
+            params = {
+                'ExpressionAttributeValues': condition_values,
+                'Select': select,
+            }
+            if condition_expresion:
+                params['FilterExpression'] = condition_expresion
+            # if projection_expression:
+            #     params['ProjectionExpression'] = projection_expression
+            response = table.scan(**params)
+            if query_type == 'find_one':
+                if select == "COUNT":
+                    count = 1 if response and response.get('Items') and \
+                        len(response.get('Items')) > 0 else 0
+                    _ = DEBUG and \
+                        log_debug(f'generic_query | COUNT 2: {count}')
+                    return count
+                return self.remove_decimal_types(
+                    response.get('Items')[0] if response and
+                    response.get('Items') and
+                    len(response.get('Items')) > 0 else [],
+                    projection)
+            if select == "COUNT":
+                count = len(response.get('Items', []))
+                _ = DEBUG and \
+                    log_debug(f'generic_query | COUNT 3: {count}')
+                return count
+            return self.remove_decimal_types_list(
+                response.get('Items', []), projection)
 
         if DEBUG:
-            log_debug('===> secondary Keys found: ' + str(keys))
+            log_debug('generic_query | ===> secondary Keys found: ' + str(keys))
             log_debug(keys)
         condition_values, condition_expresion = \
             self.get_condition_expresion_values(keys)
         if DEBUG:
             log_debug(
+                'generic_query | ' +
                 '===> secondary Keys pre query elements | condition_values: ' +
                 str(condition_values) + ' | condition_expresion:' +
                 str(condition_expresion)
             )
-        response = table.query(
-            IndexName=index_name,
-            ExpressionAttributeValues=condition_values,
-            KeyConditionExpression=condition_expresion
-        )
-
+        params = {
+            'IndexName': index_name,
+            'ExpressionAttributeValues': condition_values,
+            'KeyConditionExpression': condition_expresion,
+            'Select': select,
+        }
+        if condition_expresion:
+            params['FilterExpression'] = condition_expresion
+        # if projection_expression:
+        #     params['ProjectionExpression'] = projection_expression
+        response = table.query(**params)
         if DEBUG:
             log_debug(response)
-        if response and len(response.get('Items', [])) > 0:
-            return self.remove_decimal_types(response.get('Items')[0])
-        return None
+        if query_type == 'find_one':
+            return self.remove_decimal_types(
+                response.get('Items', [])[0], projection)
+        return self.remove_decimal_types_list(response.get('Items', []),
+                                              projection)
 
-    def find(self, query_params, proyection=None):
+    def find(self, query_params, projection=None):
         """
         Translate MongoDb 'find' to DynamoDb 'query' and returns the iterator
 
@@ -772,19 +893,19 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             int(skip)
         ).limit(int(limit))
         """
-        if not proyection:
-            proyection = {}
+        if not projection:
+            projection = {}
         if DEBUG:
             log_debug(
                 '>>--> find() | table: ' + self.get_table_name() +
-                ' | query_params: ' + str(query_params) + ' | proyection: ' +
-                str(proyection)
+                ' | query_params: ' + str(query_params) + ' | projection: ' +
+                str(projection)
             )
         return DynamoDbFindIterator(
-            self.generic_query(query_params, proyection)
+            self.generic_query(query_params, projection, query_type='find')
         )
 
-    def find_one(self, query_params, proyection=None):
+    def find_one(self, query_params, projection=None):
         """
         Translate MongoDb 'find_one' to DynamoDb 'query'' and returns the
         result.
@@ -793,15 +914,19 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
 
         resultset['resultset'] = db.users.find_one({'_id': id}, projection)
         """
-        if not proyection:
-            proyection = {}
+        if not projection:
+            projection = {}
         if DEBUG:
             log_debug(
                 '>>--> find_one() | table: ' + self.get_table_name() +
-                ' | query_params: ' + str(query_params) + ' | proyection: ' +
-                str(proyection)
+                ' | query_params: ' + str(query_params) + ' | projection: ' +
+                str(projection)
             )
-        return self.generic_query(query_params, proyection)
+        return self.generic_query(query_params, projection,
+                                  query_type='find_one')
+        # return DynamoDbFindOne(
+        #     self.generic_query(query_params, projection, query_type='find_one')
+        # )
 
     def insert_one(self, new_item):
         """
@@ -818,6 +943,7 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         self.inserted_id = None
         new_item['_id'] = self.new_id()
         new_item = self.prepare_item_with_no_floats(new_item)
+        _ = DEBUG and log_debug(f'insert_one | new_item: {new_item}')
         try:
             result = table.put_item(Item=new_item)
             self.inserted_id = new_item['_id']
@@ -828,12 +954,17 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                     ' | new_item: ' + str(new_item) + ' | self.inserted_id: ' +
                     str(self.inserted_id) + ' | result: ' + str(result)
                 )
-            return self
-        except Exception as err:
+        except botocore.exceptions.ClientError as err:
             log_error(
                 'insert_one: Error creating Item [IO_ERR_010]: ' + str(err)
             )
-        return False
+            raise err
+        except Exception as err:
+            log_error(
+                'insert_one: Error creating Item [IO_ERR_020]: ' + str(err)
+            )
+            raise err
+        return self
 
     def replace_one(self, key_set, update_set_original):
         """
@@ -843,7 +974,9 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         The MongoDb call style:
             (see update_one)
         """
-        return self.update_one(key_set, {'$set': update_set_original})
+        # Replace what is was in the item
+        return self.update_one(key_set, update_set_original)
+        # return self.update_one(key_set, {'$set': update_set_original})
 
     def update_one(self, key_set, update_set_original):
         """
@@ -853,6 +986,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         The MongoDb call style:
 
         Case 1: $set
+        # Update the item, preserving the attributes not present in
+        # the updated_record
 
         resultset['resultset']['rows_affected'] = str(
           db.users.update_one(
@@ -862,6 +997,7 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         )
 
         Case 2: $addToSet
+        # Add a new element to an array in the item
 
         resultset['resultset']['rows_affected'] = str(
           db.users.update_one(
@@ -871,6 +1007,7 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         )
 
         Case 3: $pull
+        # Remove an existing element from an array in the item
 
         resultset['resultset']['rows_affected'] = str(
           db.users.update_one(
@@ -883,6 +1020,18 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
               }}
           ).modified_count
         )
+
+        Case 4: none of the above
+        # Replace what is was in the item
+
+        resultset['resultset']['rows_affected'] = str(
+          db.users.update_one(
+             {'_id': ObjectId(record['_id'])},
+             updated_record
+          ).modified_count
+        )
+
+
         """
         if DEBUG:
             log_debug(
@@ -896,12 +1045,47 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         if not keys:
             log_warning('update_one: No partition keys found [UO_ERR_010]')
             return False
+
+        result = None
+        if '$set' in update_set_original or \
+           '$addToSet' in update_set_original or \
+           '$pull' in update_set_original:
+            try:
+                result = table.get_item(Key=keys)
+            except Exception as err:
+                log_error('update_one: Error getting existing Item' +
+                          f' [UO_ERR_030]: {str(err)}')
+            return False
+            if not result.get('Item'):
+                log_error('update_one: Item not found [UO_ERR_040]')
+                return False
+
         if '$set' in update_set_original:
-            update_set = update_set_original['$set']
+            # Update the item, preserving the attributes not present in
+            # the update_set_original
+            update_set = result['Item'].update(update_set_original['$set'])
         elif '$addToSet' in update_set_original:
-            pass
+            # Add a new element to an array in the item
+            array_field, array_value = next(
+                iter(update_set_original['$addToSet'].items())
+            )
+            if array_field in result['Item']:
+                result['Item'][array_field].append(array_value)
+            else:
+                result['Item'][array_field] = [array_value]
+            update_set = result['Item']
         elif '$pull' in update_set_original:
-            pass
+            # Remove an existing element from an array in the item
+            array_field, array_value = next(
+                iter(update_set_original['$pull'].items())
+            )
+            if array_field in result['Item']:
+                result['Item'][array_field].remove(array_value)
+            update_set = result['Item']
+        else:
+            # Replace what is was in the item
+            update_set = update_set_original
+
         update_set = self.prepare_item_with_no_floats(update_set)
         expression_attribute_values, update_expression = \
             self.get_condition_expresion_values([update_set], ', ')
@@ -940,7 +1124,7 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             return self
         except Exception as err:
             log_error(
-                'update_one: Error ipdating Item [UO_ERR_020]: ' + str(err)
+                'update_one: Error updating Item [UO_ERR_020]: ' + str(err)
             )
         return False
 
@@ -981,9 +1165,13 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             return self
         except Exception as err:
             log_error(
-                'delete_one: Error ipdating Item [DO_ERR_020]: ' + str(err)
+                'delete_one: Error updating Item [DO_ERR_020]: ' + str(err)
             )
         return False
+
+    def count_documents(self, filter):
+        return self.generic_query(query_params=filter, query_type='find',
+                                  select="COUNT")
 
 
 class DynamodbServiceSuper(DbAbstract, DynamoDbUtilities):
@@ -992,7 +1180,11 @@ class DynamodbServiceSuper(DbAbstract, DynamoDbUtilities):
     """
     def get_db_connection(self):
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb.html
-        self._db = boto3.resource('dynamodb')
+        self._db_params = {}
+        if is_local_service():
+            self._db_params['endpoint_url'] = \
+                self._app_config.DB_CONFIG['mongodb_uri']
+        self._db = boto3.resource('dynamodb', **self._db_params)
         self._prefix = self._app_config.DB_CONFIG['dynamdb_prefix']
         self.create_table_name_propeties()
         return self._db
@@ -1045,7 +1237,7 @@ class DynamodbServiceSuper(DbAbstract, DynamoDbUtilities):
         """
         return dumps(self.list_collection_names(prefix=self._prefix))
 
-    def create_tables(self):
+    def create_tables(self, dynamodb_table_structures: dict):
         """
         Create the tables in the DynamoDB database.
         """
@@ -1053,11 +1245,9 @@ class DynamodbServiceSuper(DbAbstract, DynamoDbUtilities):
             'ReadCapacityUnits': DEFAULT_READ_CAPACITY_UNITS,
             'WriteCapacityUnits': DEFAULT_WRITE_CAPACITY_UNITS
         }
-        item_list = self.list_collections(prefix=self._prefix)
+        item_list = dynamodb_table_structures.keys()
         for item_name in item_list:
-            # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/client/describe_table.html
-            response = self._db.meta.client.describe_table(TableName=item_name)
-            item_props = response.get('Table')
+            item_props = dynamodb_table_structures.get('Table')
             if not item_props:
                 continue
             item_name = item_props["TableName"]

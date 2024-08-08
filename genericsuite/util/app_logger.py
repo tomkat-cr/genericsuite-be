@@ -9,7 +9,7 @@ import logging
 import logging.config
 import datetime
 
-from genericsuite.config.config import Config
+from genericsuite.config.config import Config, is_local_service
 
 settings = Config()
 
@@ -32,9 +32,23 @@ def log_config() -> logging:
 app_logs = log_config()
 
 
+def db_stamp() -> str:
+    db_engine = os.environ['APP_DB_ENGINE']
+    if db_engine == 'DYNAMO_DB':
+        response = f"{db_engine}|" + \
+                   f"{os.environ.get('DYNAMDB_PREFIX', 'No-Prefix')}"
+    else:
+        response = f"{db_engine}|{os.environ['APP_DB_NAME']}"
+    if is_local_service():
+        response += "|LOCAL"
+    else:
+        response += "|CLOUD"
+    return response
+
+
 def formatted_message(message: Any) -> str:
     """ Returns a formatted message with database name and date/time """
-    return f"[{os.environ['APP_DB_NAME']}]" + \
+    return f"[{db_stamp()}]" + \
            f" {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}" + \
            f" | {message}"
 
