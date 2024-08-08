@@ -17,6 +17,14 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## Unreleased
+## 0.1.9 (2024-08-04)
+---
+
+### Fixes
+Make DynamoDb tables with prefix work with the GS DB Abstraction [GS-102]
+
+
 ## 0.1.8 (2024-07-27)
 ---
 

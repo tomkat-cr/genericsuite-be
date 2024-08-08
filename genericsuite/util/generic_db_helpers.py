@@ -539,7 +539,8 @@ class GenericDbHelper(GenericDbHelperSuper):
                 for filter_key in lf
             ]
             _ = DEBUG and \
-                log_debug(f'\nfetch_array_rows | lf: {lf}' + \
+                log_debug(
+                    f'\nfetch_array_rows | lf: {lf}' +
                     f'\nfetch_array_rows | all_filters: {all_filters}\n')
             # Apply filters using OR logic
             response = list(
@@ -585,13 +586,13 @@ class GenericDbHelper(GenericDbHelperSuper):
         or allow duplicates.
         The parent row primary key is determined by the
         configuration (see get_parent_keys()) and if the
-        "uuid_generator" attribute is in the 'fieldElements' 
+        "uuid_generator" attribute is in the 'fieldElements'
         configuration, it will generate a UUID4 for the
         key_fieldname (as defined in self.array_field_key).
 
         Args:
             data (dict): The data to be inserted into the row.
-            
+
             e.g. the row primary key is "daily_meal_id" and the
             row array is 'meal_ingredients'. In this example
             a new item will be inserted in the array with the
@@ -612,7 +613,7 @@ class GenericDbHelper(GenericDbHelperSuper):
         """
         _ = DEBUG and \
             log_debug('\nadd_array_item_to_row - data' +
-                f'{data}\n')
+                      f'{data}\n')
         resultset = get_default_resultset()
         parent_keys = self.get_parent_keys(data)
 
@@ -702,8 +703,8 @@ class GenericDbHelper(GenericDbHelperSuper):
             dict: The resultset containing the number of affected rows.
         """
         _ = DEBUG and \
-            log_debug('\nremove_array_item_from_row - data' + \
-                f'{data}\n')
+            log_debug('\nremove_array_item_from_row - data' +
+                      f'{data}\n')
         array_field_in_json = self.array_field
         if f'{array_field_in_json}_old' in data:
             # This is for older entry deletion,
@@ -770,7 +771,7 @@ class GenericDbHelper(GenericDbHelperSuper):
         })
         _ = DEBUG and \
             log_debug('self.table_obj | find_criteria:' +
-                f'{find_criteria}\n')
+                      f'{find_criteria}\n')
         resultset = get_default_resultset()
         try:
             resultset['resultset']['rows_count'] = str(
