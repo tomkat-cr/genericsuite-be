@@ -273,11 +273,24 @@ class DynamoDbUtilities:
             log_debug('**** id_conversion | key_set AFTER: ' + str(key_set))
         return key_set
 
-    def prepare_item_with_no_floats(self, item):
+    def convert_floats_to_decimal(self, data):
         """
         To be used before sending dict to DynamoDb for inserts/updates
         """
-        return json.loads(json.dumps(item), parse_float=Decimal)
+        # return json.loads(json.dumps(item), parse_float=Decimal)
+        #   --> TypeError: Object of type Decimal is not JSON serializable
+        # return json.loads(json.dumps(item, default=float))
+        #   --> Error updating Item [UO_ERR_020]: Float types are not
+        #       supported. Use Decimal types instead.
+        if isinstance(data, dict):
+            return {k: self.convert_floats_to_decimal(v)
+                    for k, v in data.items()}
+        elif isinstance(data, list):
+            return [self.convert_floats_to_decimal(item) for item in data]
+        elif isinstance(data, float):
+            return Decimal(str(data))
+        else:
+            return data
 
     def remove_decimal_types(self, item: dict, projection: dict = None):
         """
@@ -286,13 +299,17 @@ class DynamoDbUtilities:
         if not projection:
             projection = {}
         if DEBUG:
-            log_debug('====> REMOVE_DECIMAL_TYPES' + 
+            log_debug('====> REMOVE_DECIMAL_TYPES' +
                       f' | projection: {projection}' +
                       f' | item BEFORE: {item}')
+        # Convert MongoDB _id Object to str
         item = self.id_conversion(item)
-        # item = json.loads(json.dumps(item, default=str))
+        # Convert Decimal to floats
         item = json.loads(json.dumps(item, default=float))
+        # Convert _id to be mongodb styled
         item = self.id_addition(item)
+        # Applying MongoDB like projection (replacing the use of DymanoDb's
+        # ProjectionExpression)
         item = {k: v for k, v in item.items() if projection.get(k, 1) == 1}
         if DEBUG:
             log_debug('====> REMOVE_DECIMAL_TYPES | item AFTER: ' + str(item))
@@ -370,7 +387,7 @@ class DynamoDbFindIterator(DynamoDbUtilities):
             )
         if (not self._limit or self._num <= self._limit) and \
            self._data_set and self._num < len(self._data_set):
-            # _result = self.prepare_item_with_no_floats(
+            # _result = self.convert_floats_to_decimal(
             #   self.id_addition(self._data_set[self._num])
             # )
             _result = self.remove_decimal_types(
@@ -387,6 +404,9 @@ class DynamoDbFindIterator(DynamoDbUtilities):
         raise StopIteration
 
     def sort(self, column: str, direction: str):
+        """
+        Sort the data set
+        """
         if isinstance(self._data_set, dict):
             return self
         if self._data_set is None:
@@ -396,25 +416,6 @@ class DynamoDbFindIterator(DynamoDbUtilities):
                 key=lambda data_set: data_set.get(column),
                 reverse=(direction != 'asc'))
         return self
-
-
-class DynamoDbFindOne(DynamoDbFindIterator):
-    def get(self, item_name, default_value=None):
-        _ = DEBUG and \
-            log_debug('>>--> DynamoDbFindOne | get()' +
-                      f' | item_name: {item_name}' +
-                      f' | default_value: {default_value} | result: '
-                      f'{self._data_set.get(item_name, default_value)}')
-        return self._data_set.get(item_name, default_value)
-
-    def __getitem__(self, item_name):
-        _ = DEBUG and \
-            log_debug('>>--> DynamoDbFindOne | __getitem__()' +
-                      f' | item_name: {item_name}' +
-                      f' | value: {self._data_set.get(item_name)}')
-        if item_name not in self._data_set:
-            raise KeyError(item_name)
-        return self._data_set[item_name]
 
 
 class DynamoDbTableAbstract(DynamoDbUtilities):
@@ -495,6 +496,32 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         return element_name['AttributeName']
 
     def get_conditions(self, key, value):
+        """
+        Get the conditions for the DynamoDB query.
+        Handles the mongoDB conditions:
+            key=value, $regex, $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin
+
+        Args:
+            key (str): the key to search for
+            value (any): the value to search for. If value is a dict,
+                it contains the conditions to apply. E.g.
+                {'$regex': '.*any_value.*', '$options': 'si'}
+                {'$eq': 'any_value'}
+                {'$ne': 'any_value'}
+                {'$gt': 'any_value', '$lt': 'any_value'}
+                {'$gte': 'any_value', '$lte': 'any_value'}
+                {'$in': ['any_value', 'any_value']}
+                {'$nin': ['any_value', 'any_value']}
+
+        Returns:
+            list: a list of conditions to apply to the query, each one is a
+                dict with the following keys:
+                    'attr': the attribute name
+                    'key': the key name for the condition
+                    'comp_oper': the comparison operator
+                    'value': the value to compare against
+                    'function': the function to apply (if any)
+        """
         conditions = []
         if not isinstance(value, dict):
             conditions.append({
@@ -503,7 +530,7 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 'comp_oper': '=',
                 'value': value,
             })
-        else:        
+        else:
             # https://www.mongodb.com/docs/manual/reference/operator/query-comparison/
             # https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Query.FilterExpression.html
             # https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Query.KeyConditionExpressions.html
@@ -577,36 +604,22 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                         ('NOT ' if '$nin' in value else '') +
                         f"{key} IN ({','.join(key_list)})",
                 })
-                # i = 0
-                # for v in value['$in']:
-                #     i += 1
-                #     conditions.append({
-                #         'attr': key,
-                #         'key': f'{key}In{i}',
-                #         'comp_oper': '=',
-                #         'value': v,
-                #         'separator': 'OR',
-                #         'multiple': True if i != len(value['$in'])
-                #         or i == 1 else False,
-                #     })
-            # if '$nin' in value:
-            #     i = 0
-            #     for v in value['$in']:
-            #         i += 1
-            #         conditions.append({
-            #             'attr': key,
-            #             'key': f'{key}Nin{i}',
-            #             'comp_oper': '<>',
-            #             'value': v,
-            #             'separator': 'AND',
-            #             'multiple': True if i != len(value['$in'])
-            #             or i == 1 else False,
-            #         })
         return conditions
 
     def get_cond_exp_val(self, item):
+        """
+        Get the condition expression values for a DynamoDB operation.
+
+        Args:
+            item (dict): A dictionary representing the item to search for.
+
+        Returns:
+            tuple: A tuple containing the condition values dictionary, the
+                   condition expression string and the attribute names.
+        """
         condition_values = {}
         expresion_parts = []
+        attr_names = {}
         for key in item.keys():
             conditions = self.get_conditions(key, item[key])
             group_char = ''
@@ -626,22 +639,36 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                     group_char = '(' if group_char == '' else ')'
                     open_group = '(' if group_char == '(' else ''
                     close_group = ')' if group_char == ')' else ''
+            # Populates the condition values (to be used as the
+            # ExpressionAttributeValues parameter)
             if value:
                 if not isinstance(value, dict):
                     value = {key: value}
                 for key_name, key_value in value.items():
-                    condition_values = condition_values | {':' + key_name: key_value}
+                    condition_values = condition_values | \
+                        {':' + key_name: key_value}
+            # Populates the condition expressions (to be used as the
+            # KeyConditionExpression or FilterExpression parameter)
             if function is None:
+                # It's a condition
                 expresion_parts.append(
                     f'{inner_separator}' +
-                    f'{open_group}{attr} {comp_oper} :{key}{close_group}')
+                    f'{open_group}#{attr}_ {comp_oper} :{key}{close_group}')
+                # Set an attribute name to be passed in the
+                # ExpressionAttributeNames parameter calling the scan, query
+                # or updat_item DynamoDB operations, to avoid errors like:
+                # "Invalid UpdateExpression: Attribute name is a reserved
+                # keyword; reserved keyword: language"
+                attr_names[f'#{attr}_'] = attr
             else:
+                # It's a function call
                 expresion_parts.append(
                     f'{inner_separator}' +
                     f'{open_group}{function}{close_group}')
+            # It has more than one condition
             if multiple is not None:
                 inner_separator = condition.get('separator', 'AND') + ' '
-        return condition_values, expresion_parts
+        return condition_values, expresion_parts, attr_names
 
     def get_condition_expresion_values(self, data_list, separator=' AND '):
         """
@@ -655,27 +682,33 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             Defaults to ' AND '.
 
         Returns:
-            tuple: A tuple containing the condition values dictionary and the
-                   condition expression string.
+            tuple: A tuple containing the condition values dictionary, the
+                   condition expression string and the attribute names.
         """
         condition_values = {}
         expresion_parts = []
-        _ = DEBUG and log_debug(f'|||---> get_condition_expresion_values | data_list: {data_list} | separator: {separator}')
+        attr_names = {}
+        _ = DEBUG and log_debug(
+            '|||---> get_condition_expresion_values | ' +
+            f'data_list: {data_list} | separator: {separator}')
         for item in data_list:
-            _ = DEBUG and log_debug(f'|||---> get_condition_expresion_values | item: {item}')
+            _ = DEBUG and log_debug('|||---> get_condition_expresion_values' +
+                                    f' | item: {item}')
             if '$and' in item or '$or' in item:
                 separator = '$or' if '$or' in item else '$and'
                 for subitem in item[separator]:
-                    _ = DEBUG and log_debug(f'|||---> get_condition_expresion_values | subitem: {subitem}')
-                    condition_values, expresion_parts = \
+                    _ = DEBUG and log_debug(
+                        '|||---> get_condition_expresion_values' +
+                        f' | subitem: {subitem}')
+                    condition_values, expresion_parts, attr_names = \
                         self.get_cond_exp_val(subitem)
             else:
-                condition_values, expresion_parts = \
+                condition_values, expresion_parts, attr_names = \
                     self.get_cond_exp_val(item)
         separator = ' OR ' if '$or' in separator else ' AND ' \
             if '$and' in separator else separator
         condition_expresion = separator.join(expresion_parts)
-        return condition_values, condition_expresion
+        return condition_values, condition_expresion, attr_names
 
     def get_primary_keys(self, query_params):
         """
@@ -730,8 +763,7 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 str(keys) +
                 ' | reduced_indexes: ' + str(reduced_indexes) +
                 ' | index_name: ' +
-                str(index_name) + ' | query_keys: ' + str(query_keys)
-            )
+                str(index_name) + ' | query_keys: ' + str(query_keys))
         return keys, index_name
 
     def generic_query(self, query_params: dict, projection: dict = None,
@@ -756,11 +788,13 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         """
         if not projection:
             projection = {}
-        # projection_expression = (",".join([k for k, v
-        #                          in projection.items() if v == 1]))
-        if not select:
-            select = 'ALL_ATTRIBUTES' if not projection \
-                else 'SPECIFIC_ATTRIBUTES'
+        select = select or 'ALL_ATTRIBUTES'
+        projection_expression = None
+        if select == 'SPECIFIC_ATTRIBUTES':
+            # Assumes the specific attributes to retrieve are in the
+            # projection parameter with a value of 1
+            projection_expression = (",".join([k for k, v
+                                     in projection.items() if v == 1]))
         select = select.upper()
         if DEBUG:
             log_debug(
@@ -792,14 +826,15 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             query_params = self.id_conversion(query_params)
             keys = self.get_primary_keys(query_params)
             if keys:
+                # Get only one item
                 _ = DEBUG and log_debug('generic_query | ===> Keys found: ' +
                                         str(keys))
                 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/table/get_item.html
                 params = {
                     'Key': keys,
                 }
-                # if projection_expression:
-                #     params['ProjectionExpression'] = projection_expression
+                if projection_expression:
+                    params['ProjectionExpression'] = projection_expression
                 response = table.get_item(**params)
                 _ = DEBUG and log_debug(response)
                 if select == "COUNT":
@@ -813,7 +848,7 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 self.get_global_secondary_indexes_keys(query_params)
 
         if not keys:
-            condition_values, condition_expresion = \
+            condition_values, condition_expresion, attr_names = \
                 self.get_condition_expresion_values([query_params])
             if DEBUG:
                 log_debug(
@@ -829,10 +864,13 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             }
             if condition_expresion:
                 params['FilterExpression'] = condition_expresion
-            # if projection_expression:
-            #     params['ProjectionExpression'] = projection_expression
+            if projection_expression:
+                params['ProjectionExpression'] = projection_expression
+            if attr_names:
+                params['ExpressionAttributeNames'] = attr_names
             response = table.scan(**params)
             if query_type == 'find_one':
+                # Get only one item
                 if select == "COUNT":
                     count = 1 if response and response.get('Items') and \
                         len(response.get('Items')) > 0 else 0
@@ -842,8 +880,9 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 return self.remove_decimal_types(
                     response.get('Items')[0] if response and
                     response.get('Items') and
-                    len(response.get('Items')) > 0 else [],
+                    len(response.get('Items')) > 0 else {},
                     projection)
+            # Get more than one item
             if select == "COUNT":
                 count = len(response.get('Items', []))
                 _ = DEBUG and \
@@ -853,9 +892,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 response.get('Items', []), projection)
 
         if DEBUG:
-            log_debug('generic_query | ===> secondary Keys found: ' + str(keys))
-            log_debug(keys)
-        condition_values, condition_expresion = \
+            log_debug(f'generic_query | ===> secondary Keys found: {keys}')
+        condition_values, condition_expresion, attr_names = \
             self.get_condition_expresion_values(keys)
         if DEBUG:
             log_debug(
@@ -872,14 +910,18 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         }
         if condition_expresion:
             params['FilterExpression'] = condition_expresion
-        # if projection_expression:
-        #     params['ProjectionExpression'] = projection_expression
+        if projection_expression:
+            params['ProjectionExpression'] = projection_expression
+        if attr_names:
+            params['ExpressionAttributeNames'] = attr_names
         response = table.query(**params)
         if DEBUG:
             log_debug(response)
         if query_type == 'find_one':
+            # Get only one item
             return self.remove_decimal_types(
                 response.get('Items', [])[0], projection)
+        # Get more than one item
         return self.remove_decimal_types_list(response.get('Items', []),
                                               projection)
 
@@ -902,8 +944,7 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 str(projection)
             )
         return DynamoDbFindIterator(
-            self.generic_query(query_params, projection, query_type='find')
-        )
+            self.generic_query(query_params, projection, query_type='find'))
 
     def find_one(self, query_params, projection=None):
         """
@@ -924,9 +965,6 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             )
         return self.generic_query(query_params, projection,
                                   query_type='find_one')
-        # return DynamoDbFindOne(
-        #     self.generic_query(query_params, projection, query_type='find_one')
-        # )
 
     def insert_one(self, new_item):
         """
@@ -942,7 +980,7 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         table = self._db_conection.Table(self.get_table_name())
         self.inserted_id = None
         new_item['_id'] = self.new_id()
-        new_item = self.prepare_item_with_no_floats(new_item)
+        new_item = self.convert_floats_to_decimal(new_item)
         _ = DEBUG and log_debug(f'insert_one | new_item: {new_item}')
         try:
             result = table.put_item(Item=new_item)
@@ -956,13 +994,11 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 )
         except botocore.exceptions.ClientError as err:
             log_error(
-                'insert_one: Error creating Item [IO_ERR_010]: ' + str(err)
-            )
+                'insert_one: Error creating Item [IO_ERR_010]: ' + str(err))
             raise err
         except Exception as err:
             log_error(
-                'insert_one: Error creating Item [IO_ERR_020]: ' + str(err)
-            )
+                'insert_one: Error creating Item [IO_ERR_020]: ' + str(err))
             raise err
         return self
 
@@ -1036,12 +1072,12 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         if DEBUG:
             log_debug(
                 '>>--> update_one() | table: ' + self.get_table_name() +
-                ' | key_set: ' + str(key_set)
-            )
+                f' | key_set: {key_set}')
         table = self._db_conection.Table(self.get_table_name())
-        key_set = self.prepare_item_with_no_floats(self.id_conversion(key_set))
+        key_set = self.convert_floats_to_decimal(self.id_conversion(key_set))
         self.modified_count = None
         keys = self.get_primary_keys(key_set)
+        _ = DEBUG and log_debug(f'>>--> update_one() | keys: {keys}')
         if not keys:
             log_warning('update_one: No partition keys found [UO_ERR_010]')
             return False
@@ -1052,14 +1088,18 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
            '$pull' in update_set_original:
             try:
                 result = table.get_item(Key=keys)
+                _ = DEBUG and log_debug('>>--> update_one() | result:' +
+                                        f' {result}')
             except Exception as err:
                 log_error('update_one: Error getting existing Item' +
                           f' [UO_ERR_030]: {str(err)}')
-            return False
+                return False
             if not result.get('Item'):
                 log_error('update_one: Item not found [UO_ERR_040]')
                 return False
 
+        _ = DEBUG and log_debug('>>--> update_one() | update_set_original:' +
+                                f' {update_set_original}')
         if '$set' in update_set_original:
             # Update the item, preserving the attributes not present in
             # the update_set_original
@@ -1086,28 +1126,45 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             # Replace what is was in the item
             update_set = update_set_original
 
-        update_set = self.prepare_item_with_no_floats(update_set)
-        expression_attribute_values, update_expression = \
+        # To avoid the error:
+        # "Float types are not supported. Use Decimal types instead.""
+        update_set = self.convert_floats_to_decimal(update_set)
+
+        # Don't include the PK / SK (Primary Key / Sort Key)
+        update_set = {k: v for k, v in update_set.items() if k not in keys}
+
+        # Prepare update expresions and values
+        expression_attribute_values, update_expression, attr_names = \
             self.get_condition_expresion_values([update_set], ', ')
+
+        _ = DEBUG and log_debug(
+            '>>--> update_one()' +
+            f'\n| update_set: {update_set}' +
+            f'\n| expression_attribute_values: {expression_attribute_values}' +
+            f'\n| update_expression: {update_expression}'
+        )
+
         try:
             if DEBUG:
                 log_debug(
-                    '>>--> BEFORE update_one() | table: ' +
-                    self.get_table_name() +
-                    ' | update_set: ' + str(update_set) + ' | keys: ' +
-                    str(keys) +
-                    ' | self.modified_count: ' + str(self.modified_count) +
-                    ' | expression_attribute_values: ' +
-                    str(expression_attribute_values) +
-                    ' | update_expression: ' +
-                    str(update_expression)
+                    '>>--> BEFORE update_one()' +
+                    f' | table: {self.get_table_name()}' +
+                    f'\n| update_set: {update_set}' +
+                    f'\n| keys: {keys}' +
+                    f'\n| self.modified_count: {self.modified_count}' +
+                    '\n| expression_attribute_values: ' +
+                    f'{expression_attribute_values}' +
+                    f'\n| update_expression: {update_expression}'
                 )
-            result = table.update_item(
-                Key=keys,
-                UpdateExpression="SET " + update_expression,
-                ExpressionAttributeValues=expression_attribute_values,
-                ReturnValues="UPDATED_NEW"
-            )
+            params = {
+                'Key': keys,
+                'UpdateExpression': "SET " + update_expression,
+                'ExpressionAttributeValues': expression_attribute_values,
+                'ReturnValues': "UPDATED_NEW"
+            }
+            if attr_names:
+                params['ExpressionAttributeNames'] = attr_names
+            result = table.update_item(**params)
             self.modified_count = 1
             if DEBUG:
                 log_debug(
@@ -1124,8 +1181,7 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             return self
         except Exception as err:
             log_error(
-                'update_one: Error updating Item [UO_ERR_020]: ' + str(err)
-            )
+                'update_one: Error updating Item [UO_ERR_020]: ' + str(err))
         return False
 
     def delete_one(self, key_set):
@@ -1170,6 +1226,16 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         return False
 
     def count_documents(self, filter):
+        """
+        Translate MongoDb 'count_documents' to DynamoDb 'scan' and returns
+        the result.
+
+        The MongoDb call style:
+
+        resultset['resultset']['count'] = str(
+            db.collection_name.count_documents(filter)
+        )
+        """
         return self.generic_query(query_params=filter, query_type='find',
                                   select="COUNT")
 
@@ -1179,6 +1245,9 @@ class DynamodbServiceSuper(DbAbstract, DynamoDbUtilities):
     Dynamodb Service super class
     """
     def get_db_connection(self):
+        """
+        Get the DynamoDB connection
+        """
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb.html
         self._db_params = {}
         if is_local_service():
@@ -1350,6 +1419,9 @@ class DynamodbService(DynamodbServiceSuper):
             return []
 
     def __getitem__(self, item_name):
+        """
+        Get the table object using the subscript operator.
+        """
         table_name = f"{self._prefix}{item_name}"
         _ = DEBUG and \
             log_debug(f'||| __getitem__ | item_name: {item_name} |' +
