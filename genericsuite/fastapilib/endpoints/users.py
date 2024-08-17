@@ -15,6 +15,7 @@ from genericsuite.models.users.users import (
     test_connection_handler as test_connection_handler_model,
     login_user as login_user_model,
     super_admin_create as super_admin_create_model,
+    get_current_user_data,
 )
 
 # router = APIRouter()
@@ -49,7 +50,8 @@ async def login_user(
     router.set_current_request(request, gs_request)
     other_params['username'] = credentials.username
     other_params['password'] = credentials.password
-    return login_user_model(request=gs_request, blueprint=router,
+    return login_user_model(
+        request=gs_request, blueprint=router,
         other_params=other_params)
 
 
@@ -64,5 +66,19 @@ async def super_admin_create(
     router.set_current_request(request, gs_request)
     other_params['username'] = credentials.username
     other_params['password'] = credentials.password
-    return super_admin_create_model(request=gs_request, blueprint=router,
+    return super_admin_create_model(
+        request=gs_request, blueprint=router,
         other_params=other_params)
+
+
+@router.get('/current_user_d')
+async def current_user_d(
+    request: FaRequest,
+    current_user: str = Depends(get_current_user),
+) -> Response:
+    """
+    Current user data read
+    """
+    gs_request, other_params = get_default_fa_request(current_user)
+    router.set_current_request(request, gs_request)
+    return get_current_user_data(gs_request, router, other_params)

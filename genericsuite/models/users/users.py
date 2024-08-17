@@ -221,3 +221,23 @@ def super_admin_create(
         result = dbo.create_row(request_body)
 
     return return_resultset_jsonified_or_exception(result)
+
+
+def get_current_user_data(
+    request: AuthorizedRequest,
+    blueprint: Any,
+    other_params: Optional[dict] = None
+) -> Response:
+    """
+    Current user data read
+    """
+    if not other_params:
+        other_params = {}
+    app_context = app_context_and_set_env(request=request, blueprint=blueprint)
+    if app_context.has_error():
+        return return_resultset_jsonified_or_exception(
+            app_context.get_error_resultset()
+        )
+    result = get_default_resultset()
+    result['resultset'] = app_context.get_user_data()
+    return return_resultset_jsonified_or_exception(result)
