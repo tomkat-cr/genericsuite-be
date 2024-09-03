@@ -30,7 +30,7 @@ from genericsuite.util.request_handler import RequestHandler
 # ----------------------- Factory Methods -----------------------
 
 
-DEBUG = True
+DEBUG = False
 
 DEFAULT_WRITE_CAPACITY_UNITS = 1
 DEFAULT_READ_CAPACITY_UNITS = 1
