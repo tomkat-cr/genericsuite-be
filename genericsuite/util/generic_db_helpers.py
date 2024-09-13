@@ -167,8 +167,8 @@ class GenericDbHelper(GenericDbHelperSuper):
             resultset,
             'FUL2'
         )
-        # _ = DEBUG and \
-        log_debug(f"FETCH_LIST 030 | resultset: {resultset}")
+        _ = DEBUG and \
+            log_debug(f"FETCH_LIST 030 | resultset: {resultset}")
         return self.run_specific_func('list', resultset)
 
     def fetch_row(self, row_id: str, projection: dict = None) -> dict:
