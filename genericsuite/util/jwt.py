@@ -75,7 +75,8 @@ def get_general_authorized_request(request: Request) -> AuthorizedRequest:
         token_raw = request.headers[settings.HEADER_TOKEN_ENTRY_NAME]
         jwt_token = token_raw.replace('Bearer ', '')
         if DEBUG:
-            log_debug('||| REQUEST_AUTHENTICATION' +
+            log_debug(
+                '||| REQUEST_AUTHENTICATION' +
                 '\n | HEADER_TOKEN_ENTRY_NAME: ' +
                 f'{settings.HEADER_TOKEN_ENTRY_NAME}' +
                 f'\n | token_raw: {token_raw}' +
@@ -88,7 +89,8 @@ def get_general_authorized_request(request: Request) -> AuthorizedRequest:
             algorithms="HS256",
         )
         if DEBUG:
-            log_debug('||| REQUEST_AUTHENTICATION' +
+            log_debug(
+                '||| REQUEST_AUTHENTICATION' +
                 f' | jws_token_data = {jws_token_data}')
 
         if get_current_framework() == 'chalice':
@@ -111,10 +113,12 @@ def get_general_authorized_request(request: Request) -> AuthorizedRequest:
             )
 
         if DEBUG:
-            log_debug('||| REQUEST_AUTHENTICATION' +
+            log_debug(
+                '||| REQUEST_AUTHENTICATION' +
                 f' | authorized_request = {authorized_request}')
     except Exception as err:
-        log_error('REQUEST_AUTHENTICATION' +
+        log_error(
+            'REQUEST_AUTHENTICATION' +
             f' | Exception = {str(err)}')
         return standard_error_return('Token is invalid')
     return authorized_request
