@@ -17,12 +17,11 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## Unreleased
-## 0.1.9 (2024-09-17)
+## 0.1.9 (2024-10-06)
 ---
 
 ### New
-Add "/users/current_user_d" endpoint [GS-2]
+Add "/users/current_user_d" endpoint [GS-2].
 Add GS_LOCAL_ENVIR envvar to detect a local database running in a docker container [GS-102].
 
 ### Changes
