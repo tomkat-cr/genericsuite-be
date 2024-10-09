@@ -29,7 +29,8 @@ class GenericDbHelperSuper:
     Generic Database Helper super class
     """
     # def __init__(self, json_file, request=None, db_type=None) -> None:
-    def __init__(self, json_file, request=None, blueprint=None, db_type=None) -> None:
+    def __init__(self, json_file, request=None, blueprint=None, db_type=None
+                 ) -> None:
 
         # set_db_request(request)
 
@@ -71,9 +72,11 @@ class GenericDbHelperSuper:
                     log_debug(f"||| GenericDbHelper | db: {db}")
                 self.table_obj = db[self.table_name]
                 _ = DEBUG and \
-                    log_debug(f"||| GenericDbHelper | self.table_obj: {self.table_obj}")
+                    log_debug("||| GenericDbHelper | self.table_obj:" +
+                              f" {self.table_obj}")
             except BaseException as error:
-                self.error_message = f"ERROR connecting to Database: {str(error)}"
+                self.error_message = "ERROR connecting to Database:" + \
+                                     f" {str(error)}"
                 log_error(self.error_message)
             if not self.error_message:
                 self.allow_duplicates = self.cnf_db.get('allow_duplicates',
@@ -149,7 +152,7 @@ class GenericDbHelperSuper:
         and returns the updated filter. Mandatory filters will be
         ALWAYS included as equality (==) filter with the $and
         combinator in each condition, whether it's a "like" or
-        normal condition). E.g. 
+        normal condition). E.g.
 
         self.mandatory_filters:{'user_id': 'XXXX'}
 
@@ -445,9 +448,12 @@ class GenericDbHelperSuper:
         """
         specific_func_name = self.cnf_db.get('specific_function', None)
         if specific_func_name:
-            specific_func = self.blueprint.get_current_app().custom_data.get(specific_func_name)
+            specific_func = self.blueprint.get_current_app().custom_data.get(
+                specific_func_name
+            )
             if not specific_func:
-                raise Exception(f"Specific function {specific_func_name} not found.")
+                raise Exception(f"Specific function {specific_func_name}" +
+                                " not found.")
             action_data = {
                 'action': action,
                 'resultset': resultset,

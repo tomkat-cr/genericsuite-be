@@ -84,6 +84,11 @@ def text_to_dict(text: str) -> Union[dict, None]:
     return result
 
 
+def is_local_service() -> bool:
+    return os.environ.get('AWS_SAM_LOCAL') == 'true' or \
+        os.environ.get('GS_LOCAL_ENVIR') == 'true'
+
+
 class Config():
     """ Configuration class, to have the most used App variables """
     def __init__(self, app_context: Any = None) -> None:
@@ -107,7 +112,7 @@ class Config():
 
         # Database configuration
 
-        if os.environ.get('AWS_SAM_LOCAL') == 'true':
+        if is_local_service():
             # Handles the \@ issue in environment variables values when runs
             # by "sam local start-api"
             os.environ['APP_DB_URI'] = \
@@ -118,7 +123,7 @@ class Config():
         self.DB_CONFIG = {
             'mongodb_uri': os.environ['APP_DB_URI'],
             'mongodb_db_name': os.environ['APP_DB_NAME'],
-            'dynamdb_prefix': os.environ.get('DYNAMDB_PREFIX', '')  # '_test_'
+            'dynamdb_prefix': os.environ.get('DYNAMDB_PREFIX', ''),
         }
         # DB_ENGINE = 'MONGO_DB'
         # DB_ENGINE = 'DYNAMO_DB'

@@ -64,11 +64,16 @@ class GenericDbHelper(GenericDbHelperSuper):
             dict: The resultset containing the list of items.
             Mandatory filters will be applied.
         """
+        resultset = get_default_resultset()
+        if self.error_message:
+            resultset['error_message'] = self.error_message
+            resultset['error'] = True
+            return resultset
+
         if not like_query_params:
             like_query_params = {}
         if not combinator:
             combinator = '$and'
-        resultset = get_default_resultset()
 
         # The resulting will be something like:
         # listing_filter BEFORE: {'meal_date': {'$lte': 946702800.0,
@@ -129,6 +134,10 @@ class GenericDbHelper(GenericDbHelperSuper):
                       f"\n | listing_filter: {listing_filter}")
 
         column_name, direction = self.get_sort_config(order_param)
+        _ = DEBUG and \
+            log_debug(f"FETCH_LIST 010 | column_name: {column_name}," +
+                      f" direction: {direction}")
+
         try:
             db_result = (
                 self.table_obj.find(
@@ -144,6 +153,8 @@ class GenericDbHelper(GenericDbHelperSuper):
             if limit > 0:
                 db_result = db_result.limit(int(limit))
             resultset['resultset'] = dumps(db_result)
+            _ = DEBUG and \
+                log_debug(f"FETCH_LIST 020 | resultset: {resultset}")
         except BaseException as err:
             resultset['error_message'] = get_standard_base_exception_msg(
                 err, 'FUL1'
@@ -157,7 +168,7 @@ class GenericDbHelper(GenericDbHelperSuper):
             'FUL2'
         )
         _ = DEBUG and \
-            log_debug(f"FETCH_LIST | resultset: {resultset}")
+            log_debug(f"FETCH_LIST 030 | resultset: {resultset}")
         return self.run_specific_func('list', resultset)
 
     def fetch_row(self, row_id: str, projection: dict = None) -> dict:
@@ -172,9 +183,14 @@ class GenericDbHelper(GenericDbHelperSuper):
         Returns:
             dict: The resultset containing the fetched row.
         """
+        resultset = get_default_resultset()
+        if self.error_message:
+            resultset['error_message'] = self.error_message
+            resultset['error'] = True
+            return resultset
+
         if not projection:
             projection = {}
-        resultset = get_default_resultset()
 
         db_row = self.fetch_row_raw(row_id, projection)
         if not db_row['resultset']:
@@ -216,6 +232,11 @@ class GenericDbHelper(GenericDbHelperSuper):
             dict: The resultset containing the fetched row.
         """
         resultset = get_default_resultset()
+        if self.error_message:
+            resultset['error_message'] = self.error_message
+            resultset['error'] = True
+            return resultset
+
         filters = {} if not filters else filters
         filters.update({entry_name: entry_value})
         try:
@@ -252,6 +273,11 @@ class GenericDbHelper(GenericDbHelperSuper):
         """
         psw_class = Passwords()
         resultset = get_default_resultset()
+        if self.error_message:
+            resultset['error_message'] = self.error_message
+            resultset['error'] = True
+            return resultset
+
         filters = {} if not filters else filters
         data['creation_date'] = data['update_date'] = \
             current_datetime_timestamp()
@@ -335,6 +361,12 @@ class GenericDbHelper(GenericDbHelperSuper):
         Returns:
             dict: The resultset containing the number of affected rows.
         """
+        resultset = get_default_resultset()
+        if self.error_message:
+            resultset['error_message'] = self.error_message
+            resultset['error'] = True
+            return resultset
+
         options = {} if options is None else options
         if self.cnf_db.get('updateItem'):
             options["update_item"] = self.cnf_db.get('updateItem')
@@ -382,11 +414,14 @@ class GenericDbHelper(GenericDbHelperSuper):
 
         try:
             if options.get("update_item", "0") == "0":
+                # Replace what is was in the item
                 op_result = self.table_obj.replace_one(
                     {'_id': ObjectId(record['_id'])},
                     updated_record
                 ).modified_count
             else:
+                # Update the item, preserving the attributes not present in
+                # the updated_record
                 op_result = self.table_obj.update_one(
                     {'_id': ObjectId(record['_id'])},
                     {'$set': updated_record}
@@ -416,6 +451,10 @@ class GenericDbHelper(GenericDbHelperSuper):
             dict: The resultset containing the number of affected rows.
         """
         resultset = get_default_resultset()
+        if self.error_message:
+            resultset['error_message'] = self.error_message
+            resultset['error'] = True
+            return resultset
 
         db_row = self.fetch_row_by_entryname_raw('_id', ObjectId(remove_id))
         if not db_row['resultset']:
@@ -476,11 +515,16 @@ class GenericDbHelper(GenericDbHelperSuper):
             dict: The resultset containing the list of items
             in the row's array.
         """
+        resultset = get_default_resultset()
+        if self.error_message:
+            resultset['error_message'] = self.error_message
+            resultset['error'] = True
+            return resultset
+
         if not like_query_params:
             like_query_params = {}
         if not combinator:
             combinator = '$and'
-        resultset = get_default_resultset()
         projection = {
             self.array_field: 1
         }
@@ -539,7 +583,8 @@ class GenericDbHelper(GenericDbHelperSuper):
                 for filter_key in lf
             ]
             _ = DEBUG and \
-                log_debug(f'\nfetch_array_rows | lf: {lf}' + \
+                log_debug(
+                    f'\nfetch_array_rows | lf: {lf}' +
                     f'\nfetch_array_rows | all_filters: {all_filters}\n')
             # Apply filters using OR logic
             response = list(
@@ -585,13 +630,13 @@ class GenericDbHelper(GenericDbHelperSuper):
         or allow duplicates.
         The parent row primary key is determined by the
         configuration (see get_parent_keys()) and if the
-        "uuid_generator" attribute is in the 'fieldElements' 
+        "uuid_generator" attribute is in the 'fieldElements'
         configuration, it will generate a UUID4 for the
         key_fieldname (as defined in self.array_field_key).
 
         Args:
             data (dict): The data to be inserted into the row.
-            
+
             e.g. the row primary key is "daily_meal_id" and the
             row array is 'meal_ingredients'. In this example
             a new item will be inserted in the array with the
@@ -612,8 +657,13 @@ class GenericDbHelper(GenericDbHelperSuper):
         """
         _ = DEBUG and \
             log_debug('\nadd_array_item_to_row - data' +
-                f'{data}\n')
+                      f'{data}\n')
         resultset = get_default_resultset()
+        if self.error_message:
+            resultset['error_message'] = self.error_message
+            resultset['error'] = True
+            return resultset
+
         parent_keys = self.get_parent_keys(data)
 
         if not self.allow_duplicates:
@@ -702,8 +752,14 @@ class GenericDbHelper(GenericDbHelperSuper):
             dict: The resultset containing the number of affected rows.
         """
         _ = DEBUG and \
-            log_debug('\nremove_array_item_from_row - data' + \
-                f'{data}\n')
+            log_debug('\nremove_array_item_from_row - data' +
+                      f'{data}\n')
+        resultset = get_default_resultset()
+        if self.error_message:
+            resultset['error_message'] = self.error_message
+            resultset['error'] = True
+            return resultset
+
         array_field_in_json = self.array_field
         if f'{array_field_in_json}_old' in data:
             # This is for older entry deletion,
@@ -715,7 +771,6 @@ class GenericDbHelper(GenericDbHelperSuper):
                       f'\narray_field_in_json={array_field_in_json}, ' +
                       'key value to REMOVE=' +
                       f'{data[array_field_in_json][self.array_field_key]}\n')
-        resultset = get_default_resultset()
         pull_element = {
             self.array_field: {
                 self.array_field_key:
@@ -760,6 +815,12 @@ class GenericDbHelper(GenericDbHelperSuper):
             log_debug('\nget_array_item_in_row - array_item_id:' +
                       f' {str(array_item_id)}' +
                       f' | parent_keys: {str(parent_keys)}\n')
+        resultset = get_default_resultset()
+        if self.error_message:
+            resultset['error_message'] = self.error_message
+            resultset['error'] = True
+            return resultset
+
         find_criteria = dict(parent_keys)
         find_criteria.update({
             self.array_field: {
@@ -770,8 +831,7 @@ class GenericDbHelper(GenericDbHelperSuper):
         })
         _ = DEBUG and \
             log_debug('self.table_obj | find_criteria:' +
-                f'{find_criteria}\n')
-        resultset = get_default_resultset()
+                      f'{find_criteria}\n')
         try:
             resultset['resultset']['rows_count'] = str(
                 self.table_obj.count_documents(find_criteria)
