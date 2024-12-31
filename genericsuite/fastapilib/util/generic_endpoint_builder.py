@@ -28,6 +28,7 @@ from genericsuite.config.config import Config
 
 DEBUG = False
 
+
 class Endpoint(BaseModel):
     """
     A model for endpoint definitions.
@@ -91,14 +92,15 @@ def generate_blueprints_from_json(
                 endpoint = {
                     "name": bp_name,
                     "route": f"{url_prefix}/{route['endpoint']}"
-                        if route['endpoint'] and route['endpoint'] != '/'
-                        else url_prefix,
+                             if route['endpoint'] and route['endpoint'] != '/'
+                             else url_prefix,
                     "method": method,
                     "response_model": route.get("response_model")
                 }
                 endpoint_obj = Endpoint(**endpoint)
 
-                # Assuming the response model is a Pydantic model and already imported
+                # Assuming the response model is a Pydantic model and already
+                # imported
                 response_model = globals()[endpoint_obj.response_model] \
                     if "response_model" in route else None
 
@@ -119,7 +121,8 @@ def generate_blueprints_from_json(
                         create_endpoint_function(other_params)
                     )
                 elif other_params["method"] == 'delete':
-                    app.delete(endpoint_obj.route, response_model=response_model,
+                    app.delete(endpoint_obj.route,
+                               response_model=response_model,
                                tags=[bp_name])(
                         create_endpoint_function(other_params)
                     )
@@ -139,6 +142,10 @@ def generic_route_handler(
     Returns:
         Response: The response from the CRUD operation.
     """
+    _ = DEBUG and log_debug(
+        ">>--> GENERIC_ROUTE_HANDLER" +
+        f"\n | kwargs: {kwargs}"
+    )
     other_params = kwargs["other_params"]
     request = kwargs["request"]
     blueprint = kwargs["blueprint"]
@@ -180,7 +187,8 @@ def create_endpoint_function(other_params: dict) -> callable:
     Creates a function that can be used as a FastAPI endpoint.
 
     Args:
-        other_params (dict): The other parameters to pass to the endpoint function.
+        other_params (dict): The other parameters to pass to the endpoint
+            function.
 
     Returns:
         callable: The endpoint function.
@@ -227,7 +235,8 @@ def create_endpoint_function(other_params: dict) -> callable:
             }
         )
         router.set_current_request(request, gs_request)
-        return generic_route_handler(other_params=other_params,
+        return generic_route_handler(
+            other_params=other_params,
             request=gs_request, blueprint=router)
 
     async def generic_post(
@@ -252,7 +261,8 @@ def create_endpoint_function(other_params: dict) -> callable:
             },
         )
         router.set_current_request(request, gs_request)
-        return generic_route_handler(other_params=other_params,
+        return generic_route_handler(
+            other_params=other_params,
             request=gs_request, blueprint=router)
 
     async def generic_put(
@@ -283,7 +293,8 @@ def create_endpoint_function(other_params: dict) -> callable:
             },
         )
         router.set_current_request(request, gs_request)
-        return generic_route_handler(other_params=other_params,
+        return generic_route_handler(
+            other_params=other_params,
             request=gs_request, blueprint=router)
 
     async def generic_delete(
@@ -312,7 +323,8 @@ def create_endpoint_function(other_params: dict) -> callable:
             },
         )
         router.set_current_request(request, gs_request)
-        return generic_route_handler(other_params=other_params,
+        return generic_route_handler(
+            other_params=other_params,
             request=gs_request, blueprint=router)
 
     if other_params["method"] == 'post':

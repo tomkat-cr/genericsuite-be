@@ -34,7 +34,8 @@ async def menu_options_get(
     """ Get authorized menu options """
     gs_request, other_params = get_default_fa_request(current_user)
     router.set_current_request(request, gs_request)
-    return menu_options_get_model(request=gs_request, blueprint=router,
+    return menu_options_get_model(
+        request=gs_request, blueprint=router,
         other_params=other_params)
 
 
@@ -48,8 +49,10 @@ async def menu_options_element(
     json_body: MenuElementRequest = Body(...),
 ) -> Response:
     """ Get menu element configuration """
-    gs_request, other_params = get_default_fa_request(current_user,
+    gs_request, other_params = get_default_fa_request(
+        current_user,
         json_body=json_body.model_dump())
     router.set_current_request(request, gs_request)
-    return menu_options_element_model(request=gs_request, blueprint=router,
+    return menu_options_element_model(
+        request=gs_request, blueprint=router,
         other_params=other_params)

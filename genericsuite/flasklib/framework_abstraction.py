@@ -19,38 +19,37 @@ if FRAMEWORK == 'flask':
         if DEBUG:
             print(f'Flask abstraction | framework_module: {framework_module}')
 
-
         class FrameworkClass(framework_module.Flask):
             """
             Framkework class cloned from the selected framework super class.
             """
 
-
         class Request(framework_module.request):
             """
-            Request class cloned from the selected Request framework super class.
+            Request class cloned from the selected Request framework super
+            class.
             This class is the one to be imported by the project modules
             """
-
 
         class Response(framework_module.response):
             """
-            Response class cloned from the selected Response framework super class.
+            Response class cloned from the selected Response framework super
+            class.
             This class is the one to be imported by the project modules
             """
-
 
         # class Blueprint(framework_module.Blueprint):
         class Blueprint(FlaskBlueprint):
             """
-            Blueprint class cloned from the selected Blueprint framework super class.
+            Blueprint class cloned from the selected Blueprint framework super
+            class.
             This class is the one to be imported by the project modules
             """
 
-
         class BlueprintOne(Blueprint):
             """
-            Class to register a new route with optional schema validation and authorization.
+            Class to register a new route with optional schema validation and
+            authorization.
             """
 
     except ImportError as err:

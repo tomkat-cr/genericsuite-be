@@ -17,6 +17,13 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## Unreleased
+## 0.1.10 (2024-10-12)
+
+### New
+Implement API keys to GS BE Core [GS-159].
+
+
 ## 0.1.9 (2024-10-07)
 ---
 

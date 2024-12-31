@@ -13,6 +13,7 @@ from genericsuite.util.utilities import (
 DEBUG = False
 NON_AUTH_REQUEST_USER_ID = "[N/A/R]"
 
+
 def get_curr_user_id(request: AuthorizedRequest) -> str:
     """Get the current user ID"""
     user_id = None
@@ -44,6 +45,7 @@ def get_curr_user_data(
         # the 'resultset' as a empty dict and no error
         pass
     else:
-        dbo = GenericDbHelper(json_file="users", request=request, blueprint=blueprint)
+        dbo = GenericDbHelper(json_file="users", request=request,
+                              blueprint=blueprint)
         user_response = dbo.fetch_row_raw(user_id, {'passcode': 0})
     return user_response

@@ -159,7 +159,8 @@ def super_admin_create(
     if not other_params:
         other_params = {}
     psw_class = Passwords()
-    dbo = GenericDbHelper(json_file="users", request=request, blueprint=blueprint)
+    dbo = GenericDbHelper(json_file="users", request=request,
+                          blueprint=blueprint)
     result = get_default_resultset()
 
     if other_params.get('username') and other_params.get('password'):

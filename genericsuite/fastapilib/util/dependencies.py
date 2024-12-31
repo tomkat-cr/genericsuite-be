@@ -3,12 +3,14 @@ FastAPI dependencies library
 """
 from typing import Optional, Union
 
-from fastapi import HTTPException, Depends, Request as FaRequest
+from fastapi import HTTPException,  Request as FaRequest
+# from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 
 from genericsuite.fastapilib.framework_abstraction import (
     Request,
 )
+from genericsuite.util.app_logger import log_debug
 from genericsuite.util.jwt import (
     get_general_authorized_request,
     AuthorizedRequest,
@@ -16,7 +18,9 @@ from genericsuite.util.jwt import (
 )
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+DEBUG = False
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 
 def build_request(
@@ -39,6 +43,14 @@ def build_request(
     Returns:
         dict: The cleaned request query parameters.
     """
+    _ = DEBUG and log_debug(
+        f">> BUILD_REQUEST"
+        f"\n | method: {method}"
+        f"\n | query_params: {query_params}"
+        f"\n | json_body: {json_body}"
+        f"\n | headers: {headers}"
+        f"\n | preserve_nones: {preserve_nones}"
+    )
     query_params_reduced = {}
     if query_params:
         # Reduce query_params leaving only the not None items
@@ -64,18 +76,35 @@ def build_request(
     return new_request
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+# async def get_current_user(
+#     token: str = Depends(oauth2_scheme),
+# ):
+async def get_current_user(request: FaRequest):
     """
     Verifies the JWT token and returns the current user.
     """
-    request = build_request(headers={"token": token})
-    auth_request = get_general_authorized_request(request)
+    token = await oauth2_scheme(request)
+    headers = dict(request.headers)
+    headers["token"] = token
+    _ = DEBUG and log_debug(
+        f">> GET_CURRENT_USER"
+        f"\n | token: {token}"
+        f"\n | request: {request}"
+        f"\n | headers: {headers}"
+    )
+    # own_request = build_request(headers={"token": token})
+    own_request = build_request(
+        headers=headers,
+        query_params=request.query_params,
+        # json_body=await request.json() if await request.body() else {},
+        # json_body=request.body(),
+    )
+    auth_request = get_general_authorized_request(own_request)
     credentials_exception = HTTPException(
         status_code=401,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    # if auth_request.user is None:
     if not isinstance(auth_request, AuthorizedRequest):
         raise credentials_exception
     return auth_request.user
@@ -98,6 +127,15 @@ def get_default_fa_request(
         "query_params": query_params if query_params else {},
         "preserve_nones": preserve_nones,
     }
+    _ = DEBUG and log_debug(
+        f">> GET_DEFAULT_FA_REQUEST"
+        f"\n | current_user: {current_user}"
+        f"\n | json_body: {json_body}"
+        f"\n | headers: {headers}"
+        f"\n | query_params: {query_params}"
+        f"\n | preserve_nones: {preserve_nones}"
+        f"\n | params: {params}"
+    )
     if current_user:
         params["headers"]["current_user"] = current_user
     request = build_request(**params)

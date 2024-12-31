@@ -16,7 +16,8 @@ DEBUG = False
 
 class BlueprintOne(Blueprint):
     """
-    Class to register a new route with optional schema validation and authorization.
+    Class to register a new route with optional schema validation and
+    authorization.
     """
 
     def get_current_app(self) -> Any:
@@ -44,9 +45,10 @@ class BlueprintOne(Blueprint):
 
         Args:
             path (str): The URL path for the route.
-            schema (Optional[Schema]): The schema to validate the request against.
-            authorizor (Optional[Callable[[Request], Request]]): The authorization
-            function.
+            schema (Optional[Schema]): The schema to validate the request
+                against.
+            authorizor (Optional[Callable[[Request], Request]]): The
+                authorization function.
             other_params (Optional[dict]): Additional parameters to pass to the
             route.
             **kwargs (Any): Additional keyword arguments.
@@ -62,16 +64,17 @@ class BlueprintOne(Blueprint):
                 if DEBUG:
                     log_debug(
                         'Request was made to: ' +
-                        f'{current_request.context.get("resourcePath", path)}, ' +
-                        f'HTTP method: {current_request.method}'
+                        f'{current_request.context.get("resourcePath", path)}'
+                        f', HTTP method: {current_request.method}'
                     )
                 if schema:
-                    schema_verification(current_request.json_body, schema, current_app.log)
+                    schema_verification(current_request.json_body, schema,
+                                        current_app.log)
                 if authorizor is not None:
                     current_request = authorizor(current_request)
                     if DEBUG:
                         log_debug(
-                            'RESPONSE AUTHORIZOR BlueprintOne.route_wrapper' +
+                            'RESPONSE AUTHORIZOR BlueprintOne.route_wrapper'
                             ' | current_request:'
                         )
                         log_debug(current_request.to_dict())
@@ -80,7 +83,7 @@ class BlueprintOne(Blueprint):
                             and auth_response['statusCode'] != 200:
                         if DEBUG:
                             log_debug(
-                                'RESPONSE AUTHORIZOR FAILED | current_request.' +
+                                'RESPONSE AUTHORIZOR FAILED | current_request.'
                                 'statusCode'
                             )
                             log_debug(current_request.to_dict()["statusCode"])
