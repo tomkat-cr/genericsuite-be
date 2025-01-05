@@ -2,21 +2,33 @@
 """
 Flask abstraction layer
 """
+from typing import Optional, Union, Dict, Any
 import os
 import importlib
+import json
+
+from pydantic import BaseModel
 
 # https://stackoverflow.com/questions/47277374/flask-get-current-blueprint-webroot
-from flask import Blueprint as FlaskBlueprint
+from flask import (
+    Blueprint as FlaskBlueprint,
+    # Request as FlaskRequest,
+    Response as FlaskResponse,
+    request,
+)
 
+# from genericsuite.flasklib.util.blueprint_one import (
+#     BlueprintOne as FlaskBlueprintOne
+# )
 
-DEBUG = False
+DEBUG = True
 FRAMEWORK_LOADED = False
 FRAMEWORK = os.environ.get('CURRENT_FRAMEWORK', '').lower()
 if FRAMEWORK == 'flask':
     try:
         framework_module = importlib.import_module(FRAMEWORK)
         FRAMEWORK_LOADED = True
-        if DEBUG:
+        _ = DEBUG and \
             print(f'Flask abstraction | framework_module: {framework_module}')
 
         class FrameworkClass(framework_module.Flask):
@@ -24,19 +36,151 @@ if FRAMEWORK == 'flask':
             Framkework class cloned from the selected framework super class.
             """
 
-        class Request(framework_module.request):
+        # class Request(FlaskRequest):
+        #     """
+        #     Request class cloned from the selected Request framework super
+        #     class with added functionality to handle request context.
+        #     This class is the one to be imported by the project modules
+        #     """
+        #     method: Optional[str] = "GET"
+        #     query_params: Optional[dict] = {}
+        #     json_body: Optional[dict] = {}
+        #     headers: Optional[dict] = {}
+        #     event_dict: Optional[Dict[str, Any]] = {}
+        #     lambda_context: Optional[Any] = None
+
+        #     def __init__(self, *args, **kwargs):
+        #         if not args:
+        #             environ = dict(os.environ)
+        #             super().__init__(environ, **kwargs)
+        #         else:
+        #             super().__init__(*args, **kwargs)
+        #         self._test_request_context = None
+        #         # self.method = self.method
+        #         self.query_params = self.args.to_dict()
+        #         self.json_body = self.get_json(silent=True) or {}
+        #         self.headers = dict(self.headers)
+        #         _ = DEBUG and print(
+        #             'Flask abstraction'
+        #             f' | self.query_params: {self.query_params}'
+        #             f' | self.json_body: {self.json_body}'
+        #             f' | self.headers: {self.headers}'
+        #             f' | args: {self.args}'
+        #             f' | kwargs: {self.kwargs}')
+
+        #     @classmethod
+        #     def from_values(cls, *args, **kwargs):
+        #         instance = super().from_values(*args, **kwargs)
+        #         instance._test_request_context = \
+        #             framework_module.app.test_request_context()
+        #         instance._test_request_context.push()
+        #         return instance
+
+        #     def __del__(self):
+        #         if self._test_request_context:
+        #             self._test_request_context.pop()
+        class Request(BaseModel):
             """
             Request class cloned from the selected Request framework super
             class.
             This class is the one to be imported by the project modules
             """
+            method: Optional[str] = "GET"
+            query_params: Optional[dict] = {}
+            json_body: Optional[dict] = {}
+            headers: Optional[dict] = {}
+            event_dict: Optional[Dict[str, Any]] = {}
+            lambda_context: Optional[Any] = None
+            context: Optional[dict] = {}
 
-        class Response(framework_module.response):
+            def set_properties(self):
+                # https://tedboy.github.io/flask/generated/generated/flask.Request.html
+                self.method = request.method
+                self.query_params = request.args.to_dict()
+                self.json_body = request.form.to_dict()
+                self.headers = dict(request.headers)
+                # https://tedboy.github.io/flask/interface_api.incoming_request_data.html#flask.Request.full_path
+                # https://stackoverflow.com/questions/62147474/how-to-print-complete-http-request-using-chalice
+                self.context = {
+                    "resourcePath": request.path.split('/')[-1],
+                    "Path": f"{request.script_root}/{request.path}",
+                    "requestId": request.headers.get('X-Amzn-Trace-Id'),
+                    "apiId": request.headers.get('X-Api-Id'),
+                    "resourceId": request.headers.get('X-Amz-Api-Id'),
+                }
+                _ = DEBUG and print(
+                    'Flask abstraction | Request:'
+                    f'\n | self.query_params: {self.query_params}'
+                    f'\n | self.json_body: {self.json_body}'
+                    f'\n | self.headers: {self.headers}'
+                )
+
+            def to_dict(self):
+                """
+                Returns the request data as a dictionary.
+                """
+                return {
+                    "method": self.method,
+                    "query_params": self.query_params,
+                    "json_body": self.json_body,
+                    "headers": self.headers,
+                    "context": self.context,
+                }
+
+            def to_original_event(self) -> Union[Dict[str, Any], None]:
+                """
+                Returns the original event dictionary.
+                """
+                return self.event_dict
+
+        class Response(FlaskResponse):
             """
             Response class cloned from the selected Response framework super
-            class.
+            class with added functionality to handle request context.
             This class is the one to be imported by the project modules
             """
+            body: Union[str, dict]
+            status_code: Optional[int] = 200
+            headers: Optional[dict] = {}
+
+            def __init__(
+                self,
+                body: Union[str, dict],
+                status_code: Optional[int] = 200,
+                headers: Optional[dict] = None
+            ):
+                """
+                Initializes the Response object.
+                """
+                if isinstance(body, dict):
+                    body = json.dumps(body)
+
+                headers = headers if headers else {}
+                if 'Content-Type' not in headers:
+                    headers['Content-Type'] = 'application/json'
+                if 'Access-Control-Allow-Origin' not in headers:
+                    headers["Access-Control-Allow-Origin"] = \
+                        os.environ.get('APP_CORS_ORIGIN', '*')
+                if 'Access-Control-Allow-Methods' not in headers:
+                    headers["Access-Control-Allow-Methods"] = \
+                        "GET, POST, PUT, DELETE, OPTIONS"
+                if 'Access-Control-Allow-Headers' not in headers:
+                    headers["Access-Control-Allow-Headers"] = \
+                        "Content-Type, Authorization"
+
+                _ = DEBUG and print(
+                    'Flask abstraction | Response:'
+                    f'\n| body: {body}'
+                    f'\n| status_code: {status_code}'
+                    f'\n| headers: {headers}')
+
+                # Covert headers to a list of ``(key, value)`` tuples,
+                # which is what Flask expects
+                headers_for_flask = []
+                for key, value in headers.items():
+                    headers_for_flask.append((key, value))
+                super().__init__(response=body, status=status_code,
+                                 headers=headers_for_flask)
 
         # class Blueprint(framework_module.Blueprint):
         class Blueprint(FlaskBlueprint):
@@ -46,6 +190,7 @@ if FRAMEWORK == 'flask':
             This class is the one to be imported by the project modules
             """
 
+        # class BlueprintOne(FlaskBlueprintOne):
         class BlueprintOne(Blueprint):
             """
             Class to register a new route with optional schema validation and

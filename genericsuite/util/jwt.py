@@ -12,8 +12,9 @@ import jwt
 from pydantic import BaseModel
 
 from genericsuite.util.framework_abs_layer import (
-    Request, get_current_framework)
-
+    Request,
+    get_current_framework
+)
 from genericsuite.util.app_logger import log_debug, log_error
 from genericsuite.util.utilities import (
     standard_error_return,
@@ -26,7 +27,7 @@ settings = Config()
 
 # ----------------------- JWT -----------------------
 
-DEBUG = False
+DEBUG = True
 
 EXPIRATION_MINUTES = 30
 
@@ -70,13 +71,23 @@ def request_authentication() -> Callable[[Request], AuthorizedRequest]:
 
 def get_authorized_request(
     request: Request,
-    jws_token_data: Dict[str, Any]
+    jws_token_data: AuthTokenPayload
 ) -> AuthorizedRequest:
     """
     Get the authorized request from the request object, according to the
     current framework.
     """
-    if get_current_framework() == 'chalice':
+    if get_current_framework() == 'flask':
+        authorized_request = AuthorizedRequest(
+            # # type: ignore[attr-defined]
+            # event_dict=request.to_original_event(),
+            # # type: ignore[attr-defined]
+            # lambda_context=request.lambda_context,
+            # type: ignore[attr-defined]
+            user=jws_token_data
+        )
+        authorized_request.set_properties()
+    elif get_current_framework() == 'chalice':
         authorized_request = AuthorizedRequest(
             # type: ignore[attr-defined]
             event_dict=request.to_original_event(),
@@ -165,14 +176,14 @@ def get_api_key_auth(
             public_id=user_id
         )
         _ = DEBUG and log_debug(
-            '||| REQUEST_AUTHENTICATION' +
+            '||| REQUEST_AUTHENTICATION@get_api_key_auth' +
             f' | jws_token_data = {jws_token_data}')
         authorized_request = get_authorized_request(request, jws_token_data)
         return authorized_request
     except Exception as err:
         _ = DEBUG and log_error(
-            'REQUEST_AUTHENTICATION' +
-            f' | Exception = {str(err)}')
+            'REQUEST_AUTHENTICATION@get_api_key_auth | Exception:'
+            f' {str(err)}')
     return standard_error_return(INVALID_TOKEN_ERROR_MESSAGE)
 
 
@@ -192,7 +203,7 @@ def get_general_authorized_request(request: Request) -> AuthorizedRequest:
         token_raw = request.headers[settings.HEADER_TOKEN_ENTRY_NAME]
         jwt_token = token_raw.replace('Bearer ', '')
         _ = DEBUG and log_debug(
-                'REQUEST_AUTHENTICATION' +
+                'REQUEST_AUTHENTICATION@get_general_authorized_request' +
                 '\n | HEADER_TOKEN_ENTRY_NAME: ' +
                 f'{settings.HEADER_TOKEN_ENTRY_NAME}' +
                 f'\n | token_raw: {token_raw}' +
@@ -205,16 +216,16 @@ def get_general_authorized_request(request: Request) -> AuthorizedRequest:
             algorithms="HS256",
         )
         _ = DEBUG and log_debug(
-                'REQUEST_AUTHENTICATION' +
+                'REQUEST_AUTHENTICATION@get_general_authorized_request'
                 f' | jws_token_data = {jws_token_data}')
         authorized_request = get_authorized_request(request, jws_token_data)
         _ = DEBUG and log_debug(
-                'REQUEST_AUTHENTICATION' +
+                'REQUEST_AUTHENTICATION@get_general_authorized_request'
                 f' | authorized_request = {authorized_request}')
     except Exception as err:
         project_id = request.headers.get('x-project-id', '')
         _ = DEBUG and log_debug(
-            'REQUEST_AUTHENTICATION'
+            'REQUEST_AUTHENTICATION@get_general_authorized_request'
             f'\n | project_id = {project_id}'
             f'\n | jwt_token = {jwt_token}'
             f'\n | headers = {request.headers}'
@@ -222,8 +233,8 @@ def get_general_authorized_request(request: Request) -> AuthorizedRequest:
         if project_id and jwt_token:
             return get_api_key_auth(request, project_id, jwt_token)
         _ = DEBUG and log_error(
-            'REQUEST_AUTHENTICATION'
-            f' | Exception = {str(err)}')
+            f'REQUEST_AUTHENTICATION@get_general_authorized_request'
+            f' | Exception: {str(err)}')
         return standard_error_return(INVALID_TOKEN_ERROR_MESSAGE)
     return authorized_request
 

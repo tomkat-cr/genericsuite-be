@@ -85,7 +85,7 @@ def login_user(
     dbo = GenericDbHelper(json_file="users", request=request,
                           blueprint=blueprint)
     if DEBUG:
-        log_debug(f'login_user | request: {request}')
+        log_debug(f'login_user | request: {request.to_dict()}')
         # log_debug('login_user | bp.current_request.to_dict(): ' +
         #           f'{bp.current_request.to_dict()}')
     result = get_default_resultset()

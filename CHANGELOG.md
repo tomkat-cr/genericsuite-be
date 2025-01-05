@@ -22,6 +22,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### New
 Implement API keys to GS BE Core [GS-159].
+Generic Endpoint Builder for Flask [GS-15].
 
 
 ## 0.1.9 (2024-10-07)
