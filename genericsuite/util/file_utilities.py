@@ -19,10 +19,32 @@ def temp_filename(extension: Optional[str] = None) -> str:
     Returns
     str: The temporary path/filename.
     """
+    return os.path.join(temp_dir(), secure_filename(extension))
+
+
+def temp_dir() -> str:
+    """
+    Returns the path to a temporary directory.
+
+    Returns
+    str: The path to the temporary directory.
+    """
     settings = Config()
+    return settings.TEMP_DIR
+
+
+def secure_filename(extension: Optional[str] = None) -> str:
+    """
+    Returns a secure filename.
+
+    Args:
+    extension (str): The extension of the file.
+
+    Returns
+    str: The secure filename.
+    """
     if extension is None:
         filename = f"{uuid4().hex}"
     else:
         filename = f"{uuid4().hex}.{extension}"
-    file_path = os.path.join(settings.TEMP_DIR, filename)
-    return file_path
+    return filename

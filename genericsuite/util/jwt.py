@@ -54,8 +54,7 @@ class AuthorizedRequest(Request):
 
 def request_authentication() -> Callable[[Request], AuthorizedRequest]:
     """
-    Returns a function that performs request authentication with the specified
-    audience list.
+    Returns a function that performs request authentication.
 
     Args:
         None
@@ -126,6 +125,7 @@ def get_api_key_auth(
     error_message = INVALID_TOKEN_ERROR_MESSAGE
     filename = PARAMS_FILE_USER_FILENAME_TEMPLATE.replace('[user_id]', user_id)
     config_file_path = os.path.join(TEMP_DIR, filename)
+
     if not os.path.exists(config_file_path):
         return standard_error_return(error_message)
     try:
@@ -164,14 +164,13 @@ def get_api_key_auth(
         jws_token_data = AuthTokenPayload(
             public_id=user_id
         )
-        if DEBUG:
-            log_debug(
-                '||| REQUEST_AUTHENTICATION' +
-                f' | jws_token_data = {jws_token_data}')
+        _ = DEBUG and log_debug(
+            '||| REQUEST_AUTHENTICATION' +
+            f' | jws_token_data = {jws_token_data}')
         authorized_request = get_authorized_request(request, jws_token_data)
         return authorized_request
     except Exception as err:
-        log_error(
+        _ = DEBUG and log_error(
             'REQUEST_AUTHENTICATION' +
             f' | Exception = {str(err)}')
     return standard_error_return(INVALID_TOKEN_ERROR_MESSAGE)
@@ -192,8 +191,7 @@ def get_general_authorized_request(request: Request) -> AuthorizedRequest:
     try:
         token_raw = request.headers[settings.HEADER_TOKEN_ENTRY_NAME]
         jwt_token = token_raw.replace('Bearer ', '')
-        if DEBUG:
-            log_debug(
+        _ = DEBUG and log_debug(
                 'REQUEST_AUTHENTICATION' +
                 '\n | HEADER_TOKEN_ENTRY_NAME: ' +
                 f'{settings.HEADER_TOKEN_ENTRY_NAME}' +
@@ -206,13 +204,11 @@ def get_general_authorized_request(request: Request) -> AuthorizedRequest:
             settings.APP_SECRET_KEY,
             algorithms="HS256",
         )
-        if DEBUG:
-            log_debug(
+        _ = DEBUG and log_debug(
                 'REQUEST_AUTHENTICATION' +
                 f' | jws_token_data = {jws_token_data}')
         authorized_request = get_authorized_request(request, jws_token_data)
-        if DEBUG:
-            log_debug(
+        _ = DEBUG and log_debug(
                 'REQUEST_AUTHENTICATION' +
                 f' | authorized_request = {authorized_request}')
     except Exception as err:
@@ -225,8 +221,8 @@ def get_general_authorized_request(request: Request) -> AuthorizedRequest:
             f'\n | request = {request}')
         if project_id and jwt_token:
             return get_api_key_auth(request, project_id, jwt_token)
-        log_error(
-            'REQUEST_AUTHENTICATION' +
+        _ = DEBUG and log_error(
+            'REQUEST_AUTHENTICATION'
             f' | Exception = {str(err)}')
         return standard_error_return(INVALID_TOKEN_ERROR_MESSAGE)
     return authorized_request

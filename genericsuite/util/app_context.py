@@ -483,22 +483,24 @@ def delete_params_file(
     return action_data['resultset']
 
 
-def save_all_users_params_files(
-    blueprint: Any
-) -> dict:
+def save_user_param_file(user_id: str) -> dict:
+    dbo = GenericDbHelper(json_file="users")
+    user_response = dbo.fetch_row_raw(user_id, {'passcode': 0})
+    if user_response['error']:
+        return user_response
+    pfc = ParamsFile(user_id)
+    filename = pfc.get_params_filename(user_id)    
+    return pfc.save_params_file(filename, user_response['resultset'])
+
+
+def save_all_users_params_files() -> dict:
     """
     Save all users params files, to enable use of API keys
     """
-    # self_debug = DEBUG
-    self_debug = True
-
+    self_debug = DEBUG
+    # self_debug = True
     response = get_default_resultset()
-
-    dbo = GenericDbHelper(
-        json_file="users",
-        request=blueprint.get_current_request(),
-        blueprint=blueprint,
-    )
+    dbo = GenericDbHelper(json_file="users")
 
     users_params_files = dbo.fetch_list(skip=0, limit=0)
     if users_params_files['error']:
@@ -517,23 +519,29 @@ def save_all_users_params_files(
     for user in json.loads(users_params_files['resultset']):
         # Get user's data
         user_id = get_id_as_string(user)
-        user_response = dbo.fetch_row_raw(user_id, {'passcode': 0})
-        _ = self_debug and log_debug(
-            f"save_all_users_params_files"
-            f"\n | user_id: {user_id}"
-            f"\n | user_response: {user_response}")
-        if user_response['error']:
+        save_response = save_user_param_file(user_id)
+        if save_response['error']:
             response['error'] = True
             errors.append(f"UserId: {user_id} | Error: "
-                          f"{user_response['error_message']}")
+                          f"{save_response['error_message']}")
             continue
-        # Create or update usr's params file, delete others
-        pfc = ParamsFile(user_id)
-        filename = pfc.get_params_filename(user_id)
-        _ = self_debug and log_debug(
-            f"save_all_users_params_files"
-            f" | Saving params file: {filename}")
-        pfc.save_params_file(filename, user_response['resultset'])
+        # user_response = dbo.fetch_row_raw(user_id, {'passcode': 0})
+        # _ = self_debug and log_debug(
+        #     f"save_all_users_params_files"
+        #     f"\n | user_id: {user_id}"
+        #     f"\n | user_response: {user_response}")
+        # if user_response['error']:
+        #     response['error'] = True
+        #     errors.append(f"UserId: {user_id} | Error: "
+        #                   f"{user_response['error_message']}")
+        #     continue
+        # # Create or update usr's params file, delete others
+        # pfc = ParamsFile(user_id)
+        # filename = pfc.get_params_filename(user_id)
+        # _ = self_debug and log_debug(
+        #     f"save_all_users_params_files"
+        #     f" | Saving params file: {filename}")
+        # pfc.save_params_file(filename, user_response['resultset'])
 
     if response['error']:
         response['error_message'] = \

@@ -114,5 +114,6 @@ def caujf(
     """
     CAUJF: Create All User Json Files
     """
-    result = save_all_users_params_files(bp)
+    # result = save_all_users_params_files(bp)
+    result = save_all_users_params_files()
     return return_resultset_jsonified_or_exception(result)

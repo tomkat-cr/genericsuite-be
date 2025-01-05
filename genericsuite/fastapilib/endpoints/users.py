@@ -94,5 +94,6 @@ async def caujf(
     """
     gs_request, _ = get_default_fa_request()
     router.set_current_request(request, gs_request)
-    result = save_all_users_params_files(router)
+    # result = save_all_users_params_files(router)
+    result = save_all_users_params_files()
     return return_resultset_jsonified_or_exception(result)
