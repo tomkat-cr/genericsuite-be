@@ -1,7 +1,8 @@
 """
 JWT Library
 """
-from typing import Callable, Union, Dict, Any
+# from typing import Dict, Any
+from typing import Callable, Union
 import os
 import base64
 import datetime
@@ -27,7 +28,7 @@ settings = Config()
 
 # ----------------------- JWT -----------------------
 
-DEBUG = True
+DEBUG = False
 
 EXPIRATION_MINUTES = 30
 

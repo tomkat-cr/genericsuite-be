@@ -9,6 +9,7 @@ from genericsuite.util.utilities import (
     get_default_resultset,
     error_resultset,
 )
+from genericsuite.util.app_logger import log_debug
 
 DEBUG = False
 NON_AUTH_REQUEST_USER_ID = "[N/A/R]"
@@ -27,6 +28,11 @@ def get_curr_user_id(request: AuthorizedRequest) -> str:
         # Is a non-authorization request, so returns the identificator
         # 'N/A/R' meaning "Non-Authorization Request"
         user_id = NON_AUTH_REQUEST_USER_ID
+    _ = DEBUG and log_debug(
+        ">> get_curr_user_id"
+        f" | request: {request}"
+        f" | authorized_request: {authorized_request}"
+        f" | user_id: {user_id}")
     return user_id
 
 

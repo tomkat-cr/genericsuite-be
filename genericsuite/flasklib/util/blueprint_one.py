@@ -13,7 +13,7 @@ from genericsuite.util.schema_utilities import Schema, schema_verification
 from genericsuite.util.jwt import AuthorizedRequest
 from genericsuite.flasklib.framework_abstraction import Request
 
-DEBUG = True
+DEBUG = False
 
 
 class BlueprintOne(Blueprint):

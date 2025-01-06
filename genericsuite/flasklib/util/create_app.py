@@ -8,6 +8,8 @@ import os
 from flask import Flask
 from flask_cors import CORS
 
+# from logging.config import dictConfig
+
 from genericsuite.util.app_logger import log_info
 from genericsuite.config.config import Config
 from genericsuite.config.config_from_db import set_init_custom_data
@@ -37,8 +39,9 @@ def create_app(app_name: str, settings=None) -> Any:
     app.custom_data = set_init_custom_data()
 
     # App wide log level
-    if not settings.DEBUG:
-        app.logger.setLevel(logging.INFO)
+    app.logger.setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)
+        
+    # dictConfig({'version': 1, 'root': {'level': 'DEBUG', 'handlers': []}})
 
     # CORS configuration
     CORS(app, resources={r"/*": set_cors_config(settings)})

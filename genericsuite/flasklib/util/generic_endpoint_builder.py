@@ -1,9 +1,8 @@
 """
 generic_endpoint_builder: generate endpoint from a json file for Flask.
 """
-from flask import Flask, Blueprint, request
-# from flask import jsonify
-from functools import wraps
+from flask import Flask, request
+# from flask import jsonify, Blueprint
 from pprint import pprint
 
 from genericsuite.util.config_dbdef_helpers import get_json_def
@@ -13,8 +12,15 @@ from genericsuite.util.utilities import return_resultset_jsonified_or_exception
 from genericsuite.config.config_from_db import app_context_and_set_env
 from genericsuite.config.config import Config
 
-from genericsuite.flasklib.util.jwt import token_required
+# from functools import wraps
+# from genericsuite.flasklib.util.jwt import token_required
+
 from genericsuite.flasklib.framework_abstraction import Request
+from genericsuite.flasklib.util.blueprint_one import BlueprintOne
+from genericsuite.util.jwt import (
+    AuthorizedRequest,
+    get_general_authorized_request
+)
 
 DEBUG = False
 
@@ -39,8 +45,9 @@ def generate_blueprints_from_json(
     for definition in definitions:
         bp_name = definition['name']
         url_prefix = f"/{definition.get('url_prefix', bp_name)}"
-        blueprint = Blueprint(f"{bp_name}_gbfj", __name__,
-                              url_prefix=url_prefix)
+        blueprint = BlueprintOne(
+            f"{bp_name}_gbfj", __name__,
+            url_prefix=url_prefix)
 
         if DEBUG:
             log_debug(
@@ -51,13 +58,16 @@ def generate_blueprints_from_json(
 
         # Add routes to the blueprint
         for route in definition['routes']:
-            route_endpoint = route['endpoint']
+            route_endpoint = route['endpoint'] if route['endpoint'] != "/" \
+                else ""
             route_methods = route['methods']
             route_handler_type = route['handler_type']
             other_params = {
                 "name": bp_name,
                 "app": app,
-                "params": route['params']
+                "params": route['params'],
+                "blueprint": blueprint,
+                "authorization": route.get('authorization', True),
             }
 
             if route_handler_type == "GenericEndpointHelper":
@@ -77,36 +87,40 @@ def generate_blueprints_from_json(
 
             blueprint.add_url_rule(
                 route_endpoint,
-                endpoint=f"{bp_name}_{route_endpoint}",
-                view_func=create_endpoint_function(other_params),
-                methods=route_methods
+                route_endpoint,
+                generic_route_handler,
+                None,
+                methods=route_methods,
+                # Params passed to the endpoint in the kwargs
+                defaults=other_params,
             )
 
         # Register the blueprint with the Flask app
         app.register_blueprint(blueprint)
 
 
-def create_endpoint_function(other_params: dict) -> callable:
-    """
-    Creates a function that can be used as a Flask endpoint.
+# def create_endpoint_function(other_params: dict) -> callable:
+#     """
+#     Creates a function that can be used as a Flask endpoint.
 
-    Args:
-        other_params (dict): The other parameters to pass to the
-            endpoint function.
+#     Args:
+#         other_params (dict): The other parameters to pass to the
+#             endpoint function.
 
-    Returns:
-        callable: The endpoint function.
-    """
-    @wraps(generic_route_handler)
-    # @request_authentication()
-    @token_required
-    def wrapper(*args, **kwargs):
-        return generic_route_handler(other_params=other_params)
+#     Returns:
+#         callable: The endpoint function.
+#     """
+#     @wraps(generic_route_handler)
+#     # @request_authentication()
+#     @token_required
+#     def wrapper(*args, **kwargs):
+#         return generic_route_handler(other_params=other_params)
 
-    return wrapper
+#     return wrapper
 
 
-def generic_route_handler(other_params: dict):
+# def generic_route_handler(other_params: dict):
+def generic_route_handler(*args, **kwargs):
     """
     Handles generic route requests and delegates to the appropriate
     CRUD operation based on the request parameters.
@@ -117,20 +131,43 @@ def generic_route_handler(other_params: dict):
     Returns:
         Response: The response from the CRUD operation.
     """
-    if DEBUG:
-        log_debug(
-            "generic_route_handler |" +
-            f" | other_params: {other_params}" +
-            f" request: {request}"
-        )
-        pprint(request.__dict__)
+    self_debug = DEBUG
+    # self_debug = True
 
-    # Set environment variables from the database configurations.
-    current_request = Request()
-    current_request.set_properties()
+    other_params = dict(kwargs)
+    blueprint = other_params.pop('blueprint')
+    if self_debug:
+        log_debug(
+            "GENERATE_BLUEPRINTS_FROM_JSON / generic_route_handler" +
+            f"\n | args: {args}" +
+            f"\n | kwargs: {kwargs}"
+            f"\n | other_params: {other_params}" +
+            "\n | request:")
+        pprint(request.__dict__)
+        log_debug("blueprint:")
+        pprint(blueprint.__dict__)
+
+    # Verify authentication
+    if other_params["authorization"]:
+        current_request = get_general_authorized_request(request)
+        _ = self_debug and log_debug(
+            "GENERATE_BLUEPRINTS_FROM_JSON / generic_route_handler"
+            f"\n | Get_general_authorized_request response: {current_request}"
+        )
+        if not isinstance(current_request, AuthorizedRequest):
+            _ = self_debug and log_debug(
+                "GENERATE_BLUEPRINTS_FROM_JSON / generic_route_handler"
+                "\n | Invalid token or other error\n"
+            )
+            return current_request
+    else:
+        # Set environment variables from the database configurations.
+        current_request = Request()
+        current_request.set_properties()
+
     app_context = app_context_and_set_env(
         request=current_request,
-        blueprint=other_params['name']
+        blueprint=blueprint
     )
     if app_context.has_error():
         return return_resultset_jsonified_or_exception(

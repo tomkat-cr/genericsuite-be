@@ -36,5 +36,4 @@ def menu_options_element(
     other_params: Optional[dict] = None
 ) -> Response:
     """ Get menu element configuration """
-    # return menu_options_element_model(request, other_params)
     return menu_options_element_model(request, bp, other_params)

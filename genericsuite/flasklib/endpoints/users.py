@@ -68,7 +68,7 @@ def super_admin_create(
         other_params=other_params)
 
 
-@bp.route('/current_user_data', methods=['GET'])
+@bp.route('/current_user_d', methods=['GET'])
 @token_required
 def current_user_d(
     request: AuthorizedRequest,

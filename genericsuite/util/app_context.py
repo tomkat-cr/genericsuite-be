@@ -388,6 +388,9 @@ def delete_params_file(
             "cnf_db": the table configuration. E.g. tablename is
                 cnf_db['tablename']
     """
+    if PARAMS_FILE_ENABLED != '1':
+        return action_data['resultset']
+
     app_context = get_app_context(app_context_or_blueprint)
     pfc = ParamsFile(app_context.get_user_id())
     action_data = action_data or {}
@@ -440,7 +443,7 @@ def delete_params_file(
                                 f"\n | filenames: {filenames}")
 
         if action_data.get("action") in ["create", "update"] and \
-           PARAMS_FILE_ENABLED == '1':
+           tablename != 'general_config':
             # If it's a create or update, the params file must be created or
             # updated in order to make API Keys validation work...
             # Only if the params file is related to a user
@@ -461,6 +464,7 @@ def delete_params_file(
                         f" | action: {action_data['action']}"
                         f" | ERROR: {user_response['error_message']}")
                     return action_data['resultset']
+
             # Create or update usr's params file, delete others
             for filename in filenames:
                 if filename == user_file_name:
@@ -470,7 +474,8 @@ def delete_params_file(
                     # Delete params file if it's not a user's params file
                     os.remove(filename)
 
-        if action_data.get("action") in ["delete"]:
+        if action_data.get("action") in ["delete"] or \
+           tablename == 'general_config':
             # Delete params file if exists
             for filename in filenames:
                 if os.path.exists(filename):

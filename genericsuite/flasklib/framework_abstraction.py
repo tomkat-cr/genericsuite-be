@@ -21,7 +21,7 @@ from flask import (
 #     BlueprintOne as FlaskBlueprintOne
 # )
 
-DEBUG = True
+DEBUG = False
 FRAMEWORK_LOADED = False
 FRAMEWORK = os.environ.get('CURRENT_FRAMEWORK', '').lower()
 if FRAMEWORK == 'flask':
@@ -96,8 +96,10 @@ if FRAMEWORK == 'flask':
             def set_properties(self):
                 # https://tedboy.github.io/flask/generated/generated/flask.Request.html
                 self.method = request.method
-                self.query_params = request.args.to_dict()
-                self.json_body = request.form.to_dict()
+                # self.query_params = request.args.to_dict()
+                self.query_params = dict(request.args)
+                # self.json_body = request.form.to_dict()
+                self.json_body = request.get_json(silent=True)
                 self.headers = dict(request.headers)
                 # https://tedboy.github.io/flask/interface_api.incoming_request_data.html#flask.Request.full_path
                 # https://stackoverflow.com/questions/62147474/how-to-print-complete-http-request-using-chalice

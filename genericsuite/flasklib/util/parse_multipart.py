@@ -15,7 +15,7 @@ from genericsuite.util.utilities import (
 from genericsuite.util.file_utilities import temp_dir, secure_filename
 
 
-async def download_file_flask() -> str:
+def download_file_flask() -> str:
     """
     Downloads a file from a FastAPI UploadFile object.
     Returns:
@@ -42,10 +42,12 @@ async def download_file_flask() -> str:
         )
     if file:
         extension = get_file_extension(file.filename)
-        filename = secure_filename(extension)
-        file.save(temp_dir(), filename)
+        # filename = secure_filename(extension)
+        # file.save(temp_dir(), filename)
+        file_path = os.path.join(temp_dir(), secure_filename(extension))
+        file.save(file_path)
         result = get_default_resultset()
-        result['file_path'] = os.path.join(temp_dir(), filename)
+        result['file_path'] = file_path
         return result
     return error_resultset(
         error_message="No file provided",
