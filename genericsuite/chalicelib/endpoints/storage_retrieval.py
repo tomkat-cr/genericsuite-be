@@ -30,44 +30,45 @@ def storage_retrieval_no_item_id_endpoint(
 ) -> Response:
     """ Get file from ecrypted URL """
     debug_args(args, kwargs)
-    request = bp.get_current_request()  #   bp.current_app.current_request
+    request = bp.get_current_request()
     # Report the error ASR-E1010
     item_id = None
     other_params = kwargs.get('other_params', {}) or {}
-    other_params['response_type'] = other_params.get('response_type') or "streaming"
-    return storage_retieval_chalice(request=request, blueprint=bp,
+    other_params['response_type'] = other_params.get('response_type') \
+        or "streaming"
+    return storage_retieval_chalice(
+        request=request, blueprint=bp,
         item_id=item_id, other_params=other_params)
 
 
 @bp.route('/{item_id}', methods=['GET'])
 def storage_retrieval_endpoint(
-    # item_id: str,
     *args,
     **kwargs,
 ) -> Response:
     """ Get file from ecrypted URL """
     debug_args(args, kwargs)
-    request = bp.get_current_request()  #   bp.current_app.current_request
+    request = bp.get_current_request()
     item_id = kwargs.get('item_id')
     other_params = kwargs.get('other_params', {}) or {}
-    other_params['response_type'] = other_params.get('response_type') or "streaming"
-    return storage_retieval_chalice(request=request, blueprint=bp,
+    other_params['response_type'] = other_params.get('response_type') \
+        or "streaming"
+    return storage_retieval_chalice(
+        request=request, blueprint=bp,
         item_id=item_id, other_params=other_params)
 
 
 @bp.route('/{item_id}/{response_type}', methods=['GET'])
 def storage_retrieval_with_response_type_endpoint(
-    # other_params: Optional[Union[dict, None]] = None,
-    # item_id: str,
-    # response_type: str,
     *args, **kwargs,
 ) -> Response:
     """ Get file from ecrypted URL """
-    request = bp.get_current_request()  #   bp.current_app.current_request
+    request = bp.get_current_request()
     item_id = kwargs.get('item_id')
     other_params = kwargs.get('other_params', {}) or {}
     other_params['response_type'] = kwargs.get('response_type') or "streaming"
-    return storage_retieval_chalice(request=request, blueprint=bp,
+    return storage_retieval_chalice(
+        request=request, blueprint=bp,
         item_id=item_id, other_params=other_params)
 
 
@@ -88,8 +89,8 @@ def storage_retieval_chalice(
         Union[Response, StreamingResponse]: The object as streaming response
             or error response.
     """
-    # resultset = storage_retieval(request, item_id, other_params)
-    resultset = storage_retieval(request=request, blueprint=blueprint,
+    resultset = storage_retieval(
+        request=request, blueprint=blueprint,
         item_id=item_id, other_params=other_params)
     if resultset.get('error'):
         return return_resultset_jsonified_or_exception(
@@ -105,8 +106,8 @@ def storage_retieval_chalice(
     # Return the file content as a normal Response
     headers = {
         'Content-Type': resultset['mime_type'],
-        'Content-Disposition': 'attachment; filename=' \
-            f'"{resultset["filename"]}"',
+        'Content-Disposition': 'attachment; filename='
+        f'"{resultset["filename"]}"',
     }
     return Response(
         body=resultset['content'],

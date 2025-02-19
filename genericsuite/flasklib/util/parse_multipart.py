@@ -26,7 +26,7 @@ def download_file_flask() -> str:
             error_message="Method is not POST",
             message_code="PM-DFF-E100")
 
-    # check if the post request has the file part
+    # Check if the post request has the file part
     if 'file' not in request.files:
         return error_resultset(
             error_message="No file part",

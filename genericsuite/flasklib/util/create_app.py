@@ -8,8 +8,6 @@ import os
 from flask import Flask
 from flask_cors import CORS
 
-# from logging.config import dictConfig
-
 from genericsuite.util.app_logger import log_info
 from genericsuite.config.config import Config
 from genericsuite.config.config_from_db import set_init_custom_data

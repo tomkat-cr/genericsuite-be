@@ -21,10 +21,18 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### New
 Implement API keys to GS BE Core [GS-159].
+Implement the "CAUJF" endpoint to build all user's parameters local JSON files [GS-159].
 Generic Endpoint Builder for Flask [GS-15].
+
+### Changes
+FastAPI get_current_user() now gets the headers from the request object (required by the API keys implementation) [GS-159].
+GenericDbHelperSuper class assigns None default value to Request and Blueprint, and {} to query_params and request_body properties, so it can be used by save_all_users_params_files() or other functions that does not have those objects in a given time [GS-159].
+GenericDbHelperSuper class avoid call specific_func_name() when blueprint is None [GS-159].
+Overall code clean up and linting changes.
 
 ### Fixes
 Fix poetry 2.x "The option --no-update does not exist" error message [FA-84].
+Missing "context" and "event_dict" properties, "to_dict" and "to_original_event" events, were added to the FastAPI Request class.
 
 
 ## 0.1.9 (2024-10-07)

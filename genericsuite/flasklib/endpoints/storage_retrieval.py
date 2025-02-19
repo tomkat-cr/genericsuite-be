@@ -47,7 +47,6 @@ def storage_retrieval_no_item_id_endpoint(
 
 @bp.route('/{item_id}', methods=['GET'])
 def storage_retrieval_endpoint(
-    # item_id: str,
     *args,
     **kwargs,
 ) -> Response:
@@ -95,7 +94,6 @@ def storage_retieval_chalice(
         Union[Response, StreamingResponse]: The object as streaming response
             or error response.
     """
-    # resultset = storage_retieval(request, item_id, other_params)
     resultset = storage_retieval(
         request=request, blueprint=blueprint,
         item_id=item_id, other_params=other_params)

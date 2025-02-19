@@ -6,7 +6,6 @@ from typing import Optional
 from genericsuite.util.framework_abs_layer import (
     Request,
     Response,
-    # BlueprintOne
 )
 from genericsuite.util.jwt import (
     AuthorizedRequest,
@@ -48,8 +47,6 @@ def login_user(
     other_params: Optional[dict] = None
 ) -> Response:
     """User login"""
-    # request = Request()
-    # request.set_properties()
     return login_user_model(
         request=request, blueprint=bp,
         other_params=other_params)
@@ -61,8 +58,6 @@ def super_admin_create(
     other_params: Optional[dict] = None
 ) -> Response:
     """Super admin user emergency creation"""
-    # request = Request()
-    # request.set_properties()
     return super_admin_create_model(
         request=request, blueprint=bp,
         other_params=other_params)
