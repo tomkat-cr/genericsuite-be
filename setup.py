@@ -20,7 +20,7 @@ classifiers = [
     'Development Status :: 3 - Alpha',
     'Environment :: Console',
     'Intended Audience :: Developers',
-    'License :: OSI Approved :: ISC License',
+    'License-Expression :: ISC',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
