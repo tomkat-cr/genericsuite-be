@@ -17,11 +17,12 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## 0.1.10 (2025-02-17)
+## 0.1.10 (2025-02-19)
 
 ### New
 Implement API keys to GS BE Core [GS-159].
 Generic Endpoint Builder for Flask [GS-15].
+Fix: poetry 2.x "--no-update" option does not exist [FA-84].
 
 
 ## 0.1.9 (2024-10-07)
