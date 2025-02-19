@@ -6,6 +6,9 @@ from fastapi import Request as FaRequest, Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from genericsuite.util.framework_abs_layer import Response
+from genericsuite.util.utilities import (
+    return_resultset_jsonified_or_exception,
+)
 from genericsuite.fastapilib.util.blueprint_one import BlueprintOne
 from genericsuite.fastapilib.util.dependencies import (
     get_current_user,
@@ -17,8 +20,8 @@ from genericsuite.models.users.users import (
     super_admin_create as super_admin_create_model,
     get_current_user_data,
 )
+from genericsuite.util.app_context import save_all_users_params_files
 
-# router = APIRouter()
 router = BlueprintOne()
 
 # Set up Basic Authentication
@@ -42,7 +45,6 @@ async def test_connection_handler(
 @router.post('/login', tags='login')
 async def login_user(
     request: FaRequest,
-    # form_data: OAuth2PasswordRequestForm = Depends()
     credentials: HTTPBasicCredentials = Depends(security)
 ) -> Response:
     """User login"""
@@ -58,7 +60,6 @@ async def login_user(
 @router.post('/supad-create', tags='super-admin')
 async def super_admin_create(
     request: FaRequest,
-    # form_data: OAuth2PasswordRequestForm = Depends()
     credentials: HTTPBasicCredentials = Depends(security)
 ) -> Response:
     """Super admin user emergency creation"""
@@ -82,3 +83,16 @@ async def current_user_d(
     gs_request, other_params = get_default_fa_request(current_user)
     router.set_current_request(request, gs_request)
     return get_current_user_data(gs_request, router, other_params)
+
+
+@router.get('/caujf', tags='lambda')
+async def caujf(
+    request: FaRequest,
+) -> Response:
+    """
+    CAUJF: Create All User JSON Files (required for API Keys)
+    """
+    gs_request, _ = get_default_fa_request()
+    router.set_current_request(request, gs_request)
+    result = save_all_users_params_files()
+    return return_resultset_jsonified_or_exception(result)

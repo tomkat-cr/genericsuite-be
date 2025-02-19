@@ -14,7 +14,8 @@ from genericsuite.util.current_user_data import (
 )
 from genericsuite.util.jwt import AuthorizedRequest
 from genericsuite.util.utilities import get_default_resultset, get_id_as_string
-from genericsuite.util.app_logger import log_debug
+from genericsuite.util.app_logger import log_debug, log_error
+from genericsuite.util.generic_db_helpers import GenericDbHelper
 
 
 DEBUG = False
@@ -86,6 +87,53 @@ class ParamsFile():
     def save_params_file(self, filename: str, data_to_save: dict) -> dict:
         """
         Store the parameters in a file.
+
+        Example files:
+
+        cat /tmp/params_{user_id}.json
+        {
+            "_id": "{user_id}",
+            "firstname": "Exmaple name",
+            "lastname": "Example lastname",
+            "superuser": "0",
+            "status": "1",
+            "plan": "premium",
+            "language": "en",
+            "email": "example@email.com",
+            "creation_date": 1731864902.365586,
+            "update_date": 1731864902.365586,
+            "birthday": -131760000,
+            "gender": "m",
+            "users_preferences": [
+                {
+                    "property_type": "house",
+                    "property_for": "rent",
+                    "min_price": 0,
+                    "max_price": 0,
+                    "preferred_location": "",
+                    "id": "e1d24bc9-0b5b-4485-b257-47f5e93bfaab"
+                }
+            ],
+            "users_config": [
+                {
+                    "config_name": "ExampleParamName",
+                    "config_value": "ExampleParamValue",
+                    "id": "00a72c28-58c9-499d-957a-f2cfad12670d"
+                }
+            ]
+            "users_api_keys": [
+                {
+                    "access_token": "ExampleToken",
+                    "id": "00a72c28-58c9-499d-957a-f2cfad12670d"
+                }
+            ]
+        }
+
+        cat /tmp/params_GENERAL.json
+        {
+            "AI_TECHNOLOGY": "xai"
+        }
+
         """
         result = get_default_resultset()
         result['resultset'] = data_to_save
@@ -153,7 +201,6 @@ class AppContext:
         """
         Get current user data
         """
-        # user_response = get_curr_user_data(self.request)
         user_response = get_curr_user_data(
             request=self.request,
             blueprint=self.blueprint)
@@ -183,7 +230,7 @@ class AppContext:
 
     def get_user_data(self, check_params_file: Optional[bool] = True):
         """
-        Get current user data verifying the params json cache file existence
+        Get current user data verifying the params JSON cache file existence
         """
         if not self.user_data:
             if check_params_file and PARAMS_FILE_ENABLED == '1':
@@ -217,7 +264,7 @@ class AppContext:
     ):
         """
         Get "other" data element value.
-        If it doesn't exist try to call the generator_func
+        If it doesn't exist, try to call the generator_func
         with generator_params to assign the element's value.
 
         Args:
@@ -341,6 +388,9 @@ def delete_params_file(
             "cnf_db": the table configuration. E.g. tablename is
                 cnf_db['tablename']
     """
+    if PARAMS_FILE_ENABLED != '1':
+        return action_data['resultset']
+
     app_context = get_app_context(app_context_or_blueprint)
     pfc = ParamsFile(app_context.get_user_id())
     action_data = action_data or {}
@@ -368,11 +418,15 @@ def delete_params_file(
 
             # Get the database item resultset
             db_item = action_data['resultset']['resultset']
+            # Example db_item:
+            # {"rows_affected": "1", "_id": "6771x9999999999999999999"}
+
             if isinstance(db_item, str):
                 db_item = json.loads(db_item)
             _ = DEBUG and log_debug(
                 'DB SPECIFIC FUNCTION:' +
                 f" delete_params_file | db_item: {db_item}")
+
             # Inconsistency If _id not in resultset...
             if '_id' not in db_item:
                 return action_data['resultset']
@@ -388,13 +442,106 @@ def delete_params_file(
         _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
                                 f"\n | filenames: {filenames}")
 
-        # Delete params file if exists
-        for filename in filenames:
-            if os.path.exists(filename):
-                os.remove(filename)
-                _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
-                                        f"\n | File deleted: {filename}")
-            else:
-                _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
-                                        f"\n | File not found: {filename}")
+        if action_data.get("action") in ["create", "update"] and \
+           tablename != 'general_config':
+            # If it's a create or update, the params file must be created or
+            # updated in order to make API Keys validation work...
+            # Only if the params file is related to a user
+            # Reference: get_api_key_auth() in jwt.py
+
+            user_file_name = pfc.get_params_filename(user_id)
+            if user_file_name in filenames:
+                # Get user's data for id in db_item["_id"]
+                dbo = GenericDbHelper(
+                    json_file="users",
+                    request=app_context_or_blueprint.get_current_request(),
+                    blueprint=app_context_or_blueprint,
+                )
+                user_response = dbo.fetch_row_raw(user_id, {'passcode': 0})
+                if user_response['error']:
+                    log_error(
+                        f"DELETE_PARAMS_FILE"
+                        f" | action: {action_data['action']}"
+                        f" | ERROR: {user_response['error_message']}")
+                    return action_data['resultset']
+
+            # Create or update usr's params file, delete others
+            for filename in filenames:
+                if filename == user_file_name:
+                    pfc = ParamsFile(user_id)
+                    pfc.save_params_file(filename, user_response['resultset'])
+                elif os.path.exists(filename):
+                    # Delete params file if it's not a user's params file
+                    os.remove(filename)
+
+        if action_data.get("action") in ["delete"] or \
+           tablename == 'general_config':
+            # Delete params file if exists
+            for filename in filenames:
+                if os.path.exists(filename):
+                    os.remove(filename)
+                    _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
+                                            f"\n | File deleted: {filename}")
+                else:
+                    _ = DEBUG and log_debug("AppContext | DELETE_PARAMS_FILE" +
+                                            f"\n | File not found: {filename}")
     return action_data['resultset']
+
+
+def save_user_param_file(user_id: str) -> dict:
+    dbo = GenericDbHelper(json_file="users")
+    user_response = dbo.fetch_row_raw(user_id, {'passcode': 0})
+    if user_response['error']:
+        return user_response
+    pfc = ParamsFile(user_id)
+    filename = pfc.get_params_filename(user_id)    
+    return pfc.save_params_file(filename, user_response['resultset'])
+
+
+def save_all_users_params_files() -> dict:
+    """
+    Save all users params files, to enable use of API keys
+    Check out "CAUJF: Create All User JSON Files" for more info
+    """
+    self_debug = DEBUG
+    # self_debug = True
+    response = get_default_resultset()
+    dbo = GenericDbHelper(json_file="users")
+
+    users_params_files = dbo.fetch_list(skip=0, limit=0)
+    if users_params_files['error']:
+        response['error'] = True
+        response['error_message'] = \
+            users_params_files['error_message']
+        log_error(
+            f"save_all_users_params_files"
+            f" | ERROR: {users_params_files['error_message']}")
+        return response
+
+    errors = []
+    _ = self_debug and log_debug(
+        f"save_all_users_params_files"
+        f" | users_params_files: {users_params_files}")
+    for user in json.loads(users_params_files['resultset']):
+        # Get user's data
+        user_id = get_id_as_string(user)
+        save_response = save_user_param_file(user_id)
+        if save_response['error']:
+            response['error'] = True
+            errors.append(f"UserId: {user_id} | Error: "
+                          f"{save_response['error_message']}")
+            continue
+
+    if response['error']:
+        response['error_message'] = \
+            f"Errors saving params files: {', '.join(errors)}"
+        log_error(
+            f"save_all_users_params_files"
+            f" | ERROR: {response['error_message']}")
+    else:
+        _ = self_debug and log_debug(
+            f"save_all_users_params_files"
+            f" | All params files saved"
+            f"\n | response: {response}")
+
+    return response

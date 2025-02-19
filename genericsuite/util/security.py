@@ -35,8 +35,8 @@ def get_user_authorized_menu(menu_data: list, user_data: dict) -> dict:
     authorized_menu_options = authorize_menu_options(
         menu_data, user_groups
     )
-    # if DEBUG:
-    #     log_debug(f'GAMO-3) authorized_menu_options: {authorized_menu_options}')
+    _ = DEBUG and log_debug(
+        f'GAMO-3) authorized_menu_options: {authorized_menu_options}')
     menu_response["resultset"] = authorized_menu_options
     return menu_response
 
@@ -91,16 +91,30 @@ def get_authorized_menu_options(app_context: AppContext,
     user_groups = []
     user_data = app_context.get_user_data()
     if not user_data:
+        _ = DEBUG and log_debug(
+            "get_authorized_menu_options | USER_DATA ERROR: "
+            f"\n | app_context: {app_context}"
+        )
         menu_response = app_context.get_error_resultset()
         return menu_response, user_data, user_groups
     menu_data = ep_helper.generic_raw_json()
     if menu_data['error']:
         menu_response["error"] = True
         menu_response["error_message"] = menu_data['error_message']
+        _ = DEBUG and log_debug(
+            "get_authorized_menu_options | MENU_DATA ERROR: "
+            f"\n | menu_data: {menu_data}"
+        )
         return menu_response, user_data, user_groups
     menu_response = get_user_authorized_menu(menu_data["resultset"],
                                              user_data)
     user_groups = get_user_groups(user_data)
+    _ = DEBUG and log_debug(
+        "get_authorized_menu_options | MENU_RESPONSE: "
+        f"\n | menu_response: {menu_response}"
+        f"\n | user_groups: {user_groups}"
+        f"\n | user_data: {user_data}"
+    )
     return menu_response, user_data, user_groups
 
 
@@ -121,8 +135,9 @@ def get_element_option(menu_data: list, element: str) -> dict:
                 return element_option
         if "element" in menu_option:
             if DEBUG:
-                log_debug(f'GEO-1) element: {element} | ' +
-                          f'menu_option.element: {menu_option["element"]}')
+                log_debug(
+                    f'GEO-1) element: {element} ' +
+                    f'\n | menu_option.element: {menu_option["element"]}')
             if menu_option["element"] == element:
                 element_option = menu_option
                 if DEBUG:
@@ -140,6 +155,10 @@ def get_option_access(app_context: AppContext, element: str) -> dict:
     Then verify in the authorized menu options if the option element
     is present.
     """
+    _ = DEBUG and log_debug(
+        "GET_OPTION_ACCESS: "
+        f'\n | request: {app_context.get_request()}'
+    )
     oa_response = get_default_resultset()
     menu_response, _, user_groups = get_authorized_menu_options(app_context)
     if menu_response['error']:

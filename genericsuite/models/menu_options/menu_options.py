@@ -18,6 +18,9 @@ from genericsuite.util.utilities import (
     get_default_resultset,
 )
 from genericsuite.config.config_from_db import app_context_and_set_env
+from genericsuite.util.app_logger import log_debug
+
+DEBUG = False
 
 
 def menu_options_get(
@@ -29,8 +32,13 @@ def menu_options_get(
     if other_params is None:
         other_params = {}
     # Set environment variables from the database configurations.
+    _ = DEBUG and log_debug("menu_options_get | started...")
     app_context = app_context_and_set_env(request=request, blueprint=blueprint)
     if app_context.has_error():
+        _ = DEBUG and log_debug(
+            "menu_options_get | APPCONTEXT ERROR: "
+            f"\n | app_context: {app_context}"
+        )
         return return_resultset_jsonified_or_exception(
             app_context.get_error_resultset()
         )
@@ -52,9 +60,12 @@ def menu_options_element(
     if other_params is None:
         other_params = {}
     # Set environment variables from the database configurations.
-    # app_context = app_context_and_set_env(request)
     app_context = app_context_and_set_env(request=request, blueprint=blueprint)
     if app_context.has_error():
+        _ = DEBUG and log_debug(
+            "menu_options_element | APPCONTEXT ERROR: "
+            f"\n | app_context: {app_context}"
+        )
         return return_resultset_jsonified_or_exception(
             app_context.get_error_resultset()
         )

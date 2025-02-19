@@ -9,6 +9,7 @@ import traceback
 import base64
 
 from mimetypes import MimeTypes
+from bson.json_util import ObjectId
 
 # from flask import jsonify, make_response
 # from flask_cors import cross_origin
@@ -338,7 +339,7 @@ def sort_list_of_dicts(data: list[dict], column_name: str, direction: str):
 
 
 # Previouslly: get_user_id_as_string
-def get_id_as_string(row):
+def get_id_as_string(row) -> str:
     """
     Returns the Object(_ID) of a row as a string.
 
@@ -348,6 +349,10 @@ def get_id_as_string(row):
     Returns:
         str: The ID of the row as a string.
     """
+    if isinstance(row['_id'], dict) and '$oid' in row['_id']:
+        return str(row['_id']['$oid'])
+    elif isinstance(row['_id'], ObjectId):
+        return str(row['_id'])
     return str(row['_id'])
 
 

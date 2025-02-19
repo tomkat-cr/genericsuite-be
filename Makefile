@@ -13,7 +13,8 @@ requirements:
 
 build:
 	# Build 'dist' directory needed for the Pypi publish
-	poetry lock --no-update
+	poetry lock
+	# poetry lock --no-update
 	rm -rf dist
 	python3 -m build
 

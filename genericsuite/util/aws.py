@@ -25,7 +25,7 @@ from genericsuite.util.encryption import decrypt_string, encrypt_string
 from genericsuite.util.file_utilities import temp_filename
 from genericsuite.config.config import Config
 
-DEBUG = True
+DEBUG = False
 
 STORAGE_URL_SEPARATOR = '||'
 STORAGE_ENCRYPTION = os.environ.get('STORAGE_ENCRYPTION', '') == '1'

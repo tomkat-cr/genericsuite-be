@@ -4,7 +4,9 @@ Storage retrieval for Chalice
 from typing import Union, Optional
 
 from genericsuite.util.framework_abs_layer import (
-    Request, Response, BlueprintOne)
+    Request,
+    Response,
+)
 from genericsuite.util.app_logger import log_debug
 
 from genericsuite.util.aws import storage_retieval
@@ -12,8 +14,10 @@ from genericsuite.util.utilities import (
     return_resultset_jsonified_or_exception,
 )
 
+from genericsuite.flasklib.util.blueprint_one import BlueprintOne
+
 DEBUG = False
-bp = BlueprintOne(__name__)
+bp = BlueprintOne('asset', __name__, url_prefix='/asset')
 
 
 def debug_args(args1, kwargs1):
@@ -66,7 +70,8 @@ def storage_retrieval_with_response_type_endpoint(
     request = bp.get_current_request()
     item_id = kwargs.get('item_id')
     other_params = kwargs.get('other_params', {}) or {}
-    other_params['response_type'] = kwargs.get('response_type') or "streaming"
+    other_params['response_type'] = kwargs.get('response_type') \
+        or "streaming"
     return storage_retieval_chalice(
         request=request, blueprint=bp,
         item_id=item_id, other_params=other_params)
@@ -106,8 +111,8 @@ def storage_retieval_chalice(
     # Return the file content as a normal Response
     headers = {
         'Content-Type': resultset['mime_type'],
-        'Content-Disposition': 'attachment; filename='
-        f'"{resultset["filename"]}"',
+        'Content-Disposition': 'attachment; filename=' +
+                               f'"{resultset["filename"]}"',
     }
     return Response(
         body=resultset['content'],

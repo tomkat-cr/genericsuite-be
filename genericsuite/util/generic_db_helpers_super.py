@@ -42,8 +42,12 @@ class GenericDbHelperSuper:
 
         self.blueprint = blueprint
         self.request = request
-        self.query_params = get_query_params(self.request)
-        self.request_body = get_request_body(self.request)
+        if self.blueprint and not self.request:
+            self.request = self.blueprint.get_current_request()
+        self.query_params = get_query_params(self.request) \
+            if self.request else {}
+        self.request_body = get_request_body(self.request) \
+            if self.request else {}
 
         self.table_name = json_file
         self.name = json_file.capitalize()
@@ -447,7 +451,7 @@ class GenericDbHelperSuper:
             dict: The resultset returned by the specific function.
         """
         specific_func_name = self.cnf_db.get('specific_function', None)
-        if specific_func_name:
+        if specific_func_name and self.blueprint:
             specific_func = self.blueprint.get_current_app().custom_data.get(
                 specific_func_name
             )

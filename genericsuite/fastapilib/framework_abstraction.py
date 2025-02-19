@@ -26,18 +26,18 @@ if FRAMEWORK == 'fastapi':
         framework_module = importlib.import_module(FRAMEWORK)
         FRAMEWORK_LOADED = True
         if DEBUG:
-            print(f'FastAPI abstraction | framework_module: {framework_module}')
-
+            print('FastAPI abstraction | framework_module:'
+                  f' {framework_module}')
 
         class FrameworkClass(framework_module.FastAPI):
             """
             Framkework class cloned from the selected framework super class.
             """
 
-
         class Request(BaseModel):
             """
-            Request class cloned from the selected Request framework super class.
+            Request class cloned from the selected Request framework super
+            class.
             This class is the one to be imported by the project modules
             """
             method: Optional[str] = "GET"
@@ -64,10 +64,10 @@ if FRAMEWORK == 'fastapi':
                 """
                 return self.event_dict
 
-
         class Response(FastAPIResponse):
             """
-            Response class cloned from the selected Response framework super class.
+            Response class cloned from the selected Response framework super
+            class.
             This class is the one to be imported by the project modules
             """
             body: Union[str, dict]
@@ -90,11 +90,14 @@ if FRAMEWORK == 'fastapi':
                 if 'Content-Type' not in headers:
                     headers['Content-Type'] = 'application/json'
                 if 'Access-Control-Allow-Origin' not in headers:
-                    headers["Access-Control-Allow-Origin"] = os.environ.get('APP_CORS_ORIGIN', '*')
+                    headers["Access-Control-Allow-Origin"] = \
+                        os.environ.get('APP_CORS_ORIGIN', '*')
                 if 'Access-Control-Allow-Methods' not in headers:
-                    headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+                    headers["Access-Control-Allow-Methods"] = \
+                        "GET, POST, PUT, DELETE, OPTIONS"
                 if 'Access-Control-Allow-Headers' not in headers:
-                    headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+                    headers["Access-Control-Allow-Headers"] = \
+                        "Content-Type, Authorization"
 
                 if DEBUG:
                     print('FastAPI abstraction' +
@@ -107,16 +110,17 @@ if FRAMEWORK == 'fastapi':
                     headers=headers
                 )
 
-
         class Blueprint(framework_module.APIRouter):
             """
-            Blueprint class cloned from the selected Blueprint framework super class.
+            Blueprint class cloned from the selected Blueprint framework super
+            class.
             This class is the one to be imported by the project modules
             """
 
         class BlueprintOne(FaBlueprintOne):
             """
-            Class to register a new route with optional schema validation and authorization.
+            Class to register a new route with optional schema validation and
+            authorization.
             """
 
     except ImportError as err:

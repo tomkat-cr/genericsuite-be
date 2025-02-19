@@ -24,7 +24,7 @@ from genericsuite.util.utilities import (
 )
 # from genericsuite.config.config import Config
 
-DEBUG = True
+DEBUG = False
 
 DEFAULT_DOWNLOAD_METHOD = "fastapi"
 # DEFAULT_DOWNLOAD_METHOD = "inline"

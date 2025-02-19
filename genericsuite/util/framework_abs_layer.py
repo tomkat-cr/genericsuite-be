@@ -6,6 +6,7 @@ import importlib
 
 DEFAULT_FRAMEWORK = ''
 
+
 def get_current_framework():
     """
     Get the current framework
@@ -24,7 +25,8 @@ module_path = f"{module_base_path}.framework_abstraction"
 try:
     framework_module = importlib.import_module(module_path)
     if not framework_module or not framework_module.FRAMEWORK_LOADED:
-        raise ImportError(f"Framework '{module_path}' could no be loaded" +
+        raise ImportError(
+            f"Framework '{module_path}' could no be loaded" +
             " [FAL-E010]" +
             f" | FRAMEWORK_LOADED={framework_module.FRAMEWORK_LOADED}")
 except ImportError as err:
@@ -45,9 +47,12 @@ class FrameworkClass(framework_module.FrameworkClass):
         from fastapi import FastAPI
         from chalice import Chalice
     Will be:
-        from genericsuite.util.framework_abs_layer import FrameworkClass as Flask
-        from genericsuite.util.framework_abs_layer import FrameworkClass as FastAPI
-        from genericsuite.util.framework_abs_layer import FrameworkClass as Chalice
+        from genericsuite.util.framework_abs_layer import FrameworkClass
+            as Flask
+        from genericsuite.util.framework_abs_layer import FrameworkClass
+            as FastAPI
+        from genericsuite.util.framework_abs_layer import FrameworkClass
+            as Chalice
     This class is the one to be imported by the project modules.
     """
 
