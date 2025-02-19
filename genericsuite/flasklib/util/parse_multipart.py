@@ -42,8 +42,6 @@ def download_file_flask() -> str:
         )
     if file:
         extension = get_file_extension(file.filename)
-        # filename = secure_filename(extension)
-        # file.save(temp_dir(), filename)
         file_path = os.path.join(temp_dir(), secure_filename(extension))
         file.save(file_path)
         result = get_default_resultset()

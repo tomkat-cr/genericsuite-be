@@ -1,7 +1,6 @@
 """
 JWT Library
 """
-# from typing import Dict, Any
 from typing import Callable, Union
 import os
 import base64
@@ -133,6 +132,11 @@ def get_api_key_auth(
         user_id (str): The user ID specified as customer_id in the POST
             body.
         access_token (str): The access token (without 'Bearer ' prefix).
+            (required for API Keys)
+
+    Returns:
+        Union[AuthorizedRequest, dict]: The authorized request or an error
+            message.
     """
     error_message = INVALID_TOKEN_ERROR_MESSAGE
     filename = PARAMS_FILE_USER_FILENAME_TEMPLATE.replace('[user_id]', user_id)
@@ -224,6 +228,7 @@ def get_general_authorized_request(request: Request) -> AuthorizedRequest:
                 'REQUEST_AUTHENTICATION@get_general_authorized_request'
                 f' | authorized_request = {authorized_request}')
     except Exception as err:
+        # API Keys processing
         project_id = request.headers.get('x-project-id', '')
         _ = DEBUG and log_debug(
             'REQUEST_AUTHENTICATION@get_general_authorized_request'

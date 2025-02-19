@@ -230,7 +230,7 @@ class AppContext:
 
     def get_user_data(self, check_params_file: Optional[bool] = True):
         """
-        Get current user data verifying the params json cache file existence
+        Get current user data verifying the params JSON cache file existence
         """
         if not self.user_data:
             if check_params_file and PARAMS_FILE_ENABLED == '1':
@@ -264,7 +264,7 @@ class AppContext:
     ):
         """
         Get "other" data element value.
-        If it doesn't exist try to call the generator_func
+        If it doesn't exist, try to call the generator_func
         with generator_params to assign the element's value.
 
         Args:
@@ -501,6 +501,7 @@ def save_user_param_file(user_id: str) -> dict:
 def save_all_users_params_files() -> dict:
     """
     Save all users params files, to enable use of API keys
+    Check out "CAUJF: Create All User JSON Files" for more info
     """
     self_debug = DEBUG
     # self_debug = True
@@ -530,23 +531,6 @@ def save_all_users_params_files() -> dict:
             errors.append(f"UserId: {user_id} | Error: "
                           f"{save_response['error_message']}")
             continue
-        # user_response = dbo.fetch_row_raw(user_id, {'passcode': 0})
-        # _ = self_debug and log_debug(
-        #     f"save_all_users_params_files"
-        #     f"\n | user_id: {user_id}"
-        #     f"\n | user_response: {user_response}")
-        # if user_response['error']:
-        #     response['error'] = True
-        #     errors.append(f"UserId: {user_id} | Error: "
-        #                   f"{user_response['error_message']}")
-        #     continue
-        # # Create or update usr's params file, delete others
-        # pfc = ParamsFile(user_id)
-        # filename = pfc.get_params_filename(user_id)
-        # _ = self_debug and log_debug(
-        #     f"save_all_users_params_files"
-        #     f" | Saving params file: {filename}")
-        # pfc.save_params_file(filename, user_response['resultset'])
 
     if response['error']:
         response['error_message'] = \

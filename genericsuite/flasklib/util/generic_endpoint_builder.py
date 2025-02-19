@@ -12,9 +12,6 @@ from genericsuite.util.utilities import return_resultset_jsonified_or_exception
 from genericsuite.config.config_from_db import app_context_and_set_env
 from genericsuite.config.config import Config
 
-# from functools import wraps
-# from genericsuite.flasklib.util.jwt import token_required
-
 from genericsuite.flasklib.framework_abstraction import Request
 from genericsuite.flasklib.util.blueprint_one import BlueprintOne
 from genericsuite.util.jwt import (
@@ -99,27 +96,6 @@ def generate_blueprints_from_json(
         app.register_blueprint(blueprint)
 
 
-# def create_endpoint_function(other_params: dict) -> callable:
-#     """
-#     Creates a function that can be used as a Flask endpoint.
-
-#     Args:
-#         other_params (dict): The other parameters to pass to the
-#             endpoint function.
-
-#     Returns:
-#         callable: The endpoint function.
-#     """
-#     @wraps(generic_route_handler)
-#     # @request_authentication()
-#     @token_required
-#     def wrapper(*args, **kwargs):
-#         return generic_route_handler(other_params=other_params)
-
-#     return wrapper
-
-
-# def generic_route_handler(other_params: dict):
 def generic_route_handler(*args, **kwargs):
     """
     Handles generic route requests and delegates to the appropriate

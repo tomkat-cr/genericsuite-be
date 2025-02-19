@@ -86,7 +86,7 @@ def caujf(
     other_params: Optional[dict] = None
 ) -> Response:
     """
-    CAUJF: Create All User Json Files
+    CAUJF: Create All User JSON Files (required for API Keys)
     """
     request = Request()
     request.set_properties()

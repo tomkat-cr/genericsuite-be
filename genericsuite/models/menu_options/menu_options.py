@@ -60,7 +60,6 @@ def menu_options_element(
     if other_params is None:
         other_params = {}
     # Set environment variables from the database configurations.
-    # app_context = app_context_and_set_env(request)
     app_context = app_context_and_set_env(request=request, blueprint=blueprint)
     if app_context.has_error():
         _ = DEBUG and log_debug(

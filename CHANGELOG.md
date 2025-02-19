@@ -24,7 +24,7 @@ Implement API keys to GS BE Core [GS-159].
 Generic Endpoint Builder for Flask [GS-15].
 
 ### Fixes
-Fix poetry 2.x "option --no-update does not exist" error message [FA-84].
+Fix poetry 2.x "The option --no-update does not exist" error message [FA-84].
 
 
 ## 0.1.9 (2024-10-07)

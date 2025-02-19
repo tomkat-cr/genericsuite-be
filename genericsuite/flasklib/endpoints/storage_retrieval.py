@@ -3,12 +3,9 @@ Storage retrieval for Chalice
 """
 from typing import Union, Optional
 
-# from chalice.app import Request, Response
-# from genericsuite.util.blueprint_one import BlueprintOne
 from genericsuite.util.framework_abs_layer import (
     Request,
     Response,
-    # BlueprintOne
 )
 from genericsuite.util.app_logger import log_debug
 
@@ -19,7 +16,7 @@ from genericsuite.util.utilities import (
 
 from genericsuite.flasklib.util.blueprint_one import BlueprintOne
 
-DEBUG = True
+DEBUG = False
 bp = BlueprintOne('asset', __name__, url_prefix='/asset')
 
 

@@ -86,7 +86,7 @@ def set_cors_config(cors_config_class, settings):
         allow_origin=settings.CORS_ORIGIN,
         allow_headers=[
             settings.HEADER_TOKEN_ENTRY_NAME,
-            'x-project-id',
+            'x-project-id',     # (required for API Keys)
             'Access-Control-Allow-Origin',
             'Content-Type',
             'Access-Control-Allow-Headers',

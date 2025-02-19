@@ -3,8 +3,6 @@ Menu options access
 """
 from typing import Optional
 
-# from chalice.app import Response
-# from genericsuite.util.blueprint_one import BlueprintOne
 from genericsuite.util.framework_abs_layer import Response, BlueprintOne
 
 from genericsuite.util.jwt import (

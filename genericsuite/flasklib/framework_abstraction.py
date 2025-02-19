@@ -12,14 +12,9 @@ from pydantic import BaseModel
 # https://stackoverflow.com/questions/47277374/flask-get-current-blueprint-webroot
 from flask import (
     Blueprint as FlaskBlueprint,
-    # Request as FlaskRequest,
     Response as FlaskResponse,
     request,
 )
-
-# from genericsuite.flasklib.util.blueprint_one import (
-#     BlueprintOne as FlaskBlueprintOne
-# )
 
 DEBUG = False
 FRAMEWORK_LOADED = False
@@ -36,49 +31,6 @@ if FRAMEWORK == 'flask':
             Framkework class cloned from the selected framework super class.
             """
 
-        # class Request(FlaskRequest):
-        #     """
-        #     Request class cloned from the selected Request framework super
-        #     class with added functionality to handle request context.
-        #     This class is the one to be imported by the project modules
-        #     """
-        #     method: Optional[str] = "GET"
-        #     query_params: Optional[dict] = {}
-        #     json_body: Optional[dict] = {}
-        #     headers: Optional[dict] = {}
-        #     event_dict: Optional[Dict[str, Any]] = {}
-        #     lambda_context: Optional[Any] = None
-
-        #     def __init__(self, *args, **kwargs):
-        #         if not args:
-        #             environ = dict(os.environ)
-        #             super().__init__(environ, **kwargs)
-        #         else:
-        #             super().__init__(*args, **kwargs)
-        #         self._test_request_context = None
-        #         # self.method = self.method
-        #         self.query_params = self.args.to_dict()
-        #         self.json_body = self.get_json(silent=True) or {}
-        #         self.headers = dict(self.headers)
-        #         _ = DEBUG and print(
-        #             'Flask abstraction'
-        #             f' | self.query_params: {self.query_params}'
-        #             f' | self.json_body: {self.json_body}'
-        #             f' | self.headers: {self.headers}'
-        #             f' | args: {self.args}'
-        #             f' | kwargs: {self.kwargs}')
-
-        #     @classmethod
-        #     def from_values(cls, *args, **kwargs):
-        #         instance = super().from_values(*args, **kwargs)
-        #         instance._test_request_context = \
-        #             framework_module.app.test_request_context()
-        #         instance._test_request_context.push()
-        #         return instance
-
-        #     def __del__(self):
-        #         if self._test_request_context:
-        #             self._test_request_context.pop()
         class Request(BaseModel):
             """
             Request class cloned from the selected Request framework super

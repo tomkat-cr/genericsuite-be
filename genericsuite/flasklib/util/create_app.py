@@ -40,8 +40,6 @@ def create_app(app_name: str, settings=None) -> Any:
 
     # App wide log level
     app.logger.setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)
-        
-    # dictConfig({'version': 1, 'root': {'level': 'DEBUG', 'handlers': []}})
 
     # CORS configuration
     CORS(app, resources={r"/*": set_cors_config(settings)})
@@ -77,7 +75,7 @@ def set_cors_config(settings):
                     "DELETE"],
         "allow_headers": [
             settings.HEADER_TOKEN_ENTRY_NAME,
-            'x-project-id',
+            'x-project-id',     # (required for API Keys)
             'Access-Control-Allow-Origin',
             'Content-Type',
             'Access-Control-Allow-Headers',

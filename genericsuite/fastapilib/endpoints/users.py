@@ -90,7 +90,7 @@ async def caujf(
     request: FaRequest,
 ) -> Response:
     """
-    CAUJF: Create All User Json Files
+    CAUJF: Create All User JSON Files (required for API Keys)
     """
     gs_request, _ = get_default_fa_request()
     router.set_current_request(request, gs_request)

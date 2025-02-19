@@ -92,12 +92,14 @@ async def get_current_user(request: FaRequest):
         f"\n | request: {request}"
         f"\n | headers: {headers}"
     )
-    # own_request = build_request(headers={"token": token})
     own_request = build_request(
         headers=headers,
         query_params=request.query_params,
-        # json_body=await request.json() if await request.body() else {},
-        # json_body=request.body(),
+        # JSON body must be processed in the endpoint,
+        # with FastAPI + Pydantic style...
+        # because none of the following worked:
+        #   json_body=await request.json() if await request.body() else {},
+        #   json_body=request.body(),
     )
     auth_request = get_general_authorized_request(own_request)
     credentials_exception = HTTPException(
