@@ -33,7 +33,7 @@ Overall code clean up and linting changes.
 ### Fixes
 Fix poetry 2.x "The option --no-update does not exist" error message [FA-84].
 Missing "context" and "event_dict" properties, "to_dict" and "to_original_event" events, were added to the FastAPI Request class.
-"'License :: OSI Approved :: ISC License' is not a valid classifier" error fixed [FA-84].
+Fix "'License :: OSI Approved :: ISC License' is not a valid classifier" error running "python3 -m twine upload dist/*" [FA-84].
 
 
 ## 0.1.9 (2024-10-07)
