@@ -6,7 +6,7 @@ from typing import Any, Callable, Optional
 from functools import wraps
 
 from flask import Blueprint, current_app
-from flask import request
+# from flask import request
 
 from genericsuite.util.app_logger import log_debug
 from genericsuite.util.schema_utilities import Schema, schema_verification
@@ -93,4 +93,7 @@ class BlueprintOne(Blueprint):
         Get the current request object. It must be called inside a router
         function.
         """
-        return request
+        current_request = Request()
+        current_request.set_properties()
+        return current_request
+        # return request

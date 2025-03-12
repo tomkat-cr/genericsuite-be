@@ -114,7 +114,7 @@ def generic_route_handler(*args, **kwargs):
     blueprint = other_params.pop('blueprint')
     if self_debug:
         log_debug(
-            "GENERATE_BLUEPRINTS_FROM_JSON / generic_route_handler" +
+            "Flask / generic_route_handler" +
             f"\n | args: {args}" +
             f"\n | kwargs: {kwargs}"
             f"\n | other_params: {other_params}" +
@@ -124,22 +124,29 @@ def generic_route_handler(*args, **kwargs):
         pprint(blueprint.__dict__)
 
     # Verify authentication
+    current_request = Request()
+    current_request.set_properties()
     if other_params["authorization"]:
-        current_request = get_general_authorized_request(request)
+        # current_request = get_general_authorized_request(request)
+        current_request = get_general_authorized_request(current_request)
         _ = self_debug and log_debug(
-            "GENERATE_BLUEPRINTS_FROM_JSON / generic_route_handler"
+            "Flask / generic_route_handler"
             f"\n | Get_general_authorized_request response: {current_request}"
         )
         if not isinstance(current_request, AuthorizedRequest):
             _ = self_debug and log_debug(
-                "GENERATE_BLUEPRINTS_FROM_JSON / generic_route_handler"
+                "Flask / generic_route_handler"
                 "\n | Invalid token or other error\n"
             )
             return current_request
     else:
         # Set environment variables from the database configurations.
-        current_request = Request()
-        current_request.set_properties()
+        _ = self_debug and log_debug(
+            "Flask / generic_route_handler"
+            "\n | set Request() and set_properties()"
+            f"\n | current_request: {current_request}"
+            f"\n | type of current_request: {type(current_request)}"
+        )
 
     app_context = app_context_and_set_env(
         request=current_request,

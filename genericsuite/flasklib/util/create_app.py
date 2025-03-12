@@ -77,6 +77,7 @@ def set_cors_config(settings):
             'Access-Control-Allow-Origin',
             'Content-Type',
             'Access-Control-Allow-Headers',
+            'Access-Control-Expose-Headers',
         ],
         "expose_headers": [
             settings.HEADER_TOKEN_ENTRY_NAME,

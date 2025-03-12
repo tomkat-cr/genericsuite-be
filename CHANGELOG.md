@@ -17,6 +17,13 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## Unreleased
+## 0.1.11 (2025-02-19)
+
+### Fixes
+Fix "AttributeError: 'Request' object has no attribute 'to_dict'" error in get_query_params() when Flask framework is used in generic_array_crud() [GS-15].
+
+
 ## 0.1.10 (2025-02-19)
 
 ### New
