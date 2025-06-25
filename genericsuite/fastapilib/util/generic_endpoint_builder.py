@@ -16,6 +16,7 @@ from genericsuite.fastapilib.util.blueprint_one import BlueprintOne
 from genericsuite.fastapilib.util.dependencies import (
     get_current_user,
     build_request,
+    get_fa_query_params,
 )
 
 from genericsuite.util.config_dbdef_helpers import get_json_def
@@ -220,16 +221,18 @@ def create_endpoint_function(other_params: dict) -> callable:
         Returns:
             Response: The response from the GET operation.
         """
+        query_params = {
+            "id": _id,
+            "limit": limit,
+            "page": page,
+            "like_param": like_param,
+            "comb_param": comb_param,
+            "user_id": user_id,
+        }
+        query_params.update(get_fa_query_params(request))
         gs_request = build_request(
             method="get",
-            query_params={
-                "id": _id,
-                "limit": limit,
-                "page": page,
-                "like_param": like_param,
-                "comb_param": comb_param,
-                "user_id": user_id,
-            },
+            query_params=query_params,
             headers={
                 "current_user": current_user,
             }
@@ -253,8 +256,10 @@ def create_endpoint_function(other_params: dict) -> callable:
         Returns:
             Response: The response from the GET operation.
         """
+        query_params = get_fa_query_params(request)
         gs_request = build_request(
             method="post",
+            query_params=query_params,
             json_body=json_body,
             headers={
                 "current_user": current_user,
@@ -282,11 +287,13 @@ def create_endpoint_function(other_params: dict) -> callable:
         Returns:
             Response: The response from the GET operation.
         """
+        query_params = {
+            "update_item": update_item,
+        }
+        query_params.update(get_fa_query_params(request))
         gs_request = build_request(
             method="put",
-            query_params={
-                "update_item": update_item,
-            },
+            query_params=query_params,
             json_body=json_body,
             headers={
                 "current_user": current_user,
@@ -312,11 +319,13 @@ def create_endpoint_function(other_params: dict) -> callable:
         Returns:
             Response: The response from the GET operation.
         """
+        query_params = {
+            "id": _id,
+        }
+        query_params.update(get_fa_query_params(request))
         gs_request = build_request(
             method="delete",
-            query_params={
-                "id": _id,
-            },
+            query_params=query_params,
             json_body=json_body,
             headers={
                 "current_user": current_user,

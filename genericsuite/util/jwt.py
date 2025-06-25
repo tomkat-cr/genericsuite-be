@@ -29,7 +29,7 @@ settings = Config()
 
 DEBUG = False
 
-EXPIRATION_MINUTES = 30
+EXPIRATION_MINUTES = os.environ.get('EXPIRATION_MINUTES', 30)
 
 TEMP_DIR = os.environ.get('TEMP_DIR', '/tmp')
 PARAMS_FILE_USER_FILENAME_TEMPLATE = os.environ.get(

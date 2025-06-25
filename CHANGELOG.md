@@ -30,6 +30,7 @@ Fix "AttributeError: 'Request' object has no attribute 'to_dict'" error in get_q
 Implement API keys to GS BE Core [GS-159].
 Implement the "CAUJF" endpoint to build all user's parameters local JSON files [GS-159].
 Generic Endpoint Builder for Flask [GS-15].
+Add JWT expiration time configuration with the EXPIRATION_MINUTES envvar [GS-200].
 
 ### Changes
 FastAPI get_current_user() now gets the headers from the request object (required by the API keys implementation) [GS-159].
@@ -41,6 +42,7 @@ Overall code clean up and linting changes.
 Fix poetry 2.x "The option --no-update does not exist" error message [FA-84].
 Missing "context" and "event_dict" properties, "to_dict" and "to_original_event" events, were added to the FastAPI Request class.
 Fix "'License :: OSI Approved :: ISC License' is not a valid classifier" error running "python3 -m twine upload dist/*" [FA-84].
+Fix the filter issue in the CRUD editor using FastAPI [GS-200].
 
 
 ## 0.1.9 (2024-10-07)
