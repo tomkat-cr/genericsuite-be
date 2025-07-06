@@ -19,8 +19,17 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ## 0.1.11 (2025-07-05)
 
+### New
+Add SSL_CERT_GEN_METHOD, BASE_DEVELOPMENT_PATH and SAM_BUILD_CONTAINER documentation to the .env.example file.
+Add JWT expiration time configuration with the EXPIRATION_MINUTES envvar [GS-200].
+
+### Changes
+Flask add 'Access-Control-Expose-Headers' to the response headers [GS-15].
+
 ### Fixes
 Fix "AttributeError: 'Request' object has no attribute 'to_dict'" error in get_query_params() when Flask framework is used in generic_array_crud() [GS-15].
+Fix error reporting in modify_item_in_db() is not showing the json_file variable content [GS-196].
+Fix the filter issue in the CRUD editor using FastAPI [GS-200].
 
 
 ## 0.1.10 (2025-02-19)
@@ -29,7 +38,6 @@ Fix "AttributeError: 'Request' object has no attribute 'to_dict'" error in get_q
 Implement API keys to GS BE Core [GS-159].
 Implement the "CAUJF" endpoint to build all user's parameters local JSON files [GS-159].
 Generic Endpoint Builder for Flask [GS-15].
-Add JWT expiration time configuration with the EXPIRATION_MINUTES envvar [GS-200].
 
 ### Changes
 FastAPI get_current_user() now gets the headers from the request object (required by the API keys implementation) [GS-159].
@@ -41,7 +49,6 @@ Overall code clean up and linting changes.
 Fix poetry 2.x "The option --no-update does not exist" error message [FA-84].
 Missing "context" and "event_dict" properties, "to_dict" and "to_original_event" events, were added to the FastAPI Request class.
 Fix "'License :: OSI Approved :: ISC License' is not a valid classifier" error running "python3 -m twine upload dist/*" [FA-84].
-Fix the filter issue in the CRUD editor using FastAPI [GS-200].
 
 
 ## 0.1.9 (2024-10-07)

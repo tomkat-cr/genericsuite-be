@@ -58,7 +58,8 @@ if FRAMEWORK == 'flask':
                 # https://stackoverflow.com/questions/62147474/how-to-print-complete-http-request-using-chalice
                 self.context = {
                     "resourcePath": request.path.split('/')[-1],
-                    "Path": request.path,
+                    "Path": (request.script_root if hasattr(request,
+                             'script_root') else '') + request.path,
                     "requestId": request.headers.get('X-Amzn-Trace-Id'),
                     "apiId": request.headers.get('X-Api-Id'),
                     "resourceId": request.headers.get('X-Amz-Api-Id'),
@@ -68,6 +69,7 @@ if FRAMEWORK == 'flask':
                     f'\n | self.query_params: {self.query_params}'
                     f'\n | self.json_body: {self.json_body}'
                     f'\n | self.headers: {self.headers}'
+                    f'\n | self.context: {self.context}'
                 )
 
             def to_dict(self):

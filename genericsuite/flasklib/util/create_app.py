@@ -32,6 +32,9 @@ def create_app(app_name: str, settings=None) -> Any:
     app.config['DEBUG'] = settings.DEBUG
     app.secret_key = os.environ["FLASK_SECRET_KEY"]
 
+    if DEBUG:
+        log_info({'|||>>> app.config': app.config})
+
     # Custom data, to be used to store a dict for
     # GenericDbHelper specific functions
     app.custom_data = set_init_custom_data()

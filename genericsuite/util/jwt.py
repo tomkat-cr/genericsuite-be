@@ -29,7 +29,7 @@ settings = Config()
 
 DEBUG = False
 
-EXPIRATION_MINUTES = os.environ.get('EXPIRATION_MINUTES', 30)
+EXPIRATION_MINUTES = os.environ.get('EXPIRATION_MINUTES', '30')
 
 TEMP_DIR = os.environ.get('TEMP_DIR', '/tmp')
 PARAMS_FILE_USER_FILENAME_TEMPLATE = os.environ.get(
@@ -255,12 +255,17 @@ def token_encode(user):
     Returns:
         str: The encoded JWT token.
     """
+    # Validate EXPIRATION_MINUTES can be converted to int
+    try:
+        expiration_minutes = int(EXPIRATION_MINUTES)
+    except ValueError:
+        expiration_minutes = 30
     token = jwt.encode(
         {
             'public_id': get_id_as_string(user),
             'exp':
-                datetime.datetime.utcnow() +
-                datetime.timedelta(minutes=EXPIRATION_MINUTES)
+                datetime.datetime.now(datetime.timezone.utc) +
+                datetime.timedelta(minutes=expiration_minutes)
         },
         settings.APP_SECRET_KEY,
         algorithm="HS256"

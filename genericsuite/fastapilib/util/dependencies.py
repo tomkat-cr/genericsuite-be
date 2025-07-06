@@ -17,7 +17,6 @@ from genericsuite.util.jwt import (
     AuthTokenPayload,
 )
 
-
 DEBUG = False
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
