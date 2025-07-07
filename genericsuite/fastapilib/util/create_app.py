@@ -22,6 +22,7 @@ from genericsuite.fastapilib.endpoints import (
     users,
     menu_options,
     storage_retrieval,
+    chaos_experiments,
 )
 from genericsuite.config.config_from_db import set_init_custom_data
 
@@ -65,6 +66,7 @@ def create_app(app_name: str, settings: Config = None) -> Any:
     fastapi_app.include_router(menu_options.router, prefix='/menu_options')
     fastapi_app.include_router(users.router, prefix='/users')
     fastapi_app.include_router(storage_retrieval.router, prefix='/asset')
+    fastapi_app.include_router(chaos_experiments.router, prefix='/chaos_experiments')
 
     # Register generic endpoints (from the "endpoints.json" file)
     generate_blueprints_from_json(fastapi_app, 'endpoints')

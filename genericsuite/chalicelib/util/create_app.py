@@ -13,6 +13,7 @@ from genericsuite.config.config import Config
 from genericsuite.chalicelib.endpoints import users
 from genericsuite.chalicelib.endpoints import menu_options
 from genericsuite.chalicelib.endpoints import storage_retrieval
+from genericsuite.chalicelib.endpoints import chaos_experiments
 from genericsuite.chalicelib.util.generic_endpoint_builder import (
     generate_blueprints_from_json
 )
@@ -61,6 +62,8 @@ def create_app(app_name: str, settings=None) -> Any:
     # log_info("Registered users blueprint")
     chalice_app.register_blueprint(storage_retrieval.bp, url_prefix='/asset')
     # log_info("Registered storage_retrieval blueprint")
+    chalice_app.register_blueprint(chaos_experiments.bp, url_prefix='/chaos_experiments')
+    # log_info("Registered chaos_experiments blueprint")
 
     # Register generic endpoints (from the "endpoints.json" file)
     generate_blueprints_from_json(chalice_app, 'endpoints')
