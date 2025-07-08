@@ -17,19 +17,23 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## 0.1.11 (2025-07-05)
+## 0.1.11 (2025-07-08)
 
 ### New
 Add SSL_CERT_GEN_METHOD, BASE_DEVELOPMENT_PATH and SAM_BUILD_CONTAINER documentation to the .env.example file.
 Add JWT expiration time configuration with the EXPIRATION_MINUTES envvar [GS-200].
+Add RUN_PROTOCOL documentation to the .env.example file [GS-137].
 
 ### Changes
-Flask add 'Access-Control-Expose-Headers' to the response headers [GS-15].
+Refactor query-param parsing for FastAPI [GS-200].
+Refactor request abstraction for Flask [GS-15].
+Add 'Access-Control-Expose-Headers' to the Flask response headers [GS-15].
 
 ### Fixes
 Fix "AttributeError: 'Request' object has no attribute 'to_dict'" error in get_query_params() when Flask framework is used in generic_array_crud() [GS-15].
-Fix error reporting in modify_item_in_db() is not showing the json_file variable content [GS-196].
+Fix error reporting in modify_item_in_db() is not showing the "json_file" variable content [GS-196].
 Fix the filter issue in the CRUD editor using FastAPI [GS-200].
+Linting changes.
 
 
 ## 0.1.10 (2025-02-19)

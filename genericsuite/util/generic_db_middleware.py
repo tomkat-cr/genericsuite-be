@@ -171,7 +171,6 @@ def fetch_all_from_db_array(
     like_query_params: Optional[dict] = None,
     combinator: Optional[str] = None,
     order_param: str = None,
-# ) -> List[dict]:
 ) -> dict:
     """
     Fetches all items in a row's array from the database table
