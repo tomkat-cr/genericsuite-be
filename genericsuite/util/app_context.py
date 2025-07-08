@@ -494,7 +494,7 @@ def save_user_param_file(user_id: str) -> dict:
     if user_response['error']:
         return user_response
     pfc = ParamsFile(user_id)
-    filename = pfc.get_params_filename(user_id)    
+    filename = pfc.get_params_filename(user_id)
     return pfc.save_params_file(filename, user_response['resultset'])
 
 

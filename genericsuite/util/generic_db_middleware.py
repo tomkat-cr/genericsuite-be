@@ -1,7 +1,7 @@
 """
 Generic Database middleware to facilitate calls to GenericDbHelper
 """
-from typing import List, Union, Optional
+from typing import Union, Optional
 
 from genericsuite.util.app_logger import log_debug, log_error
 from genericsuite.util.generic_db_helpers import GenericDbHelper
@@ -124,7 +124,7 @@ def modify_item_in_db(
     result = dbo.update_row(data)
     if result['error']:
         log_error(
-            'AI_MIFD-E1) ERROR modify_item_in_db {json_file}' +
+            f'AI_MIFD-E1) ERROR modify_item_in_db {json_file}' +
             f' | result: {result}')
     elif DEBUG:
         log_debug(f'AI_MIFD-1) modify_item_in_db {json_file}' +
@@ -156,9 +156,11 @@ def add_item_to_db(
     result = dbo.create_row(data, filters)
     if result['error']:
         log_error(
-            f'AI_AITD-E1) ERROR add_item_to_db {json_file} | result: {result}')
+            f'AI_AITD-E1) ERROR add_item_to_db {json_file}' +
+            f' | result: {result}')
     elif DEBUG:
-        log_debug(f'AI_AITD-1) add_item_to_db {json_file} | result: {result}')
+        log_debug(f'AI_AITD-1) add_item_to_db {json_file}' +
+                  f' | result: {result}')
     return result
 
 
@@ -169,7 +171,6 @@ def fetch_all_from_db_array(
     like_query_params: Optional[dict] = None,
     combinator: Optional[str] = None,
     order_param: str = None,
-# ) -> List[dict]:
 ) -> dict:
     """
     Fetches all items in a row's array from the database table
@@ -201,9 +202,9 @@ def fetch_all_from_db_array(
     )
     if result['error']:
         log_error(
-            f'AI_FAFDA-E1) ERROR Fetch all (array) from {json_file} |' +
-            f' result: {result}')
+            f'AI_FAFDA-E1) ERROR Fetch all (array) from {json_file}' +
+            f' | result: {result}')
     elif DEBUG:
-        log_debug(f'AI_FAFDA-1) Fetch all (array) from {json_file} |' +
-                  f' result: {result}')
+        log_debug(f'AI_FAFDA-1) Fetch all (array) from {json_file}' +
+                  f' | result: {result}')
     return result

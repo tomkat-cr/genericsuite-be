@@ -17,7 +17,6 @@ from genericsuite.util.jwt import (
     AuthTokenPayload,
 )
 
-
 DEBUG = False
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
@@ -143,3 +142,24 @@ def get_default_fa_request(
     request = build_request(**params)
     other_params = other_params if other_params else {}
     return request, other_params
+
+
+def get_fa_query_params(request: FaRequest):
+    """
+    Returns the query parameters from the request.
+    The FastAPI request has a query_string attribute that a bytes object,
+    so we need to decode it to a string and split it by "&" to get the
+    query parameters.
+    For example:
+    'query_string': b'page=1&limit=30&like=1&comb=or&firstname=felipe&'
+                    'lastname=felipe&creation_date=946684800'
+    """
+    query_params = {v.split("=")[0]: v.split("=")[1]
+                    for v in request['query_string'].decode("utf-8").split("&")
+                    if v.split("=") and len(v.split("=")) > 1}
+    _ = DEBUG and log_debug(
+        f">> GET_FA_QUERY_PARAMS from FastAPI Request"
+        f"\n | request: {request}"
+        f"\n | query_params: {query_params}"
+    )
+    return query_params
