@@ -2,6 +2,9 @@
 .PHONY: tests lock update requirements build publish-test publish
 SHELL := /bin/bash
 
+help:
+	cat Makefile
+
 lock:
 	poetry lock
 

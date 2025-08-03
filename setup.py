@@ -36,7 +36,7 @@ setup(
     description=description,
     long_description=long_description,
     author='Carlos J. Ramirez',
-    author_email='tomkat_cr@yahoo.com',
+    author_email='info@genericsuite.com',
     url='https://github.com/tomkat-cr/genericsuite-be',
     license='ISC License',
     py_modules=['genericsuite'],
