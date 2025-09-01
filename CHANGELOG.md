@@ -19,17 +19,23 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### Added
 - Implement MCP on GS BE [GS-189].
-- Add help command to Makefile.
 - Add get_non_empty_value function to handle envvars declared in docker-composer.yml.
+- Add "help" command to Makefile.
+- Add "install" command to Makefile for easier dependency management.  
 
 ### Changed
 - Change Node.js version in .nvmrc to 20.
 - Update README for clarity and accuracy.
 - Update CHANGELOG format to be more semantic.
-- Update author email in pyproject.toml and setup.py to info@genericsuite.com.
+- Update author email in pyproject.toml and setup.py.
 - Modify pyproject.toml for compatibility with Python 3.10 and above, remove the "cryptography" dependency and add "fastmcp" and "mcp" dependencies.
 - Add .vscode and .idea to the .gitignore file.
+- Use Poetry to run build and publish commands in Makefile.  
 - Code clean-up and linting changes.
+
+### Fixed
+- Update urllib3 dependency to version 2.5.0 to fix a "make publish" error.  
+- Add new development dependencies "build" and "twine" to fix a "make publish" error.
 
 
 ## [0.1.11] - 2025-07-08
