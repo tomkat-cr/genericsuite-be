@@ -262,15 +262,15 @@ def set_tool_context(request: Request, resultset: dict, app: MCPServerApp,
     return True
 
 
-def tool_result(result: str, oher_data: dict = None) -> Dict[str, Any]:
+def tool_result(result: str, other_data: dict = None) -> Dict[str, Any]:
     """
     Helper function to format tool results
     """
-    if not oher_data:
-        oher_data = {}
+    if not other_data:
+        other_data = {}
     error = "error" in result.lower()
     return {
-        **oher_data,
+        **other_data,
         "success": not error,
         "error": result if error else None,
         "message": None if error else result
@@ -286,3 +286,15 @@ def resource_result(result: str, mime_type: str = "text/plain") -> str:
     if mime_type == "application/json":
         return result["resultset"]
     return json.dumps(result["resultset"], indent=DEFAULT_JSON_INDENT)
+
+
+def get_non_empty_value(env_var_name: str, default_value: str = None) -> str:
+    """
+    Get the non empty value from the environment variable
+    Specially useful when docker-composer.yml envvars are defined with no value.
+    """
+    resolved_value = os.environ.get(env_var_name)
+    if resolved_value is None or resolved_value == "":
+        resolved_value = default_value
+    return resolved_value
+

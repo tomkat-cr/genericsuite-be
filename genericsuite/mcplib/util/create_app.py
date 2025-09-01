@@ -3,17 +3,11 @@ App main module (create_app) for MCP
 """
 # For MCP Client
 import sys
-# import asyncio
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 # For MCP Server
 from fastmcp import FastMCP
-
-# from genericsuite.mcplib.framework_abstraction import (
-#     Request,
-#     Blueprint,
-# )
 
 from genericsuite.util.app_logger import log_info, log_error
 from genericsuite.config.config import Config

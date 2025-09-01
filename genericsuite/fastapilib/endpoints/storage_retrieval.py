@@ -45,7 +45,8 @@ async def storage_retrieval_no_item_id_endpoint(
     router.set_current_request(request, gs_request)
     # Report the error ASR-E1010
     item_id = None
-    return storage_retieval_fa(request=gs_request, blueprint=router,
+    return storage_retieval_fa(
+        request=gs_request, blueprint=router,
         item_id=item_id, other_params=other_params,
         background_tasks=background_tasks)
 
@@ -59,8 +60,8 @@ async def storage_retrieval_no_item_id_endpoint(
 # starlette.responses.FileResponse, starlette.responses.StreamingResponse] is a
 # valid Pydantic field type. If you are using a return type annotation that is
 # not a valid Pydantic field (e.g. Union[Response, dict, None]) you can disable
-# generating the response model from the type annotation with the path operation
-# decorator parameter response_model=None.
+# generating the response model from the type annotation with the path
+# operation decorator parameter response_model=None.
 #
 # Read more: https://fastapi.tiangolo.com/tutorial/response-model/
 
@@ -74,8 +75,10 @@ async def storage_retrieval_endpoint(
     """ Get authorized menu options """
     gs_request, other_params = get_default_fa_request()
     router.set_current_request(request, gs_request)
-    other_params['response_type'] = other_params.get('response_type') or DEFAULT_DOWNLOAD_METHOD
-    return storage_retieval_fa(request=gs_request, blueprint=router,
+    other_params['response_type'] = other_params.get('response_type') \
+        or DEFAULT_DOWNLOAD_METHOD
+    return storage_retieval_fa(
+        request=gs_request, blueprint=router,
         item_id=item_id, other_params=other_params,
         background_tasks=background_tasks)
 
@@ -92,7 +95,8 @@ async def storage_retrieval_with_response_type_endpoint(
     gs_request, other_params = get_default_fa_request()
     router.set_current_request(request, gs_request)
     other_params['response_type'] = response_type or DEFAULT_DOWNLOAD_METHOD
-    return storage_retieval_fa(request=gs_request, blueprint=router,
+    return storage_retieval_fa(
+        request=gs_request, blueprint=router,
         item_id=item_id, other_params=other_params,
         background_tasks=background_tasks)
 
@@ -132,7 +136,8 @@ def storage_retieval_fa(
     else:
         other_params['mode'] = 'get'
 
-    resultset = storage_retieval(request=request, blueprint=blueprint,
+    resultset = storage_retieval(
+        request=request, blueprint=blueprint,
         item_id=item_id, other_params=other_params)
     if resultset.get('error'):
         return return_resultset_jsonified_or_exception(
@@ -160,20 +165,23 @@ def storage_retieval_fa(
     if other_params.get('response_type') == "streaming":
         # Return the file content as a Streaming Response
         _ = DEBUG and log_debug("Returning file content as StreamingResponse")
-        return StreamingResponse(io.BytesIO(resultset['content']),
+        return StreamingResponse(
+            io.BytesIO(resultset['content']),
             media_type=resultset['mime_type'])
 
     content_disposition_method = "inline"
     if other_params.get('response_type') == "attachment":
-        content_disposition_method = "inline"
+        content_disposition_method = "attachment"
 
     # Return the file content as a normal Response
     headers = {
         'Content-Type': resultset['mime_type'],
-        'Content-Disposition': f'{content_disposition_method}; filename=' \
+        'Content-Disposition':
+            f'{content_disposition_method}; filename='
             f'"{resultset["filename"]}"',
     }
-    _ = DEBUG and log_debug("Returning file content as Response" +
+    _ = DEBUG and log_debug(
+        "Returning file content as Response" +
         f' | headers: {headers}')
     return Response(
         body=resultset['content'],
