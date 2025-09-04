@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Changelog](http://keepachangelog.com/).
 
 
-## [Unreleased] (Date)
+## [Unreleased] - Date
 
 ### Added
 
@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Removed
 
 
-## [0.2.0] (2025-09-03)
+## [0.2.0] - 2025-09-04
 
 ### Added
 - Implement MCP on GS BE [GS-189].
@@ -38,7 +38,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Add new development dependencies "build" and "twine" to fix a "make publish" error.
 
 
-## [0.1.11] (2025-07-08)
+## [0.1.11] - 2025-07-08
 
 ### Added
 - Add SSL_CERT_GEN_METHOD, BASE_DEVELOPMENT_PATH and SAM_BUILD_CONTAINER documentation to the .env.example file.
@@ -57,7 +57,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Linting changes.
 
 
-## [0.1.10] (2025-02-19)
+## [0.1.10] - 2025-02-19
 
 ### Added
 - Implement API keys to GS BE Core [GS-159].
@@ -76,7 +76,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Fix "'License :: OSI Approved :: ISC License' is not a valid classifier" error running "python3 -m twine upload dist/*" [FA-84].
 
 
-## [0.1.9] (2024-10-07)
+## [0.1.9] - 2024-10-07
 
 ### Added
 - Add "/users/current_user_d" endpoint [GS-2].
@@ -91,7 +91,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - S3transfer upgraded to "^0.10.0" [GS-128].
 
 
-## [0.1.8] (2024-07-27)
+## [0.1.8] - 2024-07-27
 
 ### Added
 - Add: ".nvmrc" file to set the repo default node version.
@@ -103,7 +103,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Fix: audio processing issues in FastAPI Apps by configuring expose_headers=["*"] in fastapi.add_middleware() [GS-95].
 
 
-## [0.1.7] (2024-07-18)
+## [0.1.7] - 2024-07-18
 
 ### Added
 - Add password and API Keys to AWS Secrets (encrypted) [GS-41].
@@ -122,7 +122,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Fix: "Can only access Blueprint.current_app if it's registered to an app." error in Chalice generic endpoint builder when there are specfici DB function [GS-81]
 
 
-## [0.1.6] (2024-06-07)
+## [0.1.6] - 2024-06-07
 
 ### Added
 - Mask the S3 URL and avoid AWS over-billing attacks [GS-72].
@@ -150,14 +150,14 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Fix AWS save_file_from_url() returns "public_url" instead of "attachment_url".
 
 
-## [0.1.5] (2024-04-20)
+## [0.1.5] - 2024-04-20
 
 ### Added
 - Add: "mangum" to make FastAPI work on AWS Lambda [FA-246].
 - License changed to ISC in "pyproject.toml" [FA-244].
 
 
-## [0.1.4] (2024-04-20)
+## [0.1.4] - 2024-04-20
 
 ### Added
 - Add FastAPI framework abstraction specific "create_app", "generate_blueprints_from_json" and Auth Request elements [FA-246].
@@ -184,14 +184,14 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Remove "pas-enc" endpoint for security reasons.
 
 
-## [0.1.3] (2024-04-09)
+## [0.1.3] - 2024-04-09
 ---
 
 ### Changed
 - Add links to https://www.carlosjramirez.com/genericsuite/ in the README.
 
 
-## [0.1.2] (2024-04-01)
+## [0.1.2] - 2024-04-01
 
 ### Added
 - Add stage "demo" to APP_DB_ENGINE, APP_DB_NAME, APP_DB_URI, APP_CORS_ORIGIN, and AWS_S3_CHATBOT_ATTACHMENTS_BUCKET [FA-213].
@@ -203,7 +203,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - License changed to ISC [FA-244].
 
 
-## [0.1.1] (2024-03-19)
+## [0.1.1] - 2024-03-19
 
 ### Added
 - Add Makefile `build`, `publish` and `publish-test` options.
@@ -212,44 +212,44 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - README enhanced instructions.
 
 
-## [0.1.0] (2024-03-14)
+## [0.1.0] - 2024-03-14
 
 ### Added
 - Publish to Pypi.
 
 
-## [0.0.6] (2024-03-03)
+## [0.0.6] - 2024-03-03
 
 ### Added
 - Separate BE Generic Suite to publish on PyPi [FA-84].
 - Initial commit as an independent repository.
 
 
-## [0.0.5] (2023-07-30)
+## [0.0.5] - 2023-07-30
 
 ### Added
 - Add `generate_blueprints_from_json` function to generate the blueprints from the `endpoints.json` file.
 
 
-## [0.0.4] (2023-07-13)
+## [0.0.4] - 2023-07-13
 
 ### Added
 - Generic backend classes: config_dbdef_helpers, generic_db_helpers, generic_endpoint_helpers [FA-77].
 
 
-## [0.0.3] (2023-07-12)
+## [0.0.3] - 2023-07-12
 
 ### Added
 - Database definitions are in JSON files from an external git repository [FA-87].
 
 
-## [0.0.2] (2022-08-22)
+## [0.0.2] - 2022-08-22
 
 ### Added
 - DynamoDb emulated a-la MongoDB way.
 
 
-## [0.0.1] (2022-03-10)
+## [0.0.1] - 2022-03-10
 
 ### Added
 - Start the generic editor development.
