@@ -15,11 +15,11 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Removed
 
 
-## [0.2.0] - 2025-09-04
+## [0.2.0] - 2025-09-20
 
 ### Added
-- Implement MCP on GS BE [GS-189].
-- Add get_non_empty_value function to handle envvars declared in docker-composer.yml.
+- Implement MCP on GS BE Core [GS-189].
+- Add get_non_empty_value function to handle envvars declared in docker-composer.yml with no value.
 - Add "help" command to Makefile.
 - Add "install" command to Makefile for easier dependency management.  
 

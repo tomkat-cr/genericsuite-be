@@ -55,7 +55,7 @@ def email_verification(data, email_fields):
                 and not (
                     'pytest_run' in data
                     and data['pytest_run'] == 1
-                ):
+        ):
             resultset['error_message'] = \
                 f"error: {data[email_field]} is invalid [EMV2]."
             break
@@ -531,3 +531,15 @@ def is_under_test() -> bool:
     Returns True if the current environment is under test.
     """
     return 'PYTEST_CURRENT_TEST' in os.environ
+
+
+def get_non_empty_value(env_var_name: str, default_value: str = None) -> str:
+    """
+    Get the non empty value from the environment variable
+    Specially useful when docker-composer.yml envvars are defined with no
+    value.
+    """
+    resolved_value = os.environ.get(env_var_name)
+    if resolved_value is None or resolved_value == "":
+        resolved_value = default_value
+    return resolved_value

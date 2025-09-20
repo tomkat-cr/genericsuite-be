@@ -25,7 +25,7 @@ from genericsuite.mcplib.framework_abstraction import (
     Response,
     Blueprint,
 )
-from genericsuite.mcplib.util.create_app import MCPServerApp
+from genericsuite.mcplib.util.McpServerApp import McpServerApp
 
 
 DEBUG: bool = False
@@ -57,7 +57,7 @@ def get_app_request(
 
 def get_request_blueprint(
     name: str,
-    app: MCPServerApp,
+    app: McpServerApp,
     request: Request,
 ) -> Blueprint:
     """
@@ -67,7 +67,7 @@ def get_request_blueprint(
 
 
 def mcp_login_user(
-    app: MCPServerApp,
+    app: McpServerApp,
     username: str,
     password: str,
     other_params: Optional[dict] = None,
@@ -91,7 +91,7 @@ def mcp_login_user(
 
 
 def mcp_authenticate(
-    app: MCPServerApp,
+    app: McpServerApp,
     cac_object_list: list,
     username: str,
     password: str,
@@ -158,7 +158,7 @@ def mcp_authenticate_api_key(
     user_id: str,
     username: str,
     api_key: str,
-    app: MCPServerApp,
+    app: McpServerApp,
     cac_object_list: list,
 ):
     """
@@ -201,7 +201,7 @@ def mcp_authenticate_api_key(
 
 
 def verify_app_context(
-    app: MCPServerApp,
+    app: McpServerApp,
     cac_object_list: list
 ):
     """
@@ -228,7 +228,7 @@ def verify_app_context(
     return True
 
 
-def set_tool_context(request: Request, resultset: dict, app: MCPServerApp,
+def set_tool_context(request: Request, resultset: dict, app: McpServerApp,
                      cac_object_list: list):
     """
     Set the tool context
@@ -245,8 +245,8 @@ def set_tool_context(request: Request, resultset: dict, app: MCPServerApp,
             algorithms="HS256",
         )
         _ = DEBUG and log_debug(
-                'REQUEST_AUTHENTICATION@get_general_authorized_request'
-                f' | jws_token_data = {jws_token_data}')
+            'REQUEST_AUTHENTICATION@get_general_authorized_request'
+            f' | jws_token_data = {jws_token_data}')
         authorized_request = get_authorized_request(request, jws_token_data)
     elif 'user_id' in resultset:
         auth_payload = AuthTokenPayload(public_id=resultset['user_id'])
@@ -286,15 +286,3 @@ def resource_result(result: str, mime_type: str = "text/plain") -> str:
     if mime_type == "application/json":
         return result["resultset"]
     return json.dumps(result["resultset"], indent=DEFAULT_JSON_INDENT)
-
-
-def get_non_empty_value(env_var_name: str, default_value: str = None) -> str:
-    """
-    Get the non empty value from the environment variable
-    Specially useful when docker-composer.yml envvars are defined with no value.
-    """
-    resolved_value = os.environ.get(env_var_name)
-    if resolved_value is None or resolved_value == "":
-        resolved_value = default_value
-    return resolved_value
-
