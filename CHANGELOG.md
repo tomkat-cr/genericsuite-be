@@ -14,6 +14,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### Removed
 
+### Security
+
 
 ## [0.2.0] - 2025-09-20
 
@@ -36,6 +38,27 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Fixed
 - Update urllib3 dependency to version 2.5.0 to fix a "make publish" error.  
 - Add new development dependencies "build" and "twine" to fix a "make publish" error.
+
+### Security
+- Update "urllib3" to "^2.5.0" to fix security vulnerabilities [GS-219]:
+    * "Catastrophic backtracking in URL authority parser when passed URL containing many @ characters"
+    * "`Cookie` HTTP header isn't stripped on cross-origin redirects"
+    * "urllib3 redirects are not disabled when retries are disabled on PoolManager instantiation"
+    * "urllib3's Proxy-Authorization request header isn't stripped during cross-origin redirects"
+    * "urllib3's request body not stripped after redirect from 303 status changes request method to GET"
+    * "Using default SSLContext for HTTPS requests in an HTTPS proxy doesn't verify certificate hostname for proxy connection"
+    * "`Cookie` HTTP header isn't stripped on cross-origin redirects"
+- Update "Werkzeug" to "^3.0.6" to fix security vulnerabilities [GS-219]:
+    * "Werkzeug possible resource exhaustion when parsing file data in forms"
+    * "Werkzeug safe_join not safe on Windows"
+- Update "cryptography" to "^44.0.1" to fix security vulnerability [GS-219]:
+    * "pyca/cryptography has a vulnerable OpenSSL included in cryptography wheels"
+- Update "Requests" to "^2.32.4" to fix security vulnerabilities [GS-219]:
+    * "Requests vulnerable to .netrc credentials leak via malicious URLs"
+    * "Using default SSLContext for HTTPS requests in an HTTPS proxy doesn't verify certificate hostname for proxy connection"
+    * "Vulnerable OpenSSL included in cryptography wheels"
+- Update "fastmcp" to "^2.13.0" to fix security vulnerabilities [GS-219]:
+    * "FastMCP Auth Integration Allows for Confused Deputy Account Takeover"
 
 
 ## [0.1.11] - 2025-07-08
