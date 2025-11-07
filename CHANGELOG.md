@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Security
 
 
-## [0.2.0] - 2025-09-20
+## [0.2.0] - 2025-11-07
 
 ### Added
 - Implement MCP on GS BE Core [GS-189].
@@ -30,7 +30,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Update README for clarity and accuracy.
 - Update CHANGELOG format to be more semantic, for consistency, clarity, and "Keep a Changelog" standard.
 - Update author email in pyproject.toml and setup.py.
-- Modify pyproject.toml for compatibility with Python 3.10 and above, remove the "cryptography" dependency and add "fastmcp" and "mcp" dependencies.
+- Modify pyproject.toml for compatibility with Python 3.10 and above.
 - Add .vscode and .idea to the .gitignore file.
 - Use Poetry to run build and publish commands in Makefile.  
 - Code clean-up and linting changes.
@@ -59,6 +59,11 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
     * "Vulnerable OpenSSL included in cryptography wheels"
 - Update "fastmcp" to "^2.13.0" to fix security vulnerabilities [GS-219]:
     * "FastMCP Auth Integration Allows for Confused Deputy Account Takeover"
+    * "Authlib is vulnerable to Denial of Service via Oversized JOSE Segments"
+- Update "mcp" to ">=1.21.0" to fix security vulnerabilities [GS-219]:
+    * "Starlette vulnerable to O(n^2) DoS via Range header merging in ``starlette.responses.FileResponse``"
+- Update "dnspython" to ">=2.6.1" to fix security vulnerabilities [GS-219]:
+    * "Potential DoS via the Tudoor mechanism in eventlet and dnspython"
 
 
 ## [0.1.11] - 2025-07-08
