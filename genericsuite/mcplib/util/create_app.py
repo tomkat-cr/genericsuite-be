@@ -1,7 +1,10 @@
 """
 App main module (create_app) for MCP
 """
+from typing import Any
 import sys
+
+from mcp.types import CallToolResult
 
 from genericsuite.util.app_logger import log_info, log_error
 from genericsuite.config.config import Config
@@ -28,21 +31,28 @@ def create_app(app_name: str = None, settings: Config = None) -> McpServerApp:
     return app
 
 
-async def create_client_app():
+async def run_client_app(tool_name: str, arguments: dict[str, Any] | None
+                         ) -> CallToolResult:
     """
-    Main test runner
-    """
-    app = McpClientApp()
-    success = await app.connect_to_server()
+    Main test runner using the async context manager pattern.
 
-    if not success:
-        _ = app.allow_log_info and log_info(
-            "❌ GS MCP Client - could not connect to server")
+    Usage example:
+        async with McpClientApp(allow_log_info=True) as client:
+            # Use client.session to interact with the MCP server
+            result = await client.session.call_tool(...)
+    """
+    try:
+        async with McpClientApp(allow_log_info=True) as app:
+            _ = app.allow_log_info and log_info(
+                "✅ GS MCP Client - connected to server")
+
+            result = await app.session.call_tool(tool_name, arguments)
+            return result
+
+    except Exception as e:
+        log_error(f"❌ GS MCP Client - could not connect to server: {e}")
         sys.exit(1)
-
-    _ = app.allow_log_info and log_error(
-        "✅ GS MCP Client - connected to server")
 
 
 # if __name__ == "__main__":
-#     asyncio.run(create_client_app())
+#     asyncio.run(run_client_app(tool_name="test", arguments=None))
