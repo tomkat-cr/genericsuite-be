@@ -1,5 +1,5 @@
 """
-FastAPI parse multipart module to handle downloaded files.
+Flask parse multipart module to handle downloaded files.
 
 Reference:
 https://flask.palletsprojects.com/en/stable/patterns/fileuploads/
@@ -17,7 +17,7 @@ from genericsuite.util.file_utilities import temp_dir, secure_filename
 
 def download_file_flask() -> str:
     """
-    Downloads a file from a FastAPI UploadFile object.
+    Downloads a file from a Flask UploadFile object.
     Returns:
         str: the path to the downloaded file.
     """

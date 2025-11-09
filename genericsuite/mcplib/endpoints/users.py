@@ -100,7 +100,5 @@ async def caujf(
     """
     CAUJF: Create All User JSON Files (required for API Keys)
     """
-    request = Request()
-    request.set_properties()
     result = save_all_users_params_files()
     return return_resultset_jsonified_or_exception(result)

@@ -277,7 +277,7 @@ def tool_result(result: str, other_data: dict = None) -> Dict[str, Any]:
     }
 
 
-def resource_result(result: str, mime_type: str = "text/plain") -> str:
+def resource_result(result: dict, mime_type: str = "text/plain") -> str:
     """
     Helper function to format resource results
     """

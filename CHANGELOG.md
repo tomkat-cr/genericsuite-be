@@ -17,10 +17,11 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Security
 
 
-## [0.2.0] - 2025-11-07
+## [0.2.0] - 2025-11-09
 
 ### Added
 - Implement MCP on GS BE Core [GS-189].
+- Add PEM_TOOL envvar to select the Python package and dependency management tool (uv, pipenv, and poetry), default to "uv" [GS-77].
 - Add get_non_empty_value function to handle envvars declared in docker-composer.yml with no value.
 - Add "help" command to Makefile.
 - Add "install" command to Makefile for easier dependency management.  
@@ -36,8 +37,9 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Code clean-up and linting changes.
 
 ### Fixed
-- Update urllib3 dependency to version 2.5.0 to fix a "make publish" error.  
+- Update urllib3 dependency to version 2.5.0 to fix a "make publish" error.
 - Add new development dependencies "build" and "twine" to fix a "make publish" error.
+- Fix the "boto3" and "s3transfer" conflict by removing "s3transfer" and "botocore" dependencies in the pyproject.toml file, because they are already included in "boto3".
 
 ### Security
 - Update "urllib3" to "^2.5.0" to fix security vulnerabilities [GS-219]:

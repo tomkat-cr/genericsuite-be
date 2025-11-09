@@ -99,10 +99,6 @@ if FRAMEWORK == 'mcp':
                 self._context = context
 
             def set_properties(self):
-                # self.method = request.method
-                # self.query_params = dict(request.args)
-                # self.json_body = request.get_json(silent=True)
-                # self.headers = dict(request.headers)
                 self.context = {
                     "resourcePath": '',
                     "Path": '',
