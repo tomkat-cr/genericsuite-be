@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 import json
 import os
 
@@ -277,7 +277,8 @@ def tool_result(result: str, other_data: dict = None) -> Dict[str, Any]:
     }
 
 
-def resource_result(result: dict, mime_type: str = "text/plain") -> str:
+def resource_result(result: dict, mime_type: str = "text/plain"
+                    ) -> Union[str, dict[str, Any]]:
     """
     Helper function to format resource results
     """
