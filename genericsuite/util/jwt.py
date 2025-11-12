@@ -6,7 +6,6 @@ import os
 import base64
 import datetime
 import secrets
-import json
 
 import jwt
 from pydantic import BaseModel
@@ -19,15 +18,19 @@ from genericsuite.util.app_logger import log_debug, log_error
 from genericsuite.util.utilities import (
     standard_error_return,
     get_default_resultset,
+    error_resultset,
     get_id_as_string,
 )
 from genericsuite.config.config import Config
+
+from genericsuite.util.generic_db_helpers_super import \
+    GenericDbHelperSuper
 
 settings = Config()
 
 # ----------------------- JWT -----------------------
 
-DEBUG = False
+DEBUG = True
 
 EXPIRATION_MINUTES = os.environ.get('EXPIRATION_MINUTES', '30')
 
@@ -36,6 +39,7 @@ PARAMS_FILE_USER_FILENAME_TEMPLATE = os.environ.get(
     'PARAMS_FILE_USER_FILENAME_TEMPLATE', 'params_[user_id].json')
 
 INVALID_TOKEN_ERROR_MESSAGE = 'Token is invalid'
+USER_ID_REQUIRED_ERROR_MESSAGE = 'User ID is required to get access token data'
 
 
 class AuthTokenPayload(BaseModel):
@@ -119,6 +123,45 @@ def generate_access_token(length=64):
     return secrets.token_hex(length)
 
 
+def get_access_token_data(access_token: str, user_id: str = None) -> dict:
+    """
+    Get the access token data from the database.
+
+    Args:
+        access_token (str): The access token.
+        user_id (str): The user ID.
+
+    Returns:
+        dict: The access token data.
+    """
+    if not user_id:
+        return error_resultset(USER_ID_REQUIRED_ERROR_MESSAGE)
+    dbo = GenericDbHelperSuper(json_file="users")
+    user_data = dbo.fetch_row_raw(user_id)
+    if user_data['error']:
+        return error_resultset(user_data['error_message'])
+    try:
+        # Check if the access token is valid
+        user_data['valid_token'] = False
+
+        log_debug(f'JWT.py | get_access_token_data | user_data: {user_data}')
+
+        resultset = user_data['resultset']
+        for api_key in resultset.get('users_api_keys', []):
+            if api_key['access_token'] == access_token and \
+               api_key['active'] == '1':
+                user_data['valid_token'] = True
+                break
+        if user_data['valid_token']:
+            user_data['user_id'] = get_id_as_string(resultset)
+            return user_data
+    except Exception as err:
+        _ = DEBUG and log_error(
+            'REQUEST_AUTHENTICATION@get_api_key_auth | Exception:'
+            f' {str(err)}')
+    return error_resultset(INVALID_TOKEN_ERROR_MESSAGE)
+
+
 def get_api_key_auth(
     request: Request,
     user_id: str,
@@ -138,61 +181,23 @@ def get_api_key_auth(
         Union[AuthorizedRequest, dict]: The authorized request or an error
             message.
     """
-    error_message = INVALID_TOKEN_ERROR_MESSAGE
-    filename = PARAMS_FILE_USER_FILENAME_TEMPLATE.replace('[user_id]', user_id)
-    config_file_path = os.path.join(TEMP_DIR, filename)
-
-    if not os.path.exists(config_file_path):
-        return standard_error_return(error_message)
-    try:
-        with open(config_file_path, 'r') as file:
-            user_data = file.read()
-            # Example user_data:
-            # {
-            #   "_id": "6771a9999999999be99999bb",
-            #   "firstname": "Android",
-            #   "lastname": "App",
-            #   "superuser": "0",
-            #   "status": "1",
-            #   "plan": "free",
-            #   "language": "en",
-            #   "email": "example@exampleapp.com",
-            #   "creation_date": 1735507975.791722,
-            #   "update_date": 1735507975.791722,
-            #   "birthday": -131760000,
-            #   "gender": "m",
-            #   "users_api_keys": [
-            #       {
-            #           "access_token": "a1b2c3d4e5f6g7h8i9j0k1l2m3np6qr...",
-            #           "active": "1",
-            #       }
-            #   ]
-            # }
-        # Check if the access token is valid
-        valid_token = False
-        for api_key in json.loads(user_data).get('users_api_keys', []):
-            if api_key['access_token'] == access_token and \
-               api_key['active'] == '1':
-                valid_token = True
-                break
-        if not valid_token:
-            return standard_error_return(error_message)
-        jws_token_data = AuthTokenPayload(
-            public_id=user_id
-        )
-        _ = DEBUG and log_debug(
-            '||| REQUEST_AUTHENTICATION@get_api_key_auth' +
-            f' | jws_token_data = {jws_token_data}')
-        authorized_request = get_authorized_request(request, jws_token_data)
-        return authorized_request
-    except Exception as err:
-        _ = DEBUG and log_error(
-            'REQUEST_AUTHENTICATION@get_api_key_auth | Exception:'
-            f' {str(err)}')
-    return standard_error_return(INVALID_TOKEN_ERROR_MESSAGE)
+    access_token_data = get_access_token_data(access_token, user_id)
+    if access_token_data['error']:
+        return access_token_data
+    if not access_token_data['valid_token']:
+        return standard_error_return(INVALID_TOKEN_ERROR_MESSAGE)
+    jws_token_data = AuthTokenPayload(
+        public_id=access_token_data['user_id']
+    )
+    _ = DEBUG and log_debug(
+        '||| REQUEST_AUTHENTICATION@get_api_key_auth' +
+        f' | jws_token_data = {jws_token_data}')
+    authorized_request = get_authorized_request(request, jws_token_data)
+    return authorized_request
 
 
-def get_general_authorized_request(request: Request) -> AuthorizedRequest:
+def get_general_authorized_request(request: Request
+                                   ) -> Union[AuthorizedRequest, dict]:
     """
     Get the authorized request from the request object.
 
@@ -200,7 +205,8 @@ def get_general_authorized_request(request: Request) -> AuthorizedRequest:
         request (Request): The request object.
 
     Returns:
-        AuthorizedRequest: The authorized request.
+        Union[AuthorizedRequest, dict]: The authorized request or an error
+            message.
     """
     if settings.HEADER_TOKEN_ENTRY_NAME not in request.headers:
         return standard_error_return('A valid token is missing')
@@ -208,25 +214,25 @@ def get_general_authorized_request(request: Request) -> AuthorizedRequest:
         token_raw = request.headers[settings.HEADER_TOKEN_ENTRY_NAME]
         jwt_token = token_raw.replace('Bearer ', '')
         _ = DEBUG and log_debug(
-                'REQUEST_AUTHENTICATION@get_general_authorized_request' +
-                '\n | HEADER_TOKEN_ENTRY_NAME: ' +
-                f'{settings.HEADER_TOKEN_ENTRY_NAME}' +
-                f'\n | token_raw: {token_raw}' +
-                f'\n | jwt_token: {jwt_token}' +
-                # f'\n | settings.APP_SECRET_KEY: {settings.APP_SECRET_KEY}' +
-                '\n')
+            'REQUEST_AUTHENTICATION@get_general_authorized_request' +
+            '\n | HEADER_TOKEN_ENTRY_NAME: ' +
+            f'{settings.HEADER_TOKEN_ENTRY_NAME}' +
+            f'\n | token_raw: {token_raw}' +
+            f'\n | jwt_token: {jwt_token}' +
+            # f'\n | settings.APP_SECRET_KEY: {settings.APP_SECRET_KEY}' +
+            '\n')
         jws_token_data = jwt.decode(
             jwt_token,
             settings.APP_SECRET_KEY,
             algorithms="HS256",
         )
         _ = DEBUG and log_debug(
-                'REQUEST_AUTHENTICATION@get_general_authorized_request'
-                f' | jws_token_data = {jws_token_data}')
+            'REQUEST_AUTHENTICATION@get_general_authorized_request'
+            f' | jws_token_data = {jws_token_data}')
         authorized_request = get_authorized_request(request, jws_token_data)
         _ = DEBUG and log_debug(
-                'REQUEST_AUTHENTICATION@get_general_authorized_request'
-                f' | authorized_request = {authorized_request}')
+            'REQUEST_AUTHENTICATION@get_general_authorized_request'
+            f' | authorized_request = {authorized_request}')
     except Exception as err:
         # API Keys processing
         project_id = request.headers.get('x-project-id', '')

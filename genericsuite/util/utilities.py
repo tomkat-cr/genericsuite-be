@@ -11,10 +11,6 @@ import base64
 from mimetypes import MimeTypes
 from bson.json_util import ObjectId
 
-# from flask import jsonify, make_response
-# from flask_cors import cross_origin
-
-# from chalice.app import Response, Request
 from genericsuite.util.framework_abs_layer import Response, Request
 
 from genericsuite.util.app_logger import log_error, log_debug

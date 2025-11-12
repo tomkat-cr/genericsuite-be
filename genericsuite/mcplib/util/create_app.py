@@ -6,7 +6,7 @@ import sys
 
 from mcp.types import CallToolResult
 
-from genericsuite.util.app_logger import log_info, log_error
+from genericsuite.util.app_logger import log_info, log_error, set_app_logs
 from genericsuite.config.config import Config
 from genericsuite.mcplib.util.McpServerApp import McpServerApp
 from genericsuite.mcplib.util.McpClientApp import McpClientApp
@@ -14,10 +14,14 @@ from genericsuite.mcplib.util.McpClientApp import McpClientApp
 DEBUG = False
 
 
-def create_app(app_name: str = None, settings: Config = None) -> McpServerApp:
+def create_app(app_name: str = None, settings: Config = None,
+               log_file: str = None) -> McpServerApp:
     """
     Create the MCP Server App
     """
+    if log_file:
+        set_app_logs(log_file=log_file)
+
     app = McpServerApp(app_name, settings)
 
     # Announce app boot

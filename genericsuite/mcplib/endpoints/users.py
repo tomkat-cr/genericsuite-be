@@ -4,7 +4,6 @@ System users operations (CRUD, login, database test, super-admin creation)
 from typing import Optional
 
 from genericsuite.mcplib.framework_abstraction import (
-    Request,
     Response,
 )
 from genericsuite.util.utilities import (

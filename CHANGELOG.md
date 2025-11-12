@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Changelog](http://keepachangelog.com/).
 
 
-## [Unreleased] - Date
+## [Unreleased]
 
 ### Added
 
@@ -17,11 +17,12 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Security
 
 
-## [0.2.0] - 2025-11-09
+## [0.2.0] - 2025-11-12
 
 ### Added
 - Implement MCP on GS BE Core [GS-189].
 - Add PEM_TOOL envvar to select the Python package and dependency management tool (uv, pipenv, and poetry), default to "uv" [GS-77].
+- Add AUTO_RELOAD envvar to .env.example, to fix some issues with the "--auto-reload" / "--reload" option running the app in "run_aws.sh", Turborepo and "uv", default to "1" [GS-77].
 - Add get_non_empty_value function to handle envvars declared in docker-composer.yml with no value.
 - Add "help" command to Makefile.
 - Add "install" command to Makefile for easier dependency management.  
@@ -35,6 +36,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Add .vscode and .idea to the .gitignore file.
 - Use Poetry to run build and publish commands in Makefile.  
 - Code clean-up and linting changes.
+- Authenticate API Keys from Database [GS-240]
 
 ### Fixed
 - Update urllib3 dependency to version 2.5.0 to fix a "make publish" error.
@@ -66,6 +68,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
     * "Starlette vulnerable to O(n^2) DoS via Range header merging in ``starlette.responses.FileResponse``"
 - Update "dnspython" to ">=2.6.1" to fix security vulnerabilities [GS-219]:
     * "Potential DoS via the Tudoor mechanism in eventlet and dnspython"
+- Read the user data from the database in "get_api_key_auth()" instead of the "/tmp/params_[user_id].json" because storing sensitive or configuration data in a world-writable directory like /tmp is a security risk [GS-240].
 
 
 ## [0.1.11] - 2025-07-08
