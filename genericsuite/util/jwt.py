@@ -30,7 +30,7 @@ settings = Config()
 
 # ----------------------- JWT -----------------------
 
-DEBUG = True
+DEBUG = False
 
 EXPIRATION_MINUTES = os.environ.get('EXPIRATION_MINUTES', '30')
 

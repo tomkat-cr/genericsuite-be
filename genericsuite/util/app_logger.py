@@ -62,17 +62,17 @@ def log_debug(message: Any) -> str:
     """Register a Debug log"""
     global app_logs
     if not app_logs:
-        app_logs = set_app_logs()
+        set_app_logs()
     fmt_msg = formatted_message(message)
     app_logs.debug("%s", fmt_msg)
     return fmt_msg
 
 
 def log_info(message: Any) -> str:
-    """Register a Warning log"""
+    """Register an Info log"""
     global app_logs
     if not app_logs:
-        app_logs = set_app_logs()
+        set_app_logs()
     fmt_msg = formatted_message(message)
     app_logs.info("%s", fmt_msg)
     return fmt_msg
@@ -82,17 +82,17 @@ def log_warning(message: Any) -> str:
     """Register a Warning log"""
     global app_logs
     if not app_logs:
-        app_logs = set_app_logs()
+        set_app_logs()
     fmt_msg = formatted_message(message)
     app_logs.warning("%s", fmt_msg)
     return fmt_msg
 
 
 def log_error(message: Any) -> str:
-    """Register a Warning log"""
+    """Register an Error log"""
     global app_logs
     if not app_logs:
-        app_logs = set_app_logs()
+        set_app_logs()
     fmt_msg = formatted_message(message)
     app_logs.error("%s", fmt_msg)
     return fmt_msg

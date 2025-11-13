@@ -535,7 +535,9 @@ def get_non_empty_value(env_var_name: str, default_value: str = None) -> str:
     Specially useful when docker-composer.yml envvars are defined with no
     value.
     """
-    resolved_value = os.environ.get(env_var_name)
-    if resolved_value is None or resolved_value == "":
-        resolved_value = default_value
-    return resolved_value
+    return os.environ.get(env_var_name) or default_value
+    # TODO: remove this commented code when sure it's not needed
+    # resolved_value = os.environ.get(env_var_name)
+    # if resolved_value is None or resolved_value == "":
+    #     resolved_value = default_value
+    # return resolved_value

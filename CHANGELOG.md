@@ -37,6 +37,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Use Poetry to run build and publish commands in Makefile.  
 - Code clean-up and linting changes.
 - Authenticate API Keys from Database [GS-240]
+- get_non_empty_value() function simplified using a more idiomatic Python pattern.
 
 ### Fixed
 - Update urllib3 dependency to version 2.5.0 to fix a "make publish" error.
@@ -69,6 +70,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Update "dnspython" to ">=2.6.1" to fix security vulnerabilities [GS-219]:
     * "Potential DoS via the Tudoor mechanism in eventlet and dnspython"
 - Read the user data from the database in "get_api_key_auth()" instead of the "/tmp/params_[user_id].json" because storing sensitive or configuration data in a world-writable directory like /tmp is a security risk [GS-240].
+- Add USER_PARAMS_FILE_ENABLED envvar to enable/disable user's parameters file "/tmp/params_[user_id].json", default to "0" to avoid security risks when running in a production environment [GS-240].
 
 
 ## [0.1.11] - 2025-07-08
