@@ -43,6 +43,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Update urllib3 dependency to version 2.5.0 to fix a "make publish" error.
 - Add new development dependencies "build" and "twine" to fix a "make publish" error.
 - Fix the "boto3" and "s3transfer" conflict by removing "s3transfer" and "botocore" dependencies in the pyproject.toml file, because they are already included in "boto3".
+- Update error handling in set_tool_context() function to retrieve a more concise error message from app_context [GS-240].
 
 ### Security
 - Update "urllib3" to "^2.5.0" to fix security vulnerabilities [GS-219]:

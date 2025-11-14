@@ -256,7 +256,7 @@ def set_tool_context(request: Request, resultset: dict, app: McpServerApp,
         request=authorized_request, blueprint=blueprint)
     if app_context.has_error():
         raise ValueError("App context assignment error: " +
-                         app_context.get_error_resultset())
+                         app_context.get_error())
     for cac in cac_object_list:
         cac.set(app_context)
     return True
