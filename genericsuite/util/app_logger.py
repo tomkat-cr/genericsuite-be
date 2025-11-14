@@ -37,6 +37,14 @@ def set_app_logs(log_file: str = None) -> None:
     app_logs = log_config(log_file)
 
 
+def _get_logger() -> logging.Logger:
+    """Gets the application logger, initializing it if necessary."""
+    global app_logs
+    if not app_logs:
+        set_app_logs()
+    return app_logs
+
+
 def db_stamp() -> str:
     db_engine = os.environ['APP_DB_ENGINE']
     if db_engine == 'DYNAMO_DB':
@@ -60,39 +68,27 @@ def formatted_message(message: Any) -> str:
 
 def log_debug(message: Any) -> str:
     """Register a Debug log"""
-    global app_logs
-    if not app_logs:
-        set_app_logs()
     fmt_msg = formatted_message(message)
-    app_logs.debug("%s", fmt_msg)
+    _get_logger().debug("%s", fmt_msg)
     return fmt_msg
 
 
 def log_info(message: Any) -> str:
     """Register an Info log"""
-    global app_logs
-    if not app_logs:
-        set_app_logs()
     fmt_msg = formatted_message(message)
-    app_logs.info("%s", fmt_msg)
+    _get_logger().info("%s", fmt_msg)
     return fmt_msg
 
 
 def log_warning(message: Any) -> str:
     """Register a Warning log"""
-    global app_logs
-    if not app_logs:
-        set_app_logs()
     fmt_msg = formatted_message(message)
-    app_logs.warning("%s", fmt_msg)
+    _get_logger().warning("%s", fmt_msg)
     return fmt_msg
 
 
 def log_error(message: Any) -> str:
     """Register an Error log"""
-    global app_logs
-    if not app_logs:
-        set_app_logs()
     fmt_msg = formatted_message(message)
-    app_logs.error("%s", fmt_msg)
+    _get_logger().error("%s", fmt_msg)
     return fmt_msg

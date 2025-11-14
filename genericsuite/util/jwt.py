@@ -143,9 +143,8 @@ def get_access_token_data(access_token: str, user_id: str = None) -> dict:
     try:
         # Check if the access token is valid
         user_data['valid_token'] = False
-
-        log_debug(f'JWT.py | get_access_token_data | user_data: {user_data}')
-
+        _ = DEBUG and log_debug(
+            f'JWT.py | get_access_token_data | user_data: {user_data}')
         resultset = user_data['resultset']
         for api_key in resultset.get('users_api_keys', []):
             if api_key['access_token'] == access_token and \
