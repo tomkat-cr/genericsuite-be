@@ -1,0 +1,3 @@
+"""
+Chaos experiments model module
+"""
