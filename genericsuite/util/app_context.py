@@ -22,6 +22,7 @@ DEBUG = False
 TEMP_DIR = os.environ.get('TEMP_DIR', '/tmp')
 
 PARAMS_FILE_ENABLED = os.environ.get('PARAMS_FILE_ENABLED', '1')
+USER_PARAMS_FILE_ENABLED = os.environ.get('USER_PARAMS_FILE_ENABLED', '0')
 PARAMS_FILE_USER_FILENAME_TEMPLATE = os.environ.get(
     'PARAMS_FILE_USER_FILENAME_TEMPLATE', 'params_[user_id].json')
 PARAMS_FILE_GENERAL_FILENAME = os.environ.get(
@@ -32,6 +33,7 @@ class ParamsFile():
     """
     Class to manage the parameters file (/tmp/param_*.json)
     """
+
     def __init__(self, user_id: str):
         self.user_id = user_id
 
@@ -137,7 +139,10 @@ class ParamsFile():
         """
         result = get_default_resultset()
         result['resultset'] = data_to_save
-        if PARAMS_FILE_ENABLED != '1':
+        is_general_param_file = filename == PARAMS_FILE_GENERAL_FILENAME
+        if is_general_param_file and PARAMS_FILE_ENABLED != '1':
+            return result
+        if not is_general_param_file and USER_PARAMS_FILE_ENABLED != '1':
             return result
         if '_id' in data_to_save:
             data_to_save['_id'] = get_id_as_string(data_to_save)
@@ -153,6 +158,7 @@ class AppContext:
     """
     Context manager class to preserve data between GPT functions
     """
+
     def __init__(
         self,
         request: Optional[Union[AuthorizedRequest, None]] = None,
@@ -227,13 +233,15 @@ class AppContext:
             self.set_error(get_constant(
                 "ERROR_MESSAGES",
                 "ACCOUNT_INACTIVE", "User account inactive [AC-GUD-E020]"))
+        else:
+            self.user_data['_id'] = get_id_as_string(self.user_data)
 
     def get_user_data(self, check_params_file: Optional[bool] = True):
         """
         Get current user data verifying the params JSON cache file existence
         """
         if not self.user_data:
-            if check_params_file and PARAMS_FILE_ENABLED == '1':
+            if check_params_file and USER_PARAMS_FILE_ENABLED == '1':
                 pfc = ParamsFile(self.get_user_id())
                 filename = pfc.get_params_filename()
                 if not filename:
@@ -241,8 +249,6 @@ class AppContext:
                 else:
                     params_file_result = pfc.load_params_file(filename)
                     if params_file_result['found']:
-                        # self.user_data = \
-                        #   params_file_result['resultset']['user_data']
                         self.user_data = params_file_result['resultset']
                     else:
                         self.get_user_data_raw()
@@ -342,6 +348,7 @@ class CommonAppContext():
     """
     Common context manager for the Langchain AI Chatbot API
     """
+
     def __init__(self):
         self.app_context = None
 

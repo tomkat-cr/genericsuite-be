@@ -28,16 +28,18 @@ from genericsuite.util.nav_helpers import (
     put_total_pages_from_resultset
 )
 from genericsuite.util.passwords import Passwords
-from genericsuite.util.generic_db_helpers_super import GenericDbHelperSuper
+from genericsuite.util.generic_db_helpers_with_request import \
+    GenericDbHelperWithRequest
 
 
 DEBUG = False
 
 
-class GenericDbHelper(GenericDbHelperSuper):
+class GenericDbHelper(GenericDbHelperWithRequest):
     """
     Generic Database Helper, to handle all operations over a given table.
     """
+
     def fetch_list(
         self,
         skip: int,

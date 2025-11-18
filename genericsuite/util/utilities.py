@@ -11,10 +11,6 @@ import base64
 from mimetypes import MimeTypes
 from bson.json_util import ObjectId
 
-# from flask import jsonify, make_response
-# from flask_cors import cross_origin
-
-# from chalice.app import Response, Request
 from genericsuite.util.framework_abs_layer import Response, Request
 
 from genericsuite.util.app_logger import log_error, log_debug
@@ -55,7 +51,7 @@ def email_verification(data, email_fields):
                 and not (
                     'pytest_run' in data
                     and data['pytest_run'] == 1
-                ):
+        ):
             resultset['error_message'] = \
                 f"error: {data[email_field]} is invalid [EMV2]."
             break
@@ -531,3 +527,17 @@ def is_under_test() -> bool:
     Returns True if the current environment is under test.
     """
     return 'PYTEST_CURRENT_TEST' in os.environ
+
+
+def get_non_empty_value(env_var_name: str, default_value: str = None) -> str:
+    """
+    Get the non empty value from the environment variable
+    Specially useful when docker-composer.yml envvars are defined with no
+    value.
+    """
+    return os.environ.get(env_var_name) or default_value
+    # TODO: remove this commented code when sure it's not needed
+    # resolved_value = os.environ.get(env_var_name)
+    # if resolved_value is None or resolved_value == "":
+    #     resolved_value = default_value
+    # return resolved_value

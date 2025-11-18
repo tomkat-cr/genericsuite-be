@@ -15,7 +15,7 @@ def get_current_framework():
 
 
 framework = os.environ.get('CURRENT_FRAMEWORK', DEFAULT_FRAMEWORK).lower()
-if framework not in ['chalice', 'fastapi', 'flask']:
+if framework not in ['chalice', 'fastapi', 'flask', 'mcp']:
     raise ValueError("Unsupported or undefined CURRENT_FRAMEWORK:" +
                      f" '{framework}'")
 
