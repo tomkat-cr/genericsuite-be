@@ -541,7 +541,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             resultset['error'] = True
             return resultset
 
-        response = db_parent_row['resultset'].get(self.array_field, [])
+        response = db_parent_row['resultset'].get(self.array_field, []) or []
 
         if filters is not None:
             for filter_key in filters:

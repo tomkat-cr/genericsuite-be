@@ -73,7 +73,7 @@ def put_total_pages_from_resultset(
     if resultset['error']:
         return resultset
     resultset['totalPages'] = get_total_pages(
-        len(json.loads(resultset['resultset'])), limit
+        len(json.loads(resultset['resultset']) or []), limit
     )
     if DEBUG:
         log_debug(f'NEW Resultset: {resultset}')

@@ -152,10 +152,11 @@ class PostgresqlFindIterator:
     PostgreSQL find iterator
     """
 
-    def __init__(self, cursor):
+    def __init__(self, cursor, table_structure: Dict = None):
         self._cursor = cursor
         self._results = None
         self._idx = 0
+        self._table_structure = table_structure
 
     def __iter__(self):
         self._results = self._cursor.fetchall()
@@ -167,9 +168,14 @@ class PostgresqlFindIterator:
             res = self._results[self._idx]
             self._idx += 1
             # Convert RealDictRow to dict and handle types if needed
+            row = dict(res)
+            for key, value in row.items():
+                if key in self._table_structure:
+                    if self._table_structure[key] == "json":
+                        row[key] = json.loads(value)
             _ = DEBUG and log_debug(
-                f"||| PostgresqlFindIterator | __next__ | res: {dict(res)}")
-            return dict(res)
+                f"||| PostgresqlFindIterator | __next__ | res: {row}")
+            return row
         raise StopIteration
 
     def sort(self, key, direction):
@@ -202,12 +208,13 @@ class PostgresqlTable(PostgresqlUtilities):
     PostgreSQL Table abstraction
     """
 
-    def __init__(self, table_name: str, connection):
+    def __init__(self, connection, table_name: str, table_structure: Dict = None):
         self._table_name = table_name
         self._conn = connection
         self.inserted_id = None
         self.modified_count = 0
         self.deleted_count = 0
+        self._table_structure = table_structure
 
     def find(self, query_params: Dict = None, projection: Dict = None):
         """
@@ -241,9 +248,9 @@ class PostgresqlTable(PostgresqlUtilities):
         if DEBUG:
             log_debug(
                 "PostgresqlTable.find | return: "
-                f"{PostgresqlFindIterator(cursor)}"
+                f"{PostgresqlFindIterator(cursor, self._table_structure)}"
             )
-        return PostgresqlFindIterator(cursor)
+        return PostgresqlFindIterator(cursor, self._table_structure)
 
     def find_one(self, query_params: Dict = None, projection: Dict = None):
         """
@@ -438,22 +445,15 @@ class PostgresqlService(DbAbstract):
                     "||| create_table_name_propeties"
                     + f"\n>>--> Setting property: {table_name}"
                 )
-            setattr(self, table_name, PostgresqlTable(table_name, self._db))
+            table_structure = self.table_structure(table_name)
+            setattr(self, table_name, PostgresqlTable(
+                self._db, table_name, table_structure))
 
     def list_collection_names(self):
         """
         Returns a list with the Postgres table names
         """
         try:
-            # table_names = map(
-            #     lambda table_name: table_name[0],
-            #     self._db.cursor()
-            #         .execute(
-            #             "SELECT table_name FROM information_schema.tables"
-            #             " WHERE table_schema='public';"
-            #     )
-            #     .fetchall(),
-            # )
             table_names = []
             cursor = self._db.cursor()
             cursor.execute(
@@ -466,6 +466,22 @@ class PostgresqlService(DbAbstract):
         except Exception as e:
             log_error(f"PostgresqlService list_collection_names error: {e}")
             return []
+
+    def table_structure(self, table_name: str) -> dict:
+        """
+        Returns a dictionary with the Postgres table structure
+        """
+        try:
+            cursor = self._db.cursor()
+            cursor.execute(
+                "SELECT column_name, data_type, character_maximum_length"
+                " FROM information_schema.columns"
+                " WHERE table_name = %s;", (table_name,)
+            )
+            return dict(cursor.fetchall())
+        except Exception as e:
+            log_error(f"PostgresqlService table_structure error: {e}")
+            return {}
 
     def __getitem__(self, table_name):
         if DEBUG:
