@@ -1,6 +1,7 @@
 """
 Configuration manager
 """
+
 # C0103 | Disable "name doesn't conform to naming rules..." (snake_case)
 # pylint: disable=C0103
 # R0902 | Disable "too-many-instance-attributes"
@@ -26,29 +27,31 @@ from genericsuite.config.config_secrets import get_secrets_from_iaas
 
 def get_default_resultset() -> dict:
     """Returns an standard base resultset, to be used in the building
-       of responses to the outside world
+    of responses to the outside world
     """
     resultset = {
-        'error': False,
-        'error_message': None,
-        'totalPages': None,
-        'resultset': {}
+        "error": False,
+        "error_message": None,
+        "totalPages": None,
+        "resultset": {},
     }
     return resultset
 
 
 def formatted_log_message(message: str) -> str:
-    """ Returns a formatted message with database name and date/time """
-    return f"[{os.environ.get('APP_DB_NAME', 'APP_DB_NAME not set')}]" + \
-        f" {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}" + \
-        f" | {message}"
+    """Returns a formatted message with database name and date/time"""
+    return (
+        f"[{os.environ.get('APP_DB_NAME', 'APP_DB_NAME not set')}]"
+        + f" {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        + f" | {message}"
+    )
 
 
 def get_config_logger() -> logging.Logger:
     """
     Get the logger object.
     """
-    return logging.getLogger(os.environ.get('APP_NAME'))
+    return logging.getLogger(os.environ.get("APP_NAME"))
 
 
 def config_log_error(message: str) -> None:
@@ -80,17 +83,20 @@ def text_to_dict(text: str) -> Union[dict, None]:
     try:
         result = json.loads(text)
     except json.JSONDecodeError as e:
-        config_log_error(f'ERROR [C-E010] | converting text to dict: {e}')
+        config_log_error(f"ERROR [C-E010] | converting text to dict: {e}")
     return result
 
 
 def is_local_service() -> bool:
-    return os.environ.get('AWS_SAM_LOCAL') == 'true' or \
-        os.environ.get('GS_LOCAL_ENVIR') == 'true'
+    return (
+        os.environ.get("AWS_SAM_LOCAL") == "true"
+        or os.environ.get("GS_LOCAL_ENVIR") == "true"
+    )
 
 
-class Config():
-    """ Configuration class, to have the most used App variables """
+class Config:
+    """Configuration class, to have the most used App variables"""
+
     def __init__(self, app_context: Any = None) -> None:
 
         # Set the local app_context to eventually get values from
@@ -98,11 +104,12 @@ class Config():
         self.app_context = app_context
 
         # Get secrets and set environment variables
-        params = get_secrets_from_iaas(get_default_resultset,
-                                       get_config_logger())
+        params = get_secrets_from_iaas(get_default_resultset, get_config_logger())
         if params["error"]:
-            error_msg = 'CNFG-1) ERROR: Config.__init__() |' + \
-                        f' Getting Secrets | params: {params}'
+            error_msg = (
+                "CNFG-1) ERROR: Config.__init__() |"
+                + f" Getting Secrets | params: {params}"
+            )
             raise Exception(error_msg)
 
         # ............................
@@ -115,55 +122,58 @@ class Config():
         if is_local_service():
             # Handles the \@ issue in environment variables values when runs
             # by "sam local start-api"
-            os.environ['APP_DB_URI'] = \
-                os.environ['APP_DB_URI'].replace('\\@', '@')
-            os.environ['APP_SUPERADMIN_EMAIL'] = \
-                os.environ['APP_SUPERADMIN_EMAIL'].replace('\\@', '@')
+            os.environ["APP_DB_URI"] = os.environ["APP_DB_URI"].replace("\\@", "@")
+            os.environ["APP_SUPERADMIN_EMAIL"] = os.environ[
+                "APP_SUPERADMIN_EMAIL"
+            ].replace("\\@", "@")
 
         self.DB_CONFIG = {
-            'mongodb_uri': os.environ['APP_DB_URI'],
-            'mongodb_db_name': os.environ['APP_DB_NAME'],
-            'dynamdb_prefix': os.environ.get('DYNAMDB_PREFIX', ''),
+            "app_db_uri": os.environ["APP_DB_URI"],
+            "app_db_name": os.environ["APP_DB_NAME"],
+            "dynamdb_prefix": os.environ.get("DYNAMDB_PREFIX", ""),
         }
-        # DB_ENGINE = 'MONGO_DB'
-        # DB_ENGINE = 'DYNAMO_DB'
-        self.DB_ENGINE = os.environ['APP_DB_ENGINE']
+        # DB_ENGINE = 'POSTGRESQL'
+        # DB_ENGINE = 'MONGODB'
+        # DB_ENGINE = 'DYNAMODB'
+        self.DB_ENGINE = os.environ["APP_DB_ENGINE"]
 
         # App general configuration
 
-        self.DEBUG = self.get_env('APP_DEBUG', '0') == '1'
+        self.DEBUG = self.get_env("APP_DEBUG", "0") == "1"
 
-        self.APP_NAME = os.environ['APP_NAME']
-        self.APP_VERSION = os.environ.get('APP_VERSION', 'N/A')
-        self.STAGE = os.environ.get('APP_STAGE')
-        self.SECRET_KEY = os.environ.get('SECRET_KEY', str(os.urandom(16)))
+        self.APP_NAME = os.environ["APP_NAME"]
+        self.APP_VERSION = os.environ.get("APP_VERSION", "N/A")
+        self.STAGE = os.environ.get("APP_STAGE")
+        self.SECRET_KEY = os.environ.get("SECRET_KEY", str(os.urandom(16)))
 
         # App specific configuration
 
-        self.APP_SECRET_KEY = os.environ['APP_SECRET_KEY']
-        self.APP_SUPERADMIN_EMAIL = \
-            os.environ['APP_SUPERADMIN_EMAIL']
+        self.APP_SECRET_KEY = os.environ["APP_SECRET_KEY"]
+        self.APP_SUPERADMIN_EMAIL = os.environ["APP_SUPERADMIN_EMAIL"]
 
-        self.APP_HOST_NAME = os.environ['APP_HOST_NAME']
-        self.STORAGE_URL_SEED = os.environ['STORAGE_URL_SEED']
+        self.APP_HOST_NAME = os.environ["APP_HOST_NAME"]
+        self.STORAGE_URL_SEED = os.environ["STORAGE_URL_SEED"]
 
-        self.GIT_SUBMODULE_LOCAL_PATH = os.environ['GIT_SUBMODULE_LOCAL_PATH']
+        self.GIT_SUBMODULE_LOCAL_PATH = os.environ["GIT_SUBMODULE_LOCAL_PATH"]
 
-        self.TEMP_DIR = os.environ.get('TEMP_DIR', '/tmp')
+        self.TEMP_DIR = os.environ.get("TEMP_DIR", "/tmp")
 
         # ............................
 
         # Auth parameters
 
-        self.CORS_ORIGIN = self.get_env('APP_CORS_ORIGIN', '*')
+        self.CORS_ORIGIN = self.get_env("APP_CORS_ORIGIN", "*")
         self.HEADER_TOKEN_ENTRY_NAME = self.get_env(
-            'HEADER_TOKEN_ENTRY_NAME',
-            'Authorization'  # 'x-access-tokens'
+            "HEADER_TOKEN_ENTRY_NAME", "Authorization"  # 'x-access-tokens'
         )
 
         # Languages
 
-        self.DEFAULT_LANG = self.get_env('DEFAULT_LANG', 'en')
+        self.DEFAULT_LANG = self.get_env("DEFAULT_LANG", "en")
+
+        # API configuration
+
+        self.API_VERSION = self.get_env("API_VERSION", "v1")
 
     def get_env(self, var_name: str, def_value: Any = None) -> Any:
         """
@@ -184,15 +194,15 @@ class Config():
         Show all defined config variables.
         """
         return (
-            'Config.debug_vars:\n\n' +
-            f'DEBUG = {self.DEBUG}\n' +
-            f'SECRET_KEY = {self.SECRET_KEY}\n' +
-            f'DB_CONFIG = {self.DB_CONFIG}\n' +
-            f'DB_ENGINE = {self.DB_ENGINE}\n' +
-            f'APP_SECRET_KEY = {self.APP_SECRET_KEY}\n' +
-            f'APP_SUPERADMIN_EMAIL = {self.APP_SUPERADMIN_EMAIL}\n' +
-            f'CORS_ORIGIN = {self.CORS_ORIGIN}\n' +
-            f'HEADER_TOKEN_ENTRY_NAME = {self.HEADER_TOKEN_ENTRY_NAME}\n' +
-            f'STAGE = {self.STAGE}\n' +
-            '\n'
+            "Config.debug_vars:\n\n"
+            + f"DEBUG = {self.DEBUG}\n"
+            + f"SECRET_KEY = {self.SECRET_KEY}\n"
+            + f"DB_CONFIG = {self.DB_CONFIG}\n"
+            + f"DB_ENGINE = {self.DB_ENGINE}\n"
+            + f"APP_SECRET_KEY = {self.APP_SECRET_KEY}\n"
+            + f"APP_SUPERADMIN_EMAIL = {self.APP_SUPERADMIN_EMAIL}\n"
+            + f"CORS_ORIGIN = {self.CORS_ORIGIN}\n"
+            + f"HEADER_TOKEN_ENTRY_NAME = {self.HEADER_TOKEN_ENTRY_NAME}\n"
+            + f"STAGE = {self.STAGE}\n"
+            + "\n"
         )

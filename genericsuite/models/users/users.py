@@ -103,7 +103,7 @@ def login_user(
             result['error_message'] = basic_auth_data['error_message']
             return return_resultset_jsonified_or_exception(
                 result=result,
-                http_error=basic_auth_data['status_code']
+                status_code=basic_auth_data['status_code']
             )
         username = basic_auth_data['resultset']['user']
         password = basic_auth_data['resultset']['password']
@@ -129,17 +129,26 @@ def login_user(
                         'username': user['resultset']['email'],
                     }
                 else:
+                    # Account inactive
                     result['error_message'] = get_constant("ERROR_MESSAGES",
                                                            "ACCOUNT_INACTIVE")
             else:
+                # Invalid credentials
                 result['error_message'] = 'Could not verify [L3]'
         else:
+            # Password field not found
             result['error_message'] = 'Inconsistency [L4]'
     else:
+        # User not found
         result['error_message'] = 'Could not verify [L2]'
+
     _ = DEBUG and \
         log_debug(f'login_user | FINAL result: {result}')
-    return return_resultset_jsonified_or_exception(result, 401)
+
+    return return_resultset_jsonified_or_exception(
+        result=result,
+        status_code=401 if result['error_message'] else 200,
+    )
 
 
 def super_admin_create(
@@ -176,7 +185,7 @@ def super_admin_create(
             result['error_message'] = basic_auth_data['error_message']
             return return_resultset_jsonified_or_exception(
                 result=result,
-                http_error=basic_auth_data['status_code']
+                status_code=basic_auth_data['status_code']
             )
 
         username = basic_auth_data['resultset']['user']
@@ -187,8 +196,8 @@ def super_admin_create(
     elif username != settings.APP_SUPERADMIN_EMAIL:
         result['error_message'] = 'Could not verify [SAC2]'
     elif not psw_class.verify_password(
-         psw_class.encrypt_password(settings.APP_SECRET_KEY), password
-         ):
+        psw_class.encrypt_password(settings.APP_SECRET_KEY), password
+    ):
         result['error_message'] = 'Could not verify [SAC3]'
 
     if result['error_message']:

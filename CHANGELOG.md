@@ -17,6 +17,19 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Security
 
 
+## [Unreleased]
+
+### Added
+- Add API_VERSION envvar to set the API version, default to "v1" [GS-245].
+- Add Postgres database support [GS-194].
+- Implement storage abstraction layer for S3, Azure and GCP [GS-72].
+- Implement AWS S3 generate_presigned_url on assets retrieval to avoid exposing the S3 bucket name [GS-72].
+
+### Changed
+- Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].
+- Refactor: standardize return_resultset_jsonified_or_exception() function status code parameter name from "http_error" to "status_code" in "utilities.py" and "users.py" [GS-245].
+
+
 ## [0.2.0] - 2025-11-17
 
 ### Added

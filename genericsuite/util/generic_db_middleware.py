@@ -48,7 +48,7 @@ def fetch_all_from_db(
     if result['error']:
         log_error(
             f'AI_FAFD-E1) ERROR: Fetch all from {json_file}' +
-            ' | result: {result}')
+            f' | result: {result}')
     elif DEBUG:
         log_debug(f'AI_FAFD-1) Fetch all from {json_file} | result: {result}')
     return result

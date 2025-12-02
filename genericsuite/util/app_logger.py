@@ -16,7 +16,7 @@ app_logs: Union[logging.Logger, None] = None
 
 
 def log_config(log_file: str = None) -> logging:
-    """ Logging configuration """
+    """Logging configuration"""
     logger = logging.getLogger(settings.APP_NAME)
     logger.propagate = False
     if settings.DEBUG:
@@ -26,7 +26,7 @@ def log_config(log_file: str = None) -> logging:
     handler = logging.StreamHandler(sys.stdout)
     if log_file:
         handler = logging.FileHandler(log_file)
-    formatter = logging.Formatter('%(name)s-%(levelname)s - %(message)s')
+    formatter = logging.Formatter("%(name)s-%(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     return logger
@@ -46,10 +46,9 @@ def _get_logger() -> logging.Logger:
 
 
 def db_stamp() -> str:
-    db_engine = os.environ['APP_DB_ENGINE']
-    if db_engine == 'DYNAMO_DB':
-        response = f"{db_engine}|" + \
-            f"{os.environ.get('DYNAMDB_PREFIX', 'No-Prefix')}"
+    db_engine = os.environ["APP_DB_ENGINE"]
+    if db_engine == "DYNAMODB":
+        response = f"{db_engine}|" + f"{os.environ.get('DYNAMDB_PREFIX', 'No-Prefix')}"
     else:
         response = f"{db_engine}|{os.environ['APP_DB_NAME']}"
     if is_local_service():
@@ -60,10 +59,12 @@ def db_stamp() -> str:
 
 
 def formatted_message(message: Any) -> str:
-    """ Returns a formatted message with database name and date/time """
-    return f"[{db_stamp()}]" + \
-        f" {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}" + \
-        f" | {message}"
+    """Returns a formatted message with database name and date/time"""
+    return (
+        f"[{db_stamp()}]"
+        + f" {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        + f" | {message}"
+    )
 
 
 def log_debug(message: Any) -> str:

@@ -15,7 +15,7 @@ from genericsuite.util.db_abstractor import db
 from genericsuite.util.passwords import Passwords
 
 
-DEBUG = False
+DEBUG = True
 
 
 class GenericDbHelperSuper:
@@ -51,14 +51,14 @@ class GenericDbHelperSuper:
             self.table_name = self.cnf_db['table_name']
             self.name = self.cnf_db.get('name', self.name)
             self.title = self.cnf_db.get('title', self.title)
+            _ = DEBUG and \
+                log_debug(f"||| GenericDbHelper | db: {db}")
             try:
-                _ = DEBUG and \
-                    log_debug(f"||| GenericDbHelper | db: {db}")
                 self.table_obj = db[self.table_name]
-                _ = DEBUG and \
-                    log_debug("||| GenericDbHelper | self.table_obj:" +
-                              f" {self.table_obj}")
-            except BaseException as error:
+                # _ = DEBUG and \
+                #     log_debug("||| GenericDbHelper | self.table_obj:" +
+                #               f" {self.table_obj}")
+            except Exception as error:
                 self.error_message = "ERROR connecting to Database:" + \
                                      f" {str(error)}"
                 log_error(self.error_message)

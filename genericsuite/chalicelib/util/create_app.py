@@ -55,11 +55,14 @@ def create_app(app_name: str, settings=None) -> Any:
     # log_debug(f'api.binary_types: {chalice_app.api.binary_types}')
 
     # Register general endpoints
-    chalice_app.register_blueprint(menu_options.bp, url_prefix='/menu_options')
+    chalice_app.register_blueprint(
+        menu_options.bp, url_prefix=f'/{settings.API_VERSION}/menu_options')
     # log_info("Registered menu_options blueprint")
-    chalice_app.register_blueprint(users.bp, url_prefix='/users')
+    chalice_app.register_blueprint(
+        users.bp, url_prefix=f'/{settings.API_VERSION}/users')
     # log_info("Registered users blueprint")
-    chalice_app.register_blueprint(storage_retrieval.bp, url_prefix='/asset')
+    chalice_app.register_blueprint(
+        storage_retrieval.bp, url_prefix=f'/{settings.API_VERSION}/assets')
     # log_info("Registered storage_retrieval blueprint")
 
     # Register generic endpoints (from the "endpoints.json" file)

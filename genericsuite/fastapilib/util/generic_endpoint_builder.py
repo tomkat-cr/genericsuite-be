@@ -58,7 +58,8 @@ def generate_blueprints_from_json(
     definitions = get_json_def(json_file, f'{cnf_db_base_path}/backend', [])
     for definition in definitions:
         bp_name = definition['name']
-        url_prefix = f"/{definition.get('url_prefix', bp_name)}"
+        url_prefix = definition.get('url_prefix', bp_name)
+        url_prefix = f"/{settings.API_VERSION}/{url_prefix}"
 
         if DEBUG:
             log_debug(
@@ -93,8 +94,8 @@ def generate_blueprints_from_json(
                 endpoint = {
                     "name": bp_name,
                     "route": f"{url_prefix}/{route['endpoint']}"
-                             if route['endpoint'] and route['endpoint'] != '/'
-                             else url_prefix,
+                    if route['endpoint'] and route['endpoint'] != '/'
+                    else url_prefix,
                     "method": method,
                     "response_model": route.get("response_model")
                 }

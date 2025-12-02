@@ -23,8 +23,11 @@ from genericsuite.models.users.users import (
     get_current_user_data,
 )
 from genericsuite.util.app_context import save_all_users_params_files
+from genericsuite.config.config import Config
 
-bp = BlueprintOne('users', __name__, url_prefix='/users')
+settings = Config()
+bp = BlueprintOne('users', __name__,
+                  url_prefix=f'/{settings.API_VERSION}/users')
 
 
 HEADER_CREDS_ENTRY_NAME = 'Authorization'

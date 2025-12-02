@@ -26,6 +26,7 @@ class GenericEndpointHelper:
     """
     Helper class for generic endpoint CRUD operations.
     """
+
     def __init__(
         self,
         app_context: AppContext,
@@ -98,7 +99,7 @@ class GenericEndpointHelper:
             self.dbo.cnf_db.get('additional_query_params')
 
         (limit, skip, page) = get_navigation_params(self.request)
-
+        http_status_code = None
         _ = DEBUG and log_debug(
             f' | row_id: {row_id}'
             f' | additional_query_params: {additional_query_params}'
@@ -110,6 +111,8 @@ class GenericEndpointHelper:
             # Create
             _ = DEBUG and log_debug(f'GCM-1.1) CREATE {self.data["name"]}...')
             result = self.dbo.create_row(self.request_body)
+            if not result['error']:
+                http_status_code = 201
             _ = DEBUG and log_debug(
                 f'GCM-1.2) CREATE {self.data["name"]}'
                 f'\n | request_body: {self.request_body}'
@@ -199,7 +202,9 @@ class GenericEndpointHelper:
                 f'GCM-7.2) {self.data["name"]} list |'
                 f' skip: {skip}, limit: {limit}, page: {page}'
                 f'\n | result {result}')
-        return return_resultset_jsonified_or_exception(result)
+
+        return return_resultset_jsonified_or_exception(
+            result, status_code=http_status_code)
 
     def generic_raw_json(self) -> dict:
         """

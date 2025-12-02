@@ -1,5 +1,6 @@
 """
 This module contains functions for interacting with AWS Secrets Manager.
+
 IMPORTANT:
 * It cannot use configs.py because it is used by config_from_db.py to
 * It cannot use app_context, to avoid cycling imports.
@@ -8,8 +9,7 @@ from typing import Callable
 import os
 import json
 
-import boto3
-from botocore.exceptions import ClientError
+from genericsuite.util.cloud_provider_abstractor import get_cloud_region
 
 
 DEBUG = False
@@ -23,6 +23,9 @@ def get_secrets(secret_name: str, region_name: str,
     """
     _ = DEBUG and logger.debug(f'AWS get_secrets | secret_name: {secret_name}'
                                f' | region_name: {region_name}')
+    import boto3
+    from botocore.exceptions import ClientError
+
     result = get_default_resultset()
     session = boto3.session.Session()
     client = session.client(
@@ -74,7 +77,7 @@ def get_secrets_cache_filename(secret_type: str = "") -> str:
         raise Exception(error_message)
     return os.path.join(
         TEMP_DIR, f'{prefix[secret_type]}_{app_name.lower()}_' +
-                  f'{app_stage.lower()}_aws.json')
+        f'{app_stage.lower()}_aws.json')
 
 
 def get_cache_secret(get_default_resultset: Callable, logger: Callable
@@ -85,7 +88,7 @@ def get_cache_secret(get_default_resultset: Callable, logger: Callable
     """
     app_name = os.environ.get('APP_NAME')
     app_stage = os.environ.get('APP_STAGE')
-    region_name = os.environ.get('AWS_REGION')
+    region_name = get_cloud_region()
     result = get_default_resultset()
     if not app_name or not app_stage or not region_name:
         result['error'] = True

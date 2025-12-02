@@ -62,9 +62,12 @@ def create_app(app_name: str, settings: Config = None) -> Any:
     #     '{fastapi_app.api.binary_types}')
 
     # Register generic endpoints
-    fastapi_app.include_router(menu_options.router, prefix='/menu_options')
-    fastapi_app.include_router(users.router, prefix='/users')
-    fastapi_app.include_router(storage_retrieval.router, prefix='/asset')
+    fastapi_app.include_router(
+        menu_options.router, prefix=f'/{settings.API_VERSION}/menu_options')
+    fastapi_app.include_router(
+        users.router, prefix=f'/{settings.API_VERSION}/users')
+    fastapi_app.include_router(
+        storage_retrieval.router, prefix=f'/{settings.API_VERSION}/assets')
 
     # Register generic endpoints (from the "endpoints.json" file)
     generate_blueprints_from_json(fastapi_app, 'endpoints')
