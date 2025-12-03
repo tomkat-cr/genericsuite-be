@@ -28,6 +28,12 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Changed
 - Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].
 - Refactor: standardize return_resultset_jsonified_or_exception() function status code parameter name from "http_error" to "status_code" in "utilities.py" and "users.py" [GS-245].
+- Enhance logging in aws.py for better debugging.
+
+### Fixed
+- Remove "/" prefix in the key to avoid double "/" in get_bucket_key_from_url() and fix encoded chars in get_s3_presigned_url() [GS-245].
+- Clean up unused imports and comments in create_app.py.
+- Update delete_params_file return type in app_context.py.
 
 
 ## [0.2.0] - 2025-11-17

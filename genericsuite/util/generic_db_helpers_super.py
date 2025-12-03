@@ -15,7 +15,7 @@ from genericsuite.util.db_abstractor import db
 from genericsuite.util.passwords import Passwords
 
 
-DEBUG = True
+DEBUG = False
 
 
 class GenericDbHelperSuper:

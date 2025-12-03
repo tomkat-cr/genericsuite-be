@@ -21,8 +21,10 @@ def log_config(log_file: str = None) -> logging:
     logger.propagate = False
     if settings.DEBUG:
         logger.setLevel(logging.DEBUG)
+        print("Logger configured in DEBUG mode")
     else:
         logger.setLevel(logging.INFO)
+        print("Logger configured in INFO mode")
     handler = logging.StreamHandler(sys.stdout)
     if log_file:
         handler = logging.FileHandler(log_file)
@@ -48,7 +50,8 @@ def _get_logger() -> logging.Logger:
 def db_stamp() -> str:
     db_engine = os.environ["APP_DB_ENGINE"]
     if db_engine == "DYNAMODB":
-        response = f"{db_engine}|" + f"{os.environ.get('DYNAMDB_PREFIX', 'No-Prefix')}"
+        response = f"{db_engine}|" + \
+            f"{os.environ.get('DYNAMDB_PREFIX', 'No-Prefix')}"
     else:
         response = f"{db_engine}|{os.environ['APP_DB_NAME']}"
     if is_local_service():

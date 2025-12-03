@@ -3,9 +3,6 @@ App main module (create_app) for FastAPI
 """
 from typing import Any
 
-# import importlib
-# import logging
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
@@ -25,9 +22,6 @@ from genericsuite.fastapilib.endpoints import (
 )
 from genericsuite.config.config_from_db import set_init_custom_data
 
-# framework_class = importlib.import_module("fastapi")
-# handler_wrapper_class = importlib.import_module("mangum")
-
 DEBUG = False
 
 
@@ -39,7 +33,6 @@ def create_app(app_name: str, settings: Config = None) -> Any:
     if settings is None:
         settings = Config()
 
-    # fastapi_app = framework_class.FastAPI(title=app_name)
     fastapi_app = FastAPI(title=app_name)
 
     fastapi_app.debug = settings.DEBUG
@@ -48,18 +41,8 @@ def create_app(app_name: str, settings: Config = None) -> Any:
     # GenericDbHelper specific functions
     fastapi_app.custom_data = set_init_custom_data()
 
-    # App wide log level
-    # if not settings.DEBUG:
-    #     fastapi_app.log.setLevel(logging.INFO)
-
     # CORS configuration
     set_cors_config(fastapi_app=fastapi_app, settings=settings)
-
-    # Set Content-type: multipart/form-data as Binary
-    # to properly handle image uploads
-    # fastapi_app.api.binary_types.append("multipart/form-data")
-    # log_debug(f'1) fastapi_app.api.binary_types: ' +
-    #     '{fastapi_app.api.binary_types}')
 
     # Register generic endpoints
     fastapi_app.include_router(
@@ -102,5 +85,4 @@ def create_handler(app_object):
     """
     Returns the FastAPI App as a valid AWS Lambda Function handler
     """
-    # return handler_wrapper_class.Mangum(app_object, lifespan="off")
     return Mangum(app_object, lifespan="off")

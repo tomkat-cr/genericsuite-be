@@ -380,13 +380,13 @@ def get_app_context(app_context_or_blueprint: Any):
 def delete_params_file(
     app_context_or_blueprint: Any,
     action_data: Optional[Union[dict, None]]
-) -> None:
+) -> dict:
     """
     GenericDbHelper specific function to delete the parameters file (e.g. when
     general_config or user's users_config array is changed).
 
     Args:
-        app_context (AppContext): the application context object
+        app_context_or_blueprint (AppContext): the application context object
         action_data (dict, optional): the action data. Defaults to None.
             If it's not None, it must have the following keys (attributes):
             "action": "list", "read", "create", "update" or "delete"

@@ -4,7 +4,7 @@ AWS Utilities
 from typing import Optional, Union
 import os
 import json
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 
 from genericsuite.util.app_logger import log_debug, log_error
 from genericsuite.util.utilities import (
@@ -22,7 +22,7 @@ from genericsuite.util.storage_commons import (
 )
 
 
-DEBUG = False
+DEBUG = os.environ.get('CLOUD_AWS_DEBUG', '0') == '1'
 
 
 def s3_base_url(bucket_name: str) -> str:
@@ -50,7 +50,8 @@ def get_bucket_key_from_url(public_url):
     bucket_name = parsed_url.hostname \
         .replace("https://", "") \
         .replace(".s3.amazonaws.com", "")
-    key = parsed_url.path
+    # To avoid "/key"
+    key = parsed_url.path[1:]
     return bucket_name, key
 
 
@@ -92,14 +93,16 @@ def upload_file_to_s3(
             bucket_name,
             dest_path,
         )
-        log_debug(f"\nFile uploaded successfully S3 Bucket: {bucket_name}" +
-                  f" | path: {dest_path}")
+        _ = DEBUG and log_debug(
+            "upload_file_to_s3" +
+            f"\n | File uploaded successfully S3 Bucket: {bucket_name}" +
+            f"\n | path: {dest_path}")
     except FileNotFoundError:
         error = f"The file {source_path} was not found."
-        log_debug(error)
+        log_error(error)
     except NoCredentialsError:
         error = "Credentials not available for S3 upload."
-        log_debug(error)
+        log_error(error)
 
     if public_file and not error:
         try:
@@ -124,8 +127,10 @@ def upload_file_to_s3(
                 Bucket=bucket_name,
                 Policy=json.dumps(policy)
             )
-            log_debug(f"Bucket policy for '{dest_path}' set to public-read" +
-                      " successfully")
+            _ = DEBUG and log_debug(
+                "upload_file_to_s3" +
+                f"\n | Bucket policy for '{dest_path}' set to public-read" +
+                " successfully")
         # except s3_client.exceptions.S3Error as e:
         except Exception as err:  # pylint: disable=broad-except
             error = f"Failed to set ACL for {dest_path}: {err}"
@@ -141,9 +146,10 @@ def upload_file_to_s3(
     # Final filename is the file name in the S3 destination path.
     final_filename = os.path.basename(dest_path)
 
-    log_debug(f"Public url: {public_url}")
-    log_debug(f"Final filename: {final_filename}")
-    log_debug(f"Error: {error}\n")
+    _ = DEBUG and log_debug("upload_file_to_s3" +
+                            f"\n | Public url: {public_url}" +
+                            f"\n | Final filename: {final_filename}" +
+                            f"\n | Error: {error}\n")
 
     result['public_url'] = public_url
     result['final_filename'] = final_filename
@@ -165,11 +171,13 @@ def remove_from_s3(bucket_name: str, key: str) -> dict:
     try:
         s3 = boto3.client('s3')
         s3.delete_object(Bucket=bucket_name, Key=key)
-        log_debug(f"Object removed from S3: {bucket_name}/{key}")
+        _ = DEBUG and log_debug(
+            "remove_from_s3" +
+            f"\n | Object removed from S3: {bucket_name}/{key}")
     except Exception as err:  # pylint: disable=broad-except
         result['error'] = True
         result['error_message'] = f"Failed to remove object from S3: {err}"
-        log_debug(result['error_message'])
+        log_error(result['error_message'])
     return result
 
 
@@ -193,7 +201,9 @@ def get_s3_object(bucket_name: str, key: str) -> dict:
         obj = s3.get_object(Bucket=bucket_name, Key=key)
         # result['content'] = obj['Body'].read().decode('utf-8')
         result['content'] = obj['Body'].read()
-        log_debug(f"Object retrieved from S3: {bucket_name}/{key}")
+        _ = DEBUG and log_debug(
+            "get_s3_object" +
+            f"\n | Object retrieved from S3: {bucket_name}/{key}")
     except Exception as err:  # pylint: disable=broad-except
         result['error'] = True
         result['error_message'] = f"Failed to retrieve object from S3: {err}"
@@ -227,7 +237,9 @@ def download_s3_object(bucket_name: str, key: str,
         s3_client = boto3.client('s3')
         s3_client.download_file(bucket_name, key, local_file_path)
         result['local_file_path'] = local_file_path
-        log_debug(f"Object downloaded from S3: {bucket_name}/{key}")
+        _ = DEBUG and log_debug(
+            "download_s3_object" +
+            f"\n | Object downloaded from S3: {bucket_name}/{key}")
     except Exception as err:  # pylint: disable=broad-except
         result['error'] = True
         result['error_message'] = \
@@ -246,14 +258,21 @@ def get_s3_presigned_url(
     import boto3
     s3_client = boto3.client('s3')
     result = get_default_resultset()
+    expires_in = get_storage_presigned_expiration_seconds(
+        expiration_seconds)
     try:
         presigned_url = s3_client.generate_presigned_url(
             "get_object",
             Params={"Bucket": bucket_name, "Key": object_key},
-            ExpiresIn=get_storage_presigned_expiration_seconds(
-                expiration_seconds),
+            ExpiresIn=expires_in,
         )
-        log_debug(f"Presigned URL generated: {presigned_url}")
+        presigned_url = unquote(presigned_url)
+        _ = DEBUG and log_debug(
+            "get_s3_presigned_url" +
+            f"\n | Bucket: {bucket_name}" +
+            f"\n | Object key: {object_key}" +
+            f"\n | Expiration seconds: {expires_in}" +
+            f"\n | Presigned URL generated: {presigned_url}")
         result['url'] = presigned_url
         return result
     except Exception as err:  # pylint: disable=broad-except
@@ -343,10 +362,10 @@ def prepare_asset_url(public_url):
         final_public_url = presigned_url_result['url']
 
     log_debug("prepare_asset_url" +
-              f" | public_url: {public_url}"
-              f" | bucket_name: {bucket_name}"
-              f" | key: {key}"
-              f" | presigned_url_result: {presigned_url_result}"
-              f" | final_public_url: {final_public_url}")
+              f"\n\t | public_url: {public_url}"
+              f"\n\t | bucket_name: {bucket_name}"
+              f"\n\t | key: {key}"
+              f"\n\t | presigned_url_result: {presigned_url_result}"
+              f"\n\t | final_public_url: {final_public_url}")
 
     return final_public_url

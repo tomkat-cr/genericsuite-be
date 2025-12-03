@@ -58,7 +58,8 @@ def storage_encryption_enabled() -> bool:
 
 
 def get_storage_masked_url(
-    bucket_name: str, key: str,
+    bucket_name: str,
+    key: str,
     hostname: Optional[Union[str, None]] = None
 ):
     """

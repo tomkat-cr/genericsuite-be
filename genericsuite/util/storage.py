@@ -300,7 +300,9 @@ def prepare_asset_url(public_url: str) -> str:
     """
     Prepares the asset URL (image, sound, file) for message content for tools
     like GPT4 vision.
-    If DEV_MASK_EXT_HOSTNAME is set, it will be prepended to the URL.
+    If the storage encryption is enabled and DEV_MASK_EXT_HOSTNAME is set,
+    the URL will be prepended with DEV_MASK_EXT_HOSTNAME. otherwise, the URL
+    will be masked with a presigned method.
     Args:
         public_url (str): The public URL of the image. E.g.:
             https://<bucket-name>.s3.amazonaws.com/<user-id>/<file-name.jpg|png>

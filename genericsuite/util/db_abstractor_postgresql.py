@@ -10,7 +10,7 @@ from bson.json_util import dumps, ObjectId
 from genericsuite.util.db_abstractor_super import DbAbstract
 from genericsuite.util.app_logger import log_debug, log_error
 
-DEBUG = True
+DEBUG = False
 
 
 class PostgresqlUtilities:
@@ -208,7 +208,8 @@ class PostgresqlTable(PostgresqlUtilities):
     PostgreSQL Table abstraction
     """
 
-    def __init__(self, connection, table_name: str, table_structure: Dict = None):
+    def __init__(self, connection, table_name: str,
+                 table_structure: Dict = None):
         self._table_name = table_name
         self._conn = connection
         self.inserted_id = None
