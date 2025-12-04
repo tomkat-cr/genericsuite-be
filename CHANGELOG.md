@@ -23,12 +23,16 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Add API_VERSION envvar to set the API version, default to "v1" [GS-245].
 - Add Postgres database support [GS-194].
 - Implement storage abstraction layer for S3, Azure and GCP [GS-72].
-- Implement AWS S3 generate_presigned_url on assets retrieval to avoid exposing the S3 bucket name [GS-72].
+- Implement AWS generate_presigned_url() to protect S3 bucket access, so they can be set to expire in a short time and configured to block all public access. Configuration available with STORAGE_PRESIGNED_EXPIRATION_SECONDS (default to 5 minutes or 300 seconds) [GS-72].
 
 ### Changed
 - Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].
 - Refactor: standardize return_resultset_jsonified_or_exception() function status code parameter name from "http_error" to "status_code" in "utilities.py" and "users.py" [GS-245].
-- Enhance logging in aws.py for better debugging.
+- Enhance logging in aws.py for better debugging, including an initial message in the app startup to show the logging level.
+- STORAGE_URL_SEED envvar is now required only if STORAGE_URL_ENCRYPTION is enabled [GS-72].
+- STORAGE_ENCRYPTION envvar renamed to STORAGE_URL_ENCRYPTION [GS-72].
+- Enhance AWS S3 URL masking feature to avoid exposing the bucket name. It can be configured with envvars: STORAGE_URL_ENCRYPTION, STORAGE_URL_SEED, RUN_PROTOCOL, URL_MASK_EXTERNAL_HOSTNAME, URL_MASK_EXTERNAL_PROTOCOL. Does not work with API Gateway, only EC2 instances or VPS servers [GS-72].
+- The URL_MASK_EXTERNAL_HOSTNAME envvar replaced DEV_MASK_EXT_HOSTNAME, and DEV_MASK_EXT_HOSTNAME is still being used, but has precedence assigning URL_MASK_EXTERNAL_HOSTNAME [GS-72].
 
 ### Fixed
 - Remove "/" prefix in the key to avoid double "/" in get_bucket_key_from_url() and fix encoded chars in get_s3_presigned_url() [GS-245].

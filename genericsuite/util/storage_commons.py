@@ -12,11 +12,14 @@ DEBUG = False
 DEFAULT_PRESIGNED_EXPIRATION_SECONDS = 5*60
 STORAGE_URL_SEPARATOR = '||'
 
-STORAGE_ENCRYPTION = os.environ.get('STORAGE_ENCRYPTION', '')
 STORAGE_PRESIGNED_EXPIRATION_SECONDS = os.environ.get(
     'STORAGE_PRESIGNED_EXPIRATION_SECONDS')
+
+STORAGE_URL_ENCRYPTION = settings.STORAGE_URL_ENCRYPTION
 URL_MASK_EXTERNAL_PROTOCOL = os.environ.get('URL_MASK_EXTERNAL_PROTOCOL')
-DEV_MASK_EXT_HOSTNAME = os.environ.get('DEV_MASK_EXT_HOSTNAME')
+URL_MASK_EXTERNAL_HOSTNAME = \
+    os.environ.get('DEV_MASK_EXT_HOSTNAME',
+                   os.environ.get('URL_MASK_EXTERNAL_HOSTNAME'))
 RUN_PROTOCOL = os.environ.get('RUN_PROTOCOL', 'https')
 
 
@@ -26,7 +29,7 @@ def get_dev_mask_ext_hostname() -> str:
     Returns:
         str: The development external hostname.
     """
-    return DEV_MASK_EXT_HOSTNAME or ''
+    return URL_MASK_EXTERNAL_HOSTNAME or ''
 
 
 def get_storage_presigned_expiration_seconds(
@@ -48,13 +51,13 @@ def get_storage_presigned_expiration_seconds(
     )
 
 
-def storage_encryption_enabled() -> bool:
+def storage_url_encryption_enabled() -> bool:
     """
     Check if storage encryption is enabled.
     Returns:
         bool: True if storage encryption is enabled, False otherwise.
     """
-    return STORAGE_ENCRYPTION == '1'
+    return STORAGE_URL_ENCRYPTION == '1'
 
 
 def get_storage_masked_url(

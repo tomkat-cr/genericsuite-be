@@ -10,7 +10,7 @@ from genericsuite.util.app_logger import log_debug
 from genericsuite.util.cloud_provider_abstractor import get_cloud_provider
 
 from genericsuite.util.storage_commons import (
-    storage_encryption_enabled,
+    storage_url_encryption_enabled,
     get_dev_mask_ext_hostname,
     get_nodup_filename,
 )
@@ -312,7 +312,7 @@ def prepare_asset_url(public_url: str) -> str:
     """
     final_public_url = public_url
 
-    if storage_encryption_enabled():
+    if storage_url_encryption_enabled():
         parsed_url = urlparse(public_url)
         dev_mask_ext_hostname = get_dev_mask_ext_hostname()
         final_public_url = dev_mask_ext_hostname + parsed_url.path

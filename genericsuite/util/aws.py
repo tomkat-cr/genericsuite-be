@@ -17,7 +17,7 @@ from genericsuite.util.file_utilities import temp_filename
 from genericsuite.util.storage_commons import (
     get_storage_masked_url,
     get_bucket_key_from_decripted_item_id,
-    storage_encryption_enabled,
+    storage_url_encryption_enabled,
     get_storage_presigned_expiration_seconds,
 )
 
@@ -136,7 +136,7 @@ def upload_file_to_s3(
             error = f"Failed to set ACL for {dest_path}: {err}"
             log_debug(error)
 
-    if storage_encryption_enabled():
+    if storage_url_encryption_enabled():
         # Return the encrypted S3 URL of the uploaded file
         public_url = get_storage_masked_url(s3_client, bucket_name, dest_path)
     else:

@@ -104,7 +104,8 @@ class Config:
         self.app_context = app_context
 
         # Get secrets and set environment variables
-        params = get_secrets_from_iaas(get_default_resultset, get_config_logger())
+        params = get_secrets_from_iaas(
+            get_default_resultset, get_config_logger())
         if params["error"]:
             error_msg = (
                 "CNFG-1) ERROR: Config.__init__() |"
@@ -122,7 +123,8 @@ class Config:
         if is_local_service():
             # Handles the \@ issue in environment variables values when runs
             # by "sam local start-api"
-            os.environ["APP_DB_URI"] = os.environ["APP_DB_URI"].replace("\\@", "@")
+            os.environ["APP_DB_URI"] = os.environ["APP_DB_URI"].replace(
+                "\\@", "@")
             os.environ["APP_SUPERADMIN_EMAIL"] = os.environ[
                 "APP_SUPERADMIN_EMAIL"
             ].replace("\\@", "@")
@@ -152,7 +154,13 @@ class Config:
         self.APP_SUPERADMIN_EMAIL = os.environ["APP_SUPERADMIN_EMAIL"]
 
         self.APP_HOST_NAME = os.environ["APP_HOST_NAME"]
-        self.STORAGE_URL_SEED = os.environ["STORAGE_URL_SEED"]
+
+        self.STORAGE_URL_ENCRYPTION = os.environ.get(
+            "STORAGE_URL_ENCRYPTION", "0")
+
+        self.STORAGE_URL_SEED = os.environ.get("STORAGE_URL_SEED") \
+            if self.STORAGE_URL_ENCRYPTION == "1" \
+            else os.environ.get("STORAGE_URL_SEED")
 
         self.GIT_SUBMODULE_LOCAL_PATH = os.environ["GIT_SUBMODULE_LOCAL_PATH"]
 
