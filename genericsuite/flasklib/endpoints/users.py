@@ -60,7 +60,7 @@ def super_admin_create(
     request: Request,
     other_params: Optional[dict] = None
 ) -> Response:
-    """Super admin user emergency creation"""
+    """Super admin user creation"""
     return super_admin_create_model(
         request=request, blueprint=bp,
         other_params=other_params)

@@ -22,6 +22,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Added
 - Add API_VERSION envvar to set the API version, default to "v1" [GS-245].
 - Add Postgres database support [GS-194].
+- Add Supabase support [GS-161].
+- Add MySQL support [GS-249].
 - Implement storage abstraction layer for S3, Azure and GCP [GS-72].
 - Implement AWS generate_presigned_url() to protect S3 bucket access, so they can be set to expire in a short time and configured to block all public access. Configuration available with STORAGE_PRESIGNED_EXPIRATION_SECONDS (default to 5 minutes or 300 seconds) [GS-72].
 
@@ -38,6 +40,10 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Remove "/" prefix in the key to avoid double "/" in get_bucket_key_from_url() and fix encoded chars in get_s3_presigned_url() [GS-245].
 - Clean up unused imports and comments in create_app.py.
 - Update delete_params_file return type in app_context.py.
+- DynamoDB abstractor table object scan error "AttributeError: 'tuple' object has no attribute 'update'" [GS-249].
+
+### Removed
+- boto3 and pymongo dependencies, so each project can have its own dependencies depending on the selected database and cloud storage provider [GS-245].
 
 
 ## [0.2.0] - 2025-11-17
@@ -142,7 +148,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Add GS_LOCAL_ENVIR envvar to detect a local database running in a docker container [GS-102].
 
 ### Changed
-- Make DynamoDb tables with prefix work with the GS DB Abstraction [GS-102].
+- Make DynamoDB tables with prefix work with the GS DB Abstraction [GS-102].
 - Add error handling to all GenericDbHelper methods [GS-102].
 - DynamoDB abstraction "update_one()" method handles update_one, replace_one, $addToSet and $pull operations [GS-102].
 - App logger shows LOCAL condition and database engine.
@@ -305,7 +311,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ## [0.0.2] - 2022-08-22
 
 ### Added
-- DynamoDb emulated a-la MongoDB way.
+- DynamoDB emulated a-la MongoDB way.
 
 
 ## [0.0.1] - 2022-03-10

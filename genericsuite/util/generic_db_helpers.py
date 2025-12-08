@@ -333,15 +333,17 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             )
         # Creates the new item
         try:
-            resultset['resultset']['_id'] = str(
-                self.table_obj.insert_one(data).inserted_id
-            )
+            insert_obj = self.table_obj.insert_one(data)
+            resultset['resultset']['_id'] = str(insert_obj.inserted_id)
         except BaseException as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'CU5')
             resultset['error'] = True
         else:
-            resultset['resultset']['rows_affected'] = '1'
+            resultset['resultset']['rows_affected'] = \
+                str(insert_obj.inserted_count) \
+                if hasattr(insert_obj, 'inserted_count') \
+                else '1'
 
         return self.run_specific_func('create', resultset)
 

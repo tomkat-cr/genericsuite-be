@@ -1,3 +1,7 @@
+from genericsuite.util.db_abstractor_postgresql import (
+    PostgresqlService,
+    # PostgresqlTable,
+)
 import unittest
 import sys
 from unittest.mock import MagicMock, patch
@@ -17,12 +21,6 @@ mock_logger = MagicMock()
 sys.modules["genericsuite.util.app_logger"] = mock_logger
 
 
-from genericsuite.util.db_abstractor_postgresql import (
-    PostgresqlService,
-    PostgresqlTable,
-)
-
-
 class TestPostgresqlAbstractor(unittest.TestCase):
     def setUp(self):
         self.mock_config = MagicMock()
@@ -37,7 +35,8 @@ class TestPostgresqlAbstractor(unittest.TestCase):
     @patch("psycopg2.connect")
     def test_connection(self, mock_connect):
         self.service.get_db_connection()
-        mock_connect.assert_called_with("postgresql://user:pass@localhost:5432/db")
+        mock_connect.assert_called_with(
+            "postgresql://user:pass@localhost:5432/db")
 
     def test_insert_one(self):
         table = self.service["test_table"]

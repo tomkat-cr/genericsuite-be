@@ -14,6 +14,8 @@ from genericsuite.util.db_abstractor_super import ObjectFactory
 from genericsuite.util.db_abstractor_mongodb import MongodbServiceBuilder
 from genericsuite.util.db_abstractor_dynamodb import DynamodbServiceBuilder
 from genericsuite.util.db_abstractor_postgresql import PostgresqlServiceBuilder
+from genericsuite.util.db_abstractor_mysql import MysqlServiceBuilder
+from genericsuite.util.db_abstractor_supabase import SupabaseServiceBuilder
 
 # ----------------------- Db General -----------------------
 
@@ -57,6 +59,8 @@ def get_db_factory():
     factory.register_builder("DYNAMODB", DynamodbServiceBuilder())
     factory.register_builder("MONGODB", MongodbServiceBuilder())
     factory.register_builder("POSTGRES", PostgresqlServiceBuilder())
+    factory.register_builder("MYSQL", MysqlServiceBuilder())
+    factory.register_builder("SUPABASE", SupabaseServiceBuilder())
     return factory.create(current_db_engine, app_config=settings)
 
 
@@ -67,6 +71,10 @@ def get_db_engine():
     """
     Get the current database engine.
     """
+    _ = DEBUG and log_debug(
+        "db_abstractor SUPER | get_db_engine"
+        + "\n | Starting..."
+    )
     return db_factory.get_db()
 
 
@@ -83,7 +91,11 @@ def test_connection():
 # DB utilities
 
 
-def verify_required_fields(fields: dict, required_fields: list, error_code: str):
+def verify_required_fields(
+    fields: dict,
+    required_fields: list,
+    error_code: str
+):
     """
     Verify if all the required fields are present in the fields dictionary.
 
@@ -99,20 +111,14 @@ def verify_required_fields(fields: dict, required_fields: list, error_code: str)
         will contain the missing fields.
     """
     resultset = dict({"error": False, "error_message": "", "resultset": {}})
+    error = ""
     for element in required_fields:
         if element not in fields:
-            # resultset['error_message'] = '{}{}{}'.format(
-            #     resultset['error_message'],
-            #     ', ' if resultset['error_message'] != '' else '', element
-            # )
-            resultset["error_message"] = (
-                f"{resultset['error_message']}"
-                + f"{', ' if resultset['error_message'] != '' else ''}{element}"
-            )
-    if resultset["error_message"]:
+            error += f"{', ' if error != '' else ''}{element}"
+    if error:
         resultset["error_message"] = (
             "Missing mandatory elements:"
-            + f" {resultset['error_message']} {error_code}."
+            + f" {error} {error_code}."
         )
         resultset["error"] = True
     return resultset

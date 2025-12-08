@@ -29,24 +29,40 @@ class MongodbService(DbAbstract):
         import pymongo
 
         _ = DEBUG and log_debug(
-            "DB_ABSTRACTOR | MongodbService | get_db_connection"
-            +
-            # f"\n | DB_CONFIG: {self._app_config.DB_CONFIG}" +
-            " | Starting..."
+            "MongodbService | get_db_connection"
+            + f"\n | DB_CONFIG: {self._app_config.DB_CONFIG}"
+            + " | Starting..."
         )
         client = pymongo.MongoClient(self._app_config.DB_CONFIG["app_db_uri"])
         _ = DEBUG and log_debug(
-            "DB_ABSTRACTOR | MongodbService | get_db_connection"
+            "MongodbService | get_db_connection"
             + f"\n | client: {client}"
             + "\n | DB Client OK..."
         )
-        db_connector = client.get_database(self._app_config.DB_CONFIG["app_db_name"])
+        self._db = client.get_database(
+            self._app_config.DB_CONFIG["app_db_name"])
+
         _ = DEBUG and log_debug(
-            "DB_ABSTRACTOR | MongodbService | get_db_connection"
-            + f"\n | db_connector: {db_connector}"
+            "MongodbService | get_db_connection"
+            + f"\n | self._db: {self._db}"
             + "\n | DB Connector OK..."
         )
-        return db_connector
+        return
+
+    def get_db(self):
+        """
+        Returns the database object.
+
+        Returns:
+            Object: The database object. For DynamoDb, it must returns this
+                Class as a whole.
+        """
+        _ = DEBUG and log_debug(
+            "MongodbService | get_db"
+            + f"\n | self: {self}"
+            + "\n | DB OK..."
+        )
+        return self._db
 
     def test_connection(self) -> str:
         """
@@ -84,6 +100,15 @@ class MongodbService(DbAbstract):
 
         return pymongo.ASCENDING if direction == "asc" else pymongo.DESCENDING
 
+    def get_table_class(self):
+        """
+        Returns the table class.
+
+        Returns:
+            The table class.
+        """
+        return self._db
+
 
 class MongodbServiceBuilder(DbAbstract):
     """
@@ -94,6 +119,11 @@ class MongodbServiceBuilder(DbAbstract):
         self._instance = None
 
     def __call__(self, app_config, **_ignored):
+        _ = DEBUG and log_debug(
+            "MongodbServiceBuilder | __call__"
+            + f"\n | app_config: {app_config}"
+            + "\n | Starting..."
+        )
         if not self._instance:
             self._instance = MongodbService(app_config)
         return self._instance

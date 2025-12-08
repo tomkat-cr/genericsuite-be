@@ -156,7 +156,7 @@ def super_admin_create(
     blueprint: Any,
     other_params: Optional[dict] = None
 ) -> Response:
-    """Super admin user emergency creation"""
+    """Super admin user creation"""
     # Set environment variables from the database configurations.
     app_context = app_context_and_set_env(request=request, blueprint=blueprint)
     if app_context.has_error():

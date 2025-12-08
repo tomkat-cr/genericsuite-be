@@ -57,7 +57,7 @@ async def supad_create(
     other_params: Optional[dict] = None
 ) -> Response:
     """
-    Super admin user emergency creation
+    Super admin user creation
     """
     if other_params is None:
         other_params = {}

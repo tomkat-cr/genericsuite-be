@@ -85,7 +85,8 @@ class DynamoDbUtilities:
         #   --> Error updating Item [UO_ERR_020]: Float types are not
         #       supported. Use Decimal types instead.
         if isinstance(data, dict):
-            return {k: self.convert_floats_to_decimal(v) for k, v in data.items()}
+            return {k: self.convert_floats_to_decimal(v)
+                    for k, v in data.items()}
         elif isinstance(data, list):
             return [self.convert_floats_to_decimal(item) for item in data]
         elif isinstance(data, float):
@@ -123,7 +124,8 @@ class DynamoDbUtilities:
         To be used before sending responses to entity as a list
         """
         if items is None:
-            _ = DEBUG and log_debug("remove_decimal_types_list | None result: []")
+            _ = DEBUG and log_debug(
+                "remove_decimal_types_list | None result: []")
             return []
         return [self.remove_decimal_types(item, projection) for item in items]
 
@@ -136,7 +138,8 @@ class DynamoDbFindIterator(DynamoDbUtilities):
     def __init__(self, data_set):
         if DEBUG:
             log_debug(
-                ">>--> DynamoDbFindIterator | __init__() | data_set: " + str(data_set)
+                ">>--> DynamoDbFindIterator | __init__() | data_set: "
+                + str(data_set)
             )
         self._data_set = data_set
         self._skip = 0
@@ -148,7 +151,8 @@ class DynamoDbFindIterator(DynamoDbUtilities):
         Set the skip value
         """
         if DEBUG:
-            log_debug(">>--> DynamoDbFindIterator | skip() | skip: " + str(skip))
+            log_debug(">>--> DynamoDbFindIterator | skip() | skip: "
+                      + str(skip))
         self._skip = skip
         return self
 
@@ -157,7 +161,8 @@ class DynamoDbFindIterator(DynamoDbUtilities):
         Set the limit value
         """
         if DEBUG:
-            log_debug(">>--> DynamoDbFindIterator | limit() | limit: " + str(limit))
+            log_debug(
+                ">>--> DynamoDbFindIterator | limit() | limit: " + str(limit))
         self._limit = limit
         return self
 
@@ -165,7 +170,8 @@ class DynamoDbFindIterator(DynamoDbUtilities):
         self._num = self._skip
         if DEBUG:
             log_debug(
-                ">>--> DynamoDbFindIterator | __iter__() | self.num: " + str(self._num)
+                ">>--> DynamoDbFindIterator | __iter__() | self.num: "
+                + str(self._num)
             )
         return self
 
@@ -195,7 +201,8 @@ class DynamoDbFindIterator(DynamoDbUtilities):
             )
             if DEBUG:
                 log_debug(
-                    ">>--> DynamoDbFindIterator | __next__() | _result: " + str(_result)
+                    ">>--> DynamoDbFindIterator | __next__() | _result: "
+                    + str(_result)
                 )
             # _result = self.id_addition(self._data_set[self._num])
             self._num += 1
@@ -212,7 +219,8 @@ class DynamoDbFindIterator(DynamoDbUtilities):
             self._data_set = []
         else:
             self._data_set.sort(
-                key=lambda data_set: data_set.get(column), reverse=(direction != "asc")
+                key=lambda data_set: data_set.get(column),
+                reverse=(direction != "asc")
             )
         return self
 
@@ -463,7 +471,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 if not isinstance(value, dict):
                     value = {key: value}
                 for key_name, key_value in value.items():
-                    condition_values = condition_values | {":" + key_name: key_value}
+                    condition_values = condition_values | {
+                        ":" + key_name: key_value}
             # Populates the condition expressions (to be used as the
             # KeyConditionExpression or FilterExpression parameter)
             if function is None:
@@ -481,7 +490,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             else:
                 # It's a function call
                 expresion_parts.append(
-                    f"{inner_separator}" + f"{open_group}{function}{close_group}"
+                    f"{inner_separator}" +
+                    f"{open_group}{function}{close_group}"
                 )
             # It has more than one condition
             if multiple is not None:
@@ -521,13 +531,11 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                         "|||---> get_condition_expresion_values"
                         + f" | subitem: {subitem}"
                     )
-                    condition_values, expresion_parts, attr_names = (
+                    condition_values, expresion_parts, attr_names = \
                         self.get_cond_exp_val(subitem)
-                    )
             else:
-                condition_values, expresion_parts, attr_names = self.get_cond_exp_val(
-                    item
-                )
+                condition_values, expresion_parts, attr_names = \
+                    self.get_cond_exp_val(item)
         separator = (
             " OR "
             if "$or" in separator
@@ -542,14 +550,16 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         """
         keys = list(
             filter(
-                lambda key: query_params.get(self.element_name(key)) is not None,
+                lambda key: query_params.get(
+                    self.element_name(key)) is not None,
                 self.get_key_schema(),
             )
         )
         keys = list(
             map(
                 lambda key: {
-                    self.element_name(key): query_params.get(self.element_name(key))
+                    self.element_name(key): query_params.get(
+                        self.element_name(key))
                 },
                 keys,
             )
@@ -564,7 +574,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             {
                 "name": global_index["IndexName"],
                 "keys": list(
-                    map(lambda key: self.element_name(key), global_index["KeySchema"])
+                    map(lambda key: self.element_name(
+                        key), global_index["KeySchema"])
                 ),
             }
             for global_index in self.get_global_secondary_indexes()
@@ -574,7 +585,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
 
         index_item = list(
             filter(
-                lambda index: set(query_keys).issubset(index["keys"]), reduced_indexes
+                lambda index: set(query_keys).issubset(
+                    index["keys"]), reduced_indexes
             )
         )
 
@@ -583,7 +595,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         if index_item:
             index_name = index_item[0]["name"]
             keys = list(
-                map(lambda key: {key: query_params[key]}, index_item[0]["keys"])
+                map(lambda key: {
+                    key: query_params[key]}, index_item[0]["keys"])
             )
 
         if DEBUG:
@@ -645,6 +658,9 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             )
 
         table = self._db_conection.Table(self.get_table_name())
+        _ = DEBUG and log_debug(
+            f"generic_query | table object: {table}"
+        )
 
         if not query_params or len(query_params) == 0:
             response = table.scan()
@@ -653,9 +669,11 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 _ = DEBUG and log_debug(f"generic_query | COUNT 4: {count}")
                 return count
             _ = DEBUG and log_debug(
-                "generic_query | response.get(Items):" + f' {response.get("Items")}'
+                "generic_query | response.get(Items):" +
+                f' {response.get("Items")}'
             )
-            return self.remove_decimal_types_list(response.get("Items", []), projection)
+            return self.remove_decimal_types_list(response.get("Items", []),
+                                                  projection)
 
         top_and_or = "$and" in query_params or "$or" in query_params
         keys = None
@@ -665,7 +683,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             keys = self.get_primary_keys(query_params)
             if keys:
                 # Get only one item
-                _ = DEBUG and log_debug("generic_query | ===> Keys found: " + str(keys))
+                _ = DEBUG and log_debug(
+                    "generic_query | ===> Keys found: " + str(keys))
                 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/table/get_item.html
                 params = {
                     "Key": keys,
@@ -676,10 +695,13 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 _ = DEBUG and log_debug(response)
                 if select == "COUNT":
                     count = 1 if response and response.get("Item") else 0
-                    _ = DEBUG and log_debug(f"generic_query | COUNT 1: {count}")
+                    _ = DEBUG and log_debug(
+                        f"generic_query | COUNT 1: {count}")
                     return count
-                return self.remove_decimal_types(response.get("Item", {}), projection)
-            keys, index_name = self.get_global_secondary_indexes_keys(query_params)
+                return self.remove_decimal_types(response.get("Item", {}),
+                                                 projection)
+            keys, index_name = self.get_global_secondary_indexes_keys(
+                query_params)
 
         if not keys:
             condition_values, condition_expresion, attr_names = (
@@ -704,6 +726,11 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 params["ProjectionExpression"] = projection_expression
             if attr_names:
                 params["ExpressionAttributeNames"] = attr_names
+            _ = DEBUG and log_debug(
+                "generic_query | "
+                + "No keys found... perform fullscan:"
+                + f"\n | params: {params}"
+            )
             response = table.scan(**params)
             if query_type == "find_one":
                 # Get only one item
@@ -715,7 +742,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                         and len(response.get("Items")) > 0
                         else 0
                     )
-                    _ = DEBUG and log_debug(f"generic_query | COUNT 2: {count}")
+                    _ = DEBUG and log_debug(
+                        f"generic_query | COUNT 2: {count}")
                     return count
                 return self.remove_decimal_types(
                     (
@@ -732,7 +760,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 count = len(response.get("Items", []))
                 _ = DEBUG and log_debug(f"generic_query | COUNT 3: {count}")
                 return count
-            return self.remove_decimal_types_list(response.get("Items", []), projection)
+            return self.remove_decimal_types_list(response.get("Items", []),
+                                                  projection)
 
         if DEBUG:
             log_debug(f"generic_query | ===> secondary Keys found: {keys}")
@@ -764,9 +793,11 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             log_debug(response)
         if query_type == "find_one":
             # Get only one item
-            return self.remove_decimal_types(response.get("Items", [])[0], projection)
+            return self.remove_decimal_types(response.get("Items", [])[0],
+                                             projection)
         # Get more than one item
-        return self.remove_decimal_types_list(response.get("Items", []), projection)
+        return self.remove_decimal_types_list(response.get("Items", []),
+                                              projection)
 
     def find(self, query_params, projection=None):
         """
@@ -813,7 +844,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 + " | projection: "
                 + str(projection)
             )
-        return self.generic_query(query_params, projection, query_type="find_one")
+        return self.generic_query(query_params, projection,
+                                  query_type="find_one")
 
     def insert_one(self, new_item):
         """
@@ -836,6 +868,7 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         try:
             result = table.put_item(Item=new_item)
             self.inserted_id = new_item["_id"]
+            self.inserted_count = 1
             if DEBUG:
                 log_debug(
                     ">>--> RESULT insert_one() | table: "
@@ -848,10 +881,13 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                     + str(result)
                 )
         except botocore.exceptions.ClientError as err:
-            log_error("insert_one: Error creating Item [IO_ERR_010]: " + str(err))
+            log_error("insert_one: Error creating Item [IO_ERR_010]: "
+                      + str(err))
             raise err
         except Exception as err:
-            log_error("insert_one: Error creating Item [IO_ERR_020]: " + str(err))
+            log_error(
+                "insert_one: Error creating Item [IO_ERR_020]: "
+                + str(err))
             raise err
         return self
 
@@ -945,7 +981,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         ):
             try:
                 result = table.get_item(Key=keys)
-                _ = DEBUG and log_debug(">>--> update_one() | result:" + f" {result}")
+                _ = DEBUG and log_debug(
+                    ">>--> update_one() | result:" + f" {result}")
             except Exception as err:
                 log_error(
                     "update_one: Error getting existing Item"
@@ -957,7 +994,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 return False
 
         _ = DEBUG and log_debug(
-            ">>--> update_one() | update_set_original:" + f" {update_set_original}"
+            ">>--> update_one() | update_set_original:" +
+            f" {update_set_original}"
         )
         if "$set" in update_set_original:
             # Update the item, preserving the attributes not present in
@@ -975,7 +1013,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             update_set = result["Item"]
         elif "$pull" in update_set_original:
             # Remove an existing element from an array in the item
-            array_field, array_value = next(iter(update_set_original["$pull"].items()))
+            array_field, array_value = next(
+                iter(update_set_original["$pull"].items()))
             if array_field in result["Item"]:
                 result["Item"][array_field].remove(array_value)
             update_set = result["Item"]
@@ -1043,7 +1082,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 )
             return self
         except Exception as err:
-            log_error("update_one: Error updating Item [UO_ERR_020]: " + str(err))
+            log_error(
+                "update_one: Error updating Item [UO_ERR_020]: " + str(err))
         return False
 
     def delete_one(self, key_set):
@@ -1089,7 +1129,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 )
             return self
         except Exception as err:
-            log_error("delete_one: Error updating Item [DO_ERR_020]: " + str(err))
+            log_error(
+                "delete_one: Error updating Item [DO_ERR_020]: " + str(err))
         return False
 
     def count_documents(self, filter):
@@ -1122,11 +1163,22 @@ class DynamodbServiceSuper(DbAbstract, DynamoDbUtilities):
 
         self._db_params = {}
         if is_local_service():
-            self._db_params["endpoint_url"] = self._app_config.DB_CONFIG["app_db_uri"]
-        self._db = boto3.resource("dynamodb", **self._db_params)
+            self._db_params["endpoint_url"] = \
+                self._app_config.DB_CONFIG["app_db_uri"]
+
         self._prefix = self._app_config.DB_CONFIG["dynamdb_prefix"]
+
+        # For this database service self._db must be set before executing
+        # create_table_name_propeties()
+        self._db = boto3.resource("dynamodb", **self._db_params)
+
+        _ = DEBUG and log_debug(
+            "DynamodbServiceSuper.get_db_connection"
+            + f"\n | self._db: {self._db}"
+            + "\n | DB Connector OK...")
+
         self.create_table_name_propeties()
-        return self._db
+        return
 
     def create_table_name_propeties(self):
         """
@@ -1145,23 +1197,14 @@ class DynamodbServiceSuper(DbAbstract, DynamoDbUtilities):
                     + f"\n>>--> Setting property: {item_name}"
                     + f" | item_props: {item_props}"
                 )
-            setattr(self, item_name, DynamoDbTableAbstract(item_props, self._db))
+            setattr(self, item_name, DynamoDbTableAbstract(
+                item_props, self._db))
 
     def list_collection_names(self):
         """
         Returns a list with the collection (table) names
         """
         return map(lambda item_name: item_name, self.list_collections())
-
-    def get_db(self):
-        """
-        Returns the database object.
-
-        Returns:
-            Object: The database object. For DynamoDb, it must returns this
-                Class as a whole.
-        """
-        return self
 
     def test_connection(self):
         """
@@ -1199,7 +1242,8 @@ class DynamodbServiceSuper(DbAbstract, DynamoDbUtilities):
                 ProvisionedThroughput=item_props.get(
                     "provisioned_throughput", default_provisioned_throughput
                 ),
-                GlobalSecondaryIndexes=item_props.get("GlobalSecondaryIndexes", []),
+                GlobalSecondaryIndexes=item_props.get(
+                    "GlobalSecondaryIndexes", []),
             )
             # Wait until the table exists.
             table.wait_until_exists()
@@ -1236,7 +1280,8 @@ class DynamodbService(DynamodbServiceSuper):
     Class for DynamodbService.
     """
 
-    def list_collections(self, collection_name: str = None, prefix: str = None):
+    def list_collections(self, collection_name: str = None,
+                         prefix: str = None):
         """
         List all or filtered tables in the DynamoDB database.
 
@@ -1253,7 +1298,8 @@ class DynamodbService(DynamodbServiceSuper):
             # Use the DynamoDB client to list tables
             # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/client/list_tables.html
             response = self._db.meta.client.list_tables()
-            _ = DEBUG and log_debug(f"||| list_collections | response: {response}")
+            _ = DEBUG and log_debug(
+                f"||| list_collections | response: {response}")
             # Extract table names from the response and add them to the list
             table_names.extend(
                 [
@@ -1278,7 +1324,8 @@ class DynamodbService(DynamodbServiceSuper):
                 )
             # Optionally, filter table names if a collection_name is provided
             if collection_name:
-                table_names = [name for name in table_names if name == collection_name]
+                table_names = [
+                    name for name in table_names if name == collection_name]
             # Return the list of table names
             _ = DEBUG and log_debug(
                 f"||| list_collections | table_names: {table_names}"
@@ -1295,9 +1342,28 @@ class DynamodbService(DynamodbServiceSuper):
         """
         table_name = f"{self._prefix}{item_name}"
         _ = DEBUG and log_debug(
-            f"||| __getitem__ | item_name: {item_name} |" + f" table_name: {table_name}"
+            f"||| __getitem__ | item_name: {item_name} |" +
+            f" table_name: {table_name}"
         )
         return getattr(self, table_name)
+
+    def get_table_class(self):
+        """
+        Returns the table class.
+
+        Returns:
+            The table class.
+        """
+        return DynamoDbTableAbstract
+
+    def get_iterator_class(self):
+        """
+        Returns the iterator class.
+
+        Returns:
+            The iterator class.
+        """
+        return DynamoDbFindIterator
 
 
 class DynamodbServiceBuilder(DbAbstract):

@@ -62,7 +62,7 @@ async def super_admin_create(
     request: FaRequest,
     credentials: HTTPBasicCredentials = Depends(security)
 ) -> Response:
-    """Super admin user emergency creation"""
+    """Super admin user creation"""
     gs_request, other_params = get_default_fa_request()
     router.set_current_request(request, gs_request)
     other_params['username'] = credentials.username
