@@ -40,7 +40,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Remove "/" prefix in the key to avoid double "/" in get_bucket_key_from_url() and fix encoded chars in get_s3_presigned_url() [GS-245].
 - Clean up unused imports and comments in create_app.py.
 - Update delete_params_file return type in app_context.py.
-- DynamoDB abstractor table object scan error "AttributeError: 'tuple' object has no attribute 'update'" [GS-249].
+- DynamoDB abstractor table object scan error "AttributeError: 'tuple' object has no attribute 'update'" [GS-102].
 
 ### Removed
 - boto3 and pymongo dependencies, so each project can have its own dependencies depending on the selected database and cloud storage provider [GS-245].
@@ -311,7 +311,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ## [0.0.2] - 2022-08-22
 
 ### Added
-- DynamoDB emulated a-la MongoDB way.
+- DynamoDB emulated a-la MongoDB way [GS-102].
 
 
 ## [0.0.1] - 2022-03-10

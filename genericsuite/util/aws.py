@@ -361,11 +361,12 @@ def prepare_asset_url(public_url):
     else:
         final_public_url = presigned_url_result['url']
 
-    log_debug("prepare_asset_url" +
-              f"\n\t | public_url: {public_url}"
-              f"\n\t | bucket_name: {bucket_name}"
-              f"\n\t | key: {key}"
-              f"\n\t | presigned_url_result: {presigned_url_result}"
-              f"\n\t | final_public_url: {final_public_url}")
+    _ = DEBUG and log_debug(
+        "prepare_asset_url" +
+        f"\n\t | public_url: {public_url}"
+        f"\n\t | bucket_name: {bucket_name}"
+        f"\n\t | key: {key}"
+        f"\n\t | presigned_url_result: {presigned_url_result}"
+        f"\n\t | final_public_url: {final_public_url}")
 
     return final_public_url
