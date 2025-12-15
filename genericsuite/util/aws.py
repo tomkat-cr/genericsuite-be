@@ -4,7 +4,7 @@ AWS Utilities
 from typing import Optional, Union
 import os
 import json
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse
 
 from genericsuite.util.app_logger import log_debug, log_error
 from genericsuite.util.utilities import (
@@ -256,17 +256,28 @@ def get_s3_presigned_url(
         None] = None
 ):
     import boto3
-    s3_client = boto3.client('s3')
+    from botocore.config import Config
+
+    region = os.environ.get('AWS_REGION')
+    my_config = Config(
+        region_name=region,
+        signature_version='s3v4'
+    )
+    s3_client = boto3.client('s3', config=my_config)
     result = get_default_resultset()
     expires_in = get_storage_presigned_expiration_seconds(
         expiration_seconds)
     try:
         presigned_url = s3_client.generate_presigned_url(
             "get_object",
-            Params={"Bucket": bucket_name, "Key": object_key},
+            Params={
+                "Bucket": bucket_name,
+                "Key": object_key,
+                "ResponseContentType": get_mime_type(object_key)
+            },
             ExpiresIn=expires_in,
         )
-        presigned_url = unquote(presigned_url)
+
         _ = DEBUG and log_debug(
             "get_s3_presigned_url" +
             f"\n | Bucket: {bucket_name}" +
