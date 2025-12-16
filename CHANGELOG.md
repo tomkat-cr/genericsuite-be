@@ -26,6 +26,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Add MySQL support [GS-249].
 - Implement storage abstraction layer for S3, Azure and GCP [GS-72].
 - Implement AWS generate_presigned_url() to protect S3 bucket access, so they can be set to expire in a short time and configured to block all public access. Configuration available with STORAGE_PRESIGNED_EXPIRATION_SECONDS (default to 5 minutes or 300 seconds) [GS-72].
+- Save OpenAPI schema files (JSON and YAML) to a directory specified by the PATH_TO_SAVE_OPENAPI envvar [GS-245].
 
 ### Changed
 - Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].
@@ -44,6 +45,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### Removed
 - boto3 and pymongo dependencies, so each project can have its own dependencies depending on the selected database and cloud storage provider [GS-245].
+- save_all_users_params_files() function and /users/caujf endpoint [GS-240] [GS-245].
 
 
 ## [0.2.0] - 2025-11-17
@@ -99,8 +101,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
     * "Starlette vulnerable to O(n^2) DoS via Range header merging in ``starlette.responses.FileResponse``"
 - Update "dnspython" to ">=2.6.1" to fix security vulnerabilities [GS-219]:
     * "Potential DoS via the Tudoor mechanism in eventlet and dnspython"
-- Read the user data from the database in "get_api_key_auth()" instead of the "/tmp/params_[user_id].json" because storing sensitive or configuration data in a world-writable directory like /tmp is a security risk [GS-240].
-- Add USER_PARAMS_FILE_ENABLED envvar to enable/disable user's parameters file "/tmp/params_[user_id].json", default to "0" to avoid security risks when running in a production environment [GS-240].
+- Read the user data from the database in "get_api_key_auth()" instead of the "/tmp/params_[user_id].json" (local users JSON files) because storing sensitive or configuration data in a world-writable directory like /tmp is a security risk [GS-240].
+- Add USER_PARAMS_FILE_ENABLED envvar to enable/disable user's parameters file "/tmp/params_[user_id].json" (local users JSON files), default to "0" to avoid security risks when running in a production environment [GS-240].
 
 
 ## [0.1.11] - 2025-07-08
@@ -126,7 +128,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### Added
 - Implement API keys to GS BE Core [GS-159].
-- Implement the "CAUJF" endpoint to build all user's parameters local JSON files [GS-159].
+- Implement the /users/caujf endpoint to build all local users JSON files [GS-159].
 - Generic Endpoint Builder for Flask [GS-15].
 
 ### Changed

@@ -1,6 +1,6 @@
 """
 The parse_multipart module handles the multipart form-data parsing,
-and get content like upoaded files.
+and get content like uploaded files.
 """
 import os
 
@@ -117,8 +117,9 @@ def file_upload_handler(app_context: AppContext, p: dict):
         p["other_params"][param_name] = file_path
 
     # Call the handler function
-    log_debug('Call the handler function:\n' +
-                f'{p["handler_function"]}({p["other_params"]})')
+    log_debug(
+        'Call the handler function:\n' +
+        f'{p["handler_function"]}({p["other_params"]})')
 
     result = p["handler_function"](
         **p["other_params"]

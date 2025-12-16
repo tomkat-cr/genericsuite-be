@@ -15,10 +15,6 @@ from genericsuite.util.jwt import (
     request_authentication,
     AuthorizedRequest,
 )
-from genericsuite.util.utilities import (
-    return_resultset_jsonified_or_exception,
-)
-from genericsuite.util.app_context import save_all_users_params_files
 
 from genericsuite.models.users.users import (
     # users_crud as users_crud_model,
@@ -101,18 +97,3 @@ def current_user_d(
     Get current authenticated user data
     """
     return get_current_user_data(request, bp, other_params)
-
-
-@bp.route(
-    '/caujf',
-    methods=['GET']
-)
-def caujf(
-    request: Request,
-    other_params: Optional[dict] = None
-) -> Response:
-    """
-    CAUJF: Create All User JSON Files (required for API Keys)
-    """
-    result = save_all_users_params_files()
-    return return_resultset_jsonified_or_exception(result)

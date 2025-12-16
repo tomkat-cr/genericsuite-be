@@ -2,13 +2,9 @@
 System users operations (CRUD, login, database test, super-admin creation)
 """
 from fastapi import Request as FaRequest, Depends
-# from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from genericsuite.util.framework_abs_layer import Response
-from genericsuite.util.utilities import (
-    return_resultset_jsonified_or_exception,
-)
 from genericsuite.fastapilib.util.blueprint_one import BlueprintOne
 from genericsuite.fastapilib.util.dependencies import (
     get_current_user,
@@ -20,7 +16,6 @@ from genericsuite.models.users.users import (
     super_admin_create as super_admin_create_model,
     get_current_user_data,
 )
-from genericsuite.util.app_context import save_all_users_params_files
 
 router = BlueprintOne()
 
@@ -31,7 +26,7 @@ HEADER_CREDS_ENTRY_NAME = 'Authorization'
 DEBUG = False
 
 
-@router.get('/test', tags='test')
+@router.get('/test', tags=['test'])
 async def test_connection_handler(
     request: FaRequest,
     current_user: str = Depends(get_current_user),
@@ -42,7 +37,7 @@ async def test_connection_handler(
     return test_connection_handler_model(gs_request, other_params)
 
 
-@router.post('/login', tags='login')
+@router.post('/login', tags=['login'])
 async def login_user(
     request: FaRequest,
     credentials: HTTPBasicCredentials = Depends(security)
@@ -57,7 +52,7 @@ async def login_user(
         other_params=other_params)
 
 
-@router.post('/supad-create', tags='super-admin')
+@router.post('/supad-create', tags=['super-admin'])
 async def super_admin_create(
     request: FaRequest,
     credentials: HTTPBasicCredentials = Depends(security)
@@ -83,16 +78,3 @@ async def current_user_d(
     gs_request, other_params = get_default_fa_request(current_user)
     router.set_current_request(request, gs_request)
     return get_current_user_data(gs_request, router, other_params)
-
-
-@router.get('/caujf', tags='lambda')
-async def caujf(
-    request: FaRequest,
-) -> Response:
-    """
-    CAUJF: Create All User JSON Files (required for API Keys)
-    """
-    gs_request, _ = get_default_fa_request()
-    router.set_current_request(request, gs_request)
-    result = save_all_users_params_files()
-    return return_resultset_jsonified_or_exception(result)

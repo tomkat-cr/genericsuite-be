@@ -6,9 +6,6 @@ from typing import Optional
 from genericsuite.mcplib.framework_abstraction import (
     Response,
 )
-from genericsuite.util.utilities import (
-    return_resultset_jsonified_or_exception,
-)
 from genericsuite.mcplib.util.create_app import create_app
 from genericsuite.mcplib.util.utilities import (
     get_app_request,
@@ -21,7 +18,6 @@ from genericsuite.models.users.users import (
     super_admin_create as super_admin_create_model,
     get_current_user_data,
 )
-from genericsuite.util.app_context import save_all_users_params_files
 
 
 DEBUG = False
@@ -90,14 +86,3 @@ async def current_user_d(
         request=request,
         blueprint=blueprint,
         other_params=other_params)
-
-
-@mcp.tool()
-async def caujf(
-    other_params: Optional[dict] = None
-) -> Response:
-    """
-    CAUJF: Create All User JSON Files (required for API Keys)
-    """
-    result = save_all_users_params_files()
-    return return_resultset_jsonified_or_exception(result)
