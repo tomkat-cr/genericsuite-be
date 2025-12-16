@@ -2,14 +2,15 @@
 Blueprint wrapper to add authorization, other data and schema validation
 to requests for Flask.
 """
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Type
 from functools import wraps
 
+from pydantic import BaseModel
 from flask import Blueprint, current_app
 # from flask import request
 
 from genericsuite.util.app_logger import log_debug
-from genericsuite.util.schema_utilities import Schema, schema_verification
+from genericsuite.util.schema_utilities import schema_verification
 from genericsuite.util.jwt import AuthorizedRequest
 from genericsuite.flasklib.framework_abstraction import Request
 
@@ -26,7 +27,7 @@ class BlueprintOne(Blueprint):
         self,
         rule: str,
         authorizor: Optional[Callable] = None,
-        schema: Optional[Schema] = None,
+        schema: Optional[Type[BaseModel]] = None,
         other_params: Optional[dict] = None,
         **options: Any
     ) -> Callable:
@@ -36,8 +37,8 @@ class BlueprintOne(Blueprint):
         Args:
             rule (str): The URL rule for the route.
             authorizor (Optional[Callable]): The authorization function.
-            schema (Optional[Schema]): The schema to validate the request
-                against.
+            schema (Optional[Type[BaseModel]]): The schema to validate the
+                request against.
             other_params (Optional[dict]): Additional parameters to pass to
                 the route.
             **options: Additional options to pass to the route.

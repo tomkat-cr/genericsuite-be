@@ -27,6 +27,9 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Implement storage abstraction layer for S3, Azure and GCP [GS-72].
 - Implement AWS generate_presigned_url() to protect S3 bucket access, so they can be set to expire in a short time and configured to block all public access. Configuration available with STORAGE_PRESIGNED_EXPIRATION_SECONDS (default to 5 minutes or 300 seconds) [GS-72].
 - Save OpenAPI schema files (JSON and YAML) to a directory specified by the PATH_TO_SAVE_OPENAPI envvar [GS-245].
+- Add "requests-toolbelt" because it's required by parse_multipart.py [GS-248].
+- Add "make test" command to run tests [GS-248].
+- Add "pymongo" and "boto3" to run tests [GS-248].
 
 ### Changed
 - Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].
@@ -36,6 +39,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - STORAGE_ENCRYPTION envvar renamed to STORAGE_URL_ENCRYPTION [GS-72].
 - Enhance AWS S3 URL masking feature to avoid exposing the bucket name. It can be configured with envvars: STORAGE_URL_ENCRYPTION, STORAGE_URL_SEED, RUN_PROTOCOL, URL_MASK_EXTERNAL_HOSTNAME, URL_MASK_EXTERNAL_PROTOCOL. Does not work with API Gateway, only EC2 instances or VPS servers [GS-72].
 - The URL_MASK_EXTERNAL_HOSTNAME envvar replaced DEV_MASK_EXT_HOSTNAME, and DEV_MASK_EXT_HOSTNAME is still being used, but has precedence assigning URL_MASK_EXTERNAL_HOSTNAME [GS-72].
+- Migrate Marshmallow to Pydantic: update schema_verification() function to use Pydantic instead of Marshmallow [GS-248].
 
 ### Fixed
 - Remove "/" prefix in the key to avoid double "/" in get_bucket_key_from_url() and fix encoded chars in get_s3_presigned_url() [GS-245].
@@ -44,9 +48,10 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - DynamoDB abstractor table object scan error "AttributeError: 'tuple' object has no attribute 'update'" [GS-102].
 
 ### Removed
-- boto3 and pymongo dependencies, so each project can have its own dependencies depending on the selected database and cloud storage provider [GS-245].
+- "boto3" and "pymongo" dependencies, so each project can have its own dependencies depending on the selected database and cloud storage provider [GS-245].
 - save_all_users_params_files() function and /users/caujf endpoint [GS-240] [GS-245].
-
+- "python-dateutil", "marshmallow", "requests", "dnspython", "wheel" dependencies, because they are not used [GS-248].
+- "fastmcp" and "mcp" dependencies, so each project can install them if needed [GS-248].
 
 ## [0.2.0] - 2025-11-17
 
