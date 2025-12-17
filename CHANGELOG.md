@@ -27,9 +27,9 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Implement storage abstraction layer for S3, Azure and GCP [GS-72].
 - Implement AWS generate_presigned_url() to protect S3 bucket access, so they can be set to expire in a short time and configured to block all public access. Configuration available with STORAGE_PRESIGNED_EXPIRATION_SECONDS (default to 5 minutes or 300 seconds) [GS-72].
 - Save OpenAPI schema files (JSON and YAML) to a directory specified by the PATH_TO_SAVE_OPENAPI envvar [GS-245].
-- Add "requests-toolbelt" because it's required by parse_multipart.py [GS-248].
+- Add "requests-toolbelt" dependency because it's required by parse_multipart.py [GS-248].
 - Add "make test" command to run tests [GS-248].
-- Add "pymongo" and "boto3" to run tests [GS-248].
+- Add "pymongo" and "boto3" to dev group dependencies to run tests [GS-248].
 
 ### Changed
 - Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].
@@ -47,11 +47,19 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Update delete_params_file return type in app_context.py.
 - DynamoDB abstractor table object scan error "AttributeError: 'tuple' object has no attribute 'update'" [GS-102].
 
+### Security
+- Update "urllib3" to "^2.6.2" to fix security vulnerabilities [GS-219]:
+    * "Allocation of Resources Without Limits or Throttling": "CWE-770", "CVE-2025-66418", "CVSS 8.9", "SNYK-PYTHON-URLLIB3-14192443"
+    * "Improper Handling of Highly Compressed Data (Data Amplification)": "CWE-409", "CVSS 8.9", "CVE-2025-66471", "SNYK-PYTHON-URLLIB3-14192442".
+- Update "werkzeug" to "^3.1.4" to fix security vulnerabilities [GS-219]:
+    * "Improper Handling of Windows Device Names": "CWE-67", "CVSS 6.3", "CVE-2025-66221", "SNYK-PYTHON-WERKZEUG-14151620".
+
 ### Removed
 - "boto3" and "pymongo" dependencies, so each project can have its own dependencies depending on the selected database and cloud storage provider [GS-245].
 - save_all_users_params_files() function and /users/caujf endpoint [GS-240] [GS-245].
 - "python-dateutil", "marshmallow", "requests", "dnspython", "wheel" dependencies, because they are not used [GS-248].
 - "fastmcp" and "mcp" dependencies, so each project can install them if needed [GS-248].
+
 
 ## [0.2.0] - 2025-11-17
 
