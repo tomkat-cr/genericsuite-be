@@ -31,6 +31,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - "make test" command to run tests [GS-248].
 - "pymongo" and "boto3" to dev group dependencies to run tests [GS-248].
 - APP_LOGGER_OPTIONS envvar to configure logging options, initially to disable the debug mensage at the application startup when "silent" is set [GS-245].
+- MCP access token retrieval function get_access_token() in mcplib utilities [GS-159].
+- MCP_MANDATORY_USER_ID envvar to force MCP authentication with user_id and api_key. Default to "0" to allow api key only authentication [GS-159].
 
 ### Changed
 - Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].
@@ -42,6 +44,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - The URL_MASK_EXTERNAL_HOSTNAME envvar replaced DEV_MASK_EXT_HOSTNAME, and DEV_MASK_EXT_HOSTNAME is still being used, but has precedence assigning URL_MASK_EXTERNAL_HOSTNAME [GS-72].
 - Migrate Marshmallow to Pydantic: update schema_verification() function to use Pydantic instead of Marshmallow [GS-248].
 - Rename "parentKeyNames" to "endpointKeyNames" in JSON config files [GS-159].
+- Reimplement API key authentication using a dedicated table "users_api_keys" [GS-159].
 
 ### Fixed
 - Remove "/" prefix in the key to avoid double "/" in get_bucket_key_from_url() and fix encoded chars in get_s3_presigned_url() [GS-245].
