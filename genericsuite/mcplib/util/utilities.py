@@ -3,8 +3,7 @@ import json
 import os
 
 import jwt
-from mcp.server.auth.middleware.auth_context \
-    import get_access_token as get_access_token_mcp
+from fastmcp.server.dependencies import get_http_headers
 
 from genericsuite.models.users.users import (
     login_user as login_user_model,
@@ -208,8 +207,8 @@ def get_access_token():
     """
     Get the access token
     """
-    gatm = get_access_token_mcp()
-    return gatm.token if gatm else None
+    headers = get_http_headers()
+    return headers.get("authorization")
 
 
 def verify_app_context(
