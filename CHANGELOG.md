@@ -20,16 +20,17 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ## [Unreleased]
 
 ### Added
-- Add API_VERSION envvar to set the API version, default to "v1" [GS-245].
-- Add Postgres database support [GS-194].
-- Add Supabase support [GS-161].
-- Add MySQL support [GS-249].
+- API_VERSION envvar to set the API version, default to "v1" [GS-245].
+- Postgres database support [GS-194].
+- Supabase support [GS-161].
+- MySQL support [GS-249].
 - Implement storage abstraction layer for S3, Azure and GCP [GS-72].
 - Implement AWS generate_presigned_url() to protect S3 bucket access, so they can be set to expire in a short time and configured to block all public access. Configuration available with STORAGE_PRESIGNED_EXPIRATION_SECONDS (default to 5 minutes or 300 seconds) [GS-72].
 - Save OpenAPI schema files (JSON and YAML) to a directory specified by the PATH_TO_SAVE_OPENAPI envvar [GS-245].
-- Add "requests-toolbelt" dependency because it's required by parse_multipart.py [GS-248].
-- Add "make test" command to run tests [GS-248].
-- Add "pymongo" and "boto3" to dev group dependencies to run tests [GS-248].
+- "requests-toolbelt" dependency because it's required by parse_multipart.py [GS-248].
+- "make test" command to run tests [GS-248].
+- "pymongo" and "boto3" to dev group dependencies to run tests [GS-248].
+- APP_LOGGER_OPTIONS envvar to configure logging options, initially to disable the debug mensage at the application startup when "silent" is set [GS-245].
 
 ### Changed
 - Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].
@@ -40,6 +41,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Enhance AWS S3 URL masking feature to avoid exposing the bucket name. It can be configured with envvars: STORAGE_URL_ENCRYPTION, STORAGE_URL_SEED, RUN_PROTOCOL, URL_MASK_EXTERNAL_HOSTNAME, URL_MASK_EXTERNAL_PROTOCOL. Does not work with API Gateway, only EC2 instances or VPS servers [GS-72].
 - The URL_MASK_EXTERNAL_HOSTNAME envvar replaced DEV_MASK_EXT_HOSTNAME, and DEV_MASK_EXT_HOSTNAME is still being used, but has precedence assigning URL_MASK_EXTERNAL_HOSTNAME [GS-72].
 - Migrate Marshmallow to Pydantic: update schema_verification() function to use Pydantic instead of Marshmallow [GS-248].
+- Rename "parentKeyNames" to "endpointKeyNames" in JSON config files [GS-159].
 
 ### Fixed
 - Remove "/" prefix in the key to avoid double "/" in get_bucket_key_from_url() and fix encoded chars in get_s3_presigned_url() [GS-245].

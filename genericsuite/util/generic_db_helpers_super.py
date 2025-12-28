@@ -80,9 +80,9 @@ class GenericDbHelperSuper:
                    self.sub_type == "array":
                     self.array_field = self.cnf_db.get('array_name')
                     self.array_field_key = self.cnf_db['primaryKeyName']
-                    self.parent_key_names = self.cnf_db['parentKeyNames']
+                    self.parent_key_names = self.cnf_db['endpointKeyNames']
                     self.parent_key_field = \
-                        self.cnf_db['parentKeyNames'][0]['parameterName']
+                        self.cnf_db['endpointKeyNames'][0]['parameterName']
 
     def listing_projection_exclusions(self) -> dict:
         """

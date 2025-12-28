@@ -17,14 +17,17 @@ app_logs: Union[logging.Logger, None] = None
 
 def log_config(log_file: str = None) -> logging:
     """Logging configuration"""
+    logger_options = os.getenv("APP_LOGGER_OPTIONS", "")
     logger = logging.getLogger(settings.APP_NAME)
     logger.propagate = False
     if settings.DEBUG:
         logger.setLevel(logging.DEBUG)
-        print("Logger configured in DEBUG mode")
+        if "silent" not in logger_options:
+            print("Logger configured in DEBUG mode")
     else:
         logger.setLevel(logging.INFO)
-        print("Logger configured in INFO mode")
+        if "silent" not in logger_options:
+            print("Logger configured in INFO mode")
     handler = logging.StreamHandler(sys.stdout)
     if log_file:
         handler = logging.FileHandler(log_file)
