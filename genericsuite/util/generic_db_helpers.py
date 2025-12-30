@@ -213,49 +213,6 @@ class GenericDbHelper(GenericDbHelperWithRequest):
 
         return self.run_specific_func('read', resultset)
 
-    def fetch_row_by_entryname_raw(
-        self,
-        entry_name: str,
-        entry_value: str,
-        filters: dict = None,
-    ) -> dict:
-        """
-        Fetches a row from the database based on the given
-        entry_name and entry_value and returns it without
-        applying dumps() to the 'resultset' element.
-
-        Args:
-            entry_name (str): The name of the entry to filter by.
-            entry_value (str): The value of the entry to filter by.
-            filters (dict, optional): Additional filters to apply.
-            e.g. user_id.
-
-        Returns:
-            dict: The resultset containing the fetched row.
-        """
-        resultset = get_default_resultset()
-        if self.error_message:
-            resultset['error_message'] = self.error_message
-            resultset['error'] = True
-            return resultset
-
-        filters = {} if not filters else filters
-        filters.update({entry_name: entry_value})
-        try:
-            resultset['resultset'] = self.table_obj.find_one(
-                filters
-            )
-        except BaseException as err:
-            resultset['error_message'] = \
-                get_standard_base_exception_msg(err, 'FUBEN1')
-            resultset['error'] = True
-        _ = DEBUG and \
-            log_debug("fetch_row_by_entryname_raw: " +
-                      f"entry_name: {entry_name}" +
-                      f" | entry_value: {entry_value}" +
-                      f" | resultset: {resultset}")
-        return resultset
-
     def create_row(
         self,
         data: dict,

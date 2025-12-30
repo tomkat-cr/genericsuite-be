@@ -290,6 +290,20 @@ class GenericDbHelperSuper:
                 mandatory_fields.append(element_name)
         return mandatory_fields
 
+    def get_current_user(self) -> str:
+        """
+        Get the current user Id from the Request
+
+        NOTE:
+        This method is implemented in the GenericDbHelperWithRequest class.
+        It is defined here to avoid errors in the __init__ method when there's
+        any error.
+
+        Returns:
+            str: the current user Id from the JWT Request
+        """
+        return "**UserId not available without a Request**"
+
     def replace_special_vars(self, params: dict) -> dict:
         """
         Returns the params record replacing special value tokens.
@@ -306,9 +320,6 @@ class GenericDbHelperSuper:
             k: self.get_current_user() if v == "{CurrentUserId}" else v
             for k, v in params.items()
         }
-        # if DEBUG:
-        #     log_debug("replace_special_vars | params:" +
-        #               f" {params} | response: {response}")
         return response
 
     def get_field_element(self, fieldname: str) -> dict:
@@ -322,10 +333,6 @@ class GenericDbHelperSuper:
             dict: field (attribute) definition or an empty dict
                 if the field is not found.
         """
-        # if DEBUG:
-        #     log_debug(f">>> get_field_element | fieldname: {fieldname}" +
-        #               f" | fieldElements: {self.cnf_db.get('fieldElements')}"
-        #               )
         field_element = [v for v in self.cnf_db.get('fieldElements', [])
                          if v.get('name') == fieldname]
         # Returns an empty dict if the field is not found
@@ -449,6 +456,49 @@ class GenericDbHelperSuper:
                 get_standard_base_exception_msg(err, 'FUR3')
             resultset['error'] = True
 
+        return resultset
+
+    def fetch_row_by_entryname_raw(
+        self,
+        entry_name: str,
+        entry_value: str,
+        filters: dict = None,
+    ) -> dict:
+        """
+        Fetches a row from the database based on the given
+        entry_name and entry_value and returns it without
+        applying dumps() to the 'resultset' element.
+
+        Args:
+            entry_name (str): The name of the entry to filter by.
+            entry_value (str): The value of the entry to filter by.
+            filters (dict, optional): Additional filters to apply.
+            e.g. user_id.
+
+        Returns:
+            dict: The resultset containing the fetched row.
+        """
+        resultset = get_default_resultset()
+        if self.error_message:
+            resultset['error_message'] = self.error_message
+            resultset['error'] = True
+            return resultset
+
+        filters = {} if not filters else filters
+        filters.update({entry_name: entry_value})
+        try:
+            resultset['resultset'] = self.table_obj.find_one(
+                filters
+            )
+        except BaseException as err:
+            resultset['error_message'] = \
+                get_standard_base_exception_msg(err, 'FUBEN1')
+            resultset['error'] = True
+        _ = DEBUG and \
+            log_debug("fetch_row_by_entryname_raw: " +
+                      f"entry_name: {entry_name}" +
+                      f" | entry_value: {entry_value}" +
+                      f" | resultset: {resultset}")
         return resultset
 
     # ----- Array row operations.

@@ -31,7 +31,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - "make test" command to run tests [GS-248].
 - "pymongo" and "boto3" to dev group dependencies to run tests [GS-248].
 - APP_LOGGER_OPTIONS envvar to configure logging options, initially to disable the debug mensage at the application startup when "silent" is set [GS-245].
-- MCP access token retrieval function get_access_token() in mcplib utilities [GS-159].
+- MCP access token retrieval from headdrs (Authorization: Bearer <token>) with the get_access_token() function in mcplib utilities [GS-159].
 - MCP_MANDATORY_USER_ID envvar to force MCP authentication with user_id and api_key. Default to "0" to allow api key only authentication [GS-159].
 
 ### Changed
