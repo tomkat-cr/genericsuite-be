@@ -116,15 +116,15 @@ def return_resultset_jsonified_or_exception(
     """
     if not headers:
         headers = {}
-    if result['error'] or result['error_message']:
+    if result.get('error') or result.get('error_message'):
         if DEBUG:
             log_debug(
                 'return_resultset_jsonified_or_exception |' +
-                f' ERROR error_message: {result["error_message"]}' +
+                f' ERROR error_message: {result.get("error_message")}' +
                 f' | status_code: {status_code}'
             )
         return standard_error_return(
-            error_message=result['error_message'],
+            error_message=result.get('error_message'),
             error_code=status_code or 400,
             headers=headers,
         )

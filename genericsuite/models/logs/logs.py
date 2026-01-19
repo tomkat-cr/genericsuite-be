@@ -54,5 +54,8 @@ def put_log(
         log_info(f"Unknown log type: {log_type} | message: {message}")
 
     return return_resultset_jsonified_or_exception(
-        "Ok"
+        {
+            "error": False,
+            "resultset": "Ok",
+        }
     )
