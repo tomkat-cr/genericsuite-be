@@ -33,6 +33,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - APP_LOGGER_OPTIONS envvar to configure logging options, initially to disable the debug mensage at the application startup when "silent" is set [GS-245].
 - MCP access token retrieval from headdrs (Authorization: Bearer <token>) with the get_access_token() function in mcplib utilities [GS-159].
 - MCP_MANDATORY_USER_ID envvar to force MCP authentication with user_id and api_key. Default to "0" to allow api key only authentication [GS-159].
+- Implement logs endpoint [GS-250].
 
 ### Changed
 - Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].
@@ -45,12 +46,14 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Migrate Marshmallow to Pydantic: update schema_verification() function to use Pydantic instead of Marshmallow [GS-248].
 - Rename "parentKeyNames" to "endpointKeyNames" in JSON config files [GS-159].
 - Reimplement API key authentication using a dedicated table "users_api_keys" [GS-159].
+- Remove example users_api_keys from app context.
 
 ### Fixed
 - Remove "/" prefix in the key to avoid double "/" in get_bucket_key_from_url() and fix encoded chars in get_s3_presigned_url() [GS-245].
 - Clean up unused imports and comments in create_app.py.
 - Update delete_params_file return type in app_context.py.
 - DynamoDB abstractor table object scan error "AttributeError: 'tuple' object has no attribute 'update'" [GS-102].
+- Robustify ObjectId conversion by casting to string in fetch_list() when "_id_ is in like_query_params.
 
 ### Security
 - Update "urllib3" to "^2.6.2" to fix security vulnerabilities [GS-219]:

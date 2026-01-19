@@ -20,6 +20,7 @@ from genericsuite.fastapilib.endpoints import (
     menu_options,
     storage_retrieval,
     api_documentation,
+    logs,
 )
 from genericsuite.config.config_from_db import set_init_custom_data
 
@@ -54,6 +55,8 @@ def create_app(app_name: str, settings: Config = None) -> Any:
         storage_retrieval.router, prefix=f'/{settings.API_VERSION}/assets')
     fastapi_app.include_router(
         api_documentation.router, prefix=f'/{settings.API_VERSION}/openapis')
+    fastapi_app.include_router(
+        logs.router, prefix=f'/{settings.API_VERSION}/logs')
 
     # Register generic endpoints (from the "endpoints.json" file)
     generate_blueprints_from_json(fastapi_app, 'endpoints')
