@@ -123,12 +123,6 @@ class ParamsFile():
                     "id": "00a72c28-58c9-499d-957a-f2cfad12670d"
                 }
             ]
-            "users_api_keys": [
-                {
-                    "access_token": "ExampleToken",
-                    "id": "00a72c28-58c9-499d-957a-f2cfad12670d"
-                }
-            ]
         }
 
         cat /tmp/params_GENERAL.json

@@ -101,7 +101,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
 
         if '_id' in listing_filter:
             try:
-                listing_filter['_id'] = ObjectId(listing_filter['_id'])
+                listing_filter['_id'] = ObjectId(str(listing_filter['_id']))
             except ValueError:
                 resultset['error_message'] = \
                     f"_id `{listing_filter['_id']}` is invalid [FUL3]."
