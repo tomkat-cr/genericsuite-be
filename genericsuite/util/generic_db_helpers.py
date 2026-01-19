@@ -87,6 +87,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
                 '$regex': f".*{v}.*",
                 '$options': 'si',
             } if k not in self.mandatory_filters
+            and not k == '_id'
             and not self.is_datefield(k)
             # Date range
             else get_date_range_filter(v)
