@@ -95,9 +95,8 @@ class GenericDbHelperSuper:
             e.g. {'field_name': 0, 'field_name2': 0}
             e.g. {} (empty dictionary)
         """
-        projection = {k: 0 for k in self.cnf_db.get(
-            'projection_exclusion', []
-        )}
+        projection_exclusion = self.cnf_db.get('projection_exclusion', [])
+        projection = {k: 0 for k in projection_exclusion}
         if DEBUG:
             log_debug('listing_projection_exclusions |' +
                       f' projection: {projection}')
@@ -116,10 +115,11 @@ class GenericDbHelperSuper:
             e.g. {'field_name': 0, 'field_name2': 0}
             e.g. {} (empty dictionary)
         """
+        projection_exclusion = self.cnf_db.get('projection_exclusion', [])
         projection = {
             k["name"]: 0 for k in self.cnf_db.get('fieldElements', [])
             if not k.get("listing", False) or
-            k["name"] in self.cnf_db.get('projection_exclusion', [])
+            k["name"] in projection_exclusion
         }
         if DEBUG:
             log_debug('listing_disabled_columns_projection |' +

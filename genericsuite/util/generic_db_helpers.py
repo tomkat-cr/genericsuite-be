@@ -97,7 +97,8 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             else v
             for k, v in like_query_params.items()
             # Exclude paging and search configuration parameters
-            if k not in ['page', 'limit', 'like', 'comb', 'order']
+            if k not in ['page', 'limit', 'like', 'comb', 'order',
+                         'gs_listing_columns']
         }
 
         if '_id' in listing_filter:
@@ -115,11 +116,20 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             return resultset
 
         if self.query_params.get("only_listing_cols", "1") == "1":
-            # By default, include only listing enabled columns and
-            # unprotected columns (those not in projection_exclusions)
-            projection = self.listing_disabled_columns_projection()
+            if 'gs_listing_columns' in like_query_params:
+                # Limit the columns (attributes) to be returned
+                projection_exclusion = self.cnf_db.get(
+                    'projection_exclusion', [])
+                projection = {
+                    k: 1 for k in like_query_params['gs_listing_columns']
+                    .split(',') if k not in projection_exclusion}
+            else:
+                # By default, include only listing enabled columns and
+                # exclude unprotected columns (those not in
+                # projection_exclusions)
+                projection = self.listing_disabled_columns_projection()
         else:
-            # include only unprotected columns (those not in
+            # Include only unprotected columns (those not in
             # projection_exclusions)
             projection = self.listing_projection_exclusions()
 
@@ -131,10 +141,11 @@ class GenericDbHelper(GenericDbHelperWithRequest):
         listing_filter = self.add_mandatory_filters(listing_filter, combinator)
 
         _ = DEBUG and \
-            log_debug(f"FETCH_LIST | self.table_name: {self.table_name}" +
-                      f"\n | combinator: {combinator}" +
-                      f"\n | like_query_params: {like_query_params}" +
-                      f"\n | listing_filter: {listing_filter}")
+            log_debug(
+                f"FETCH_LIST | self.table_name: {self.table_name}" +
+                f"\n | combinator: {combinator}" +
+                f"\n | like_query_params: {like_query_params}" +
+                f"\n | listing_filter: {listing_filter}")
 
         column_name, direction = self.get_sort_config(order_param)
         _ = DEBUG and \

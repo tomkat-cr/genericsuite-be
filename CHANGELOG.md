@@ -34,6 +34,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - MCP access token retrieval from headdrs (Authorization: Bearer <token>) with the get_access_token() function in mcplib utilities [GS-159].
 - MCP_MANDATORY_USER_ID envvar to force MCP authentication with user_id and api_key. Default to "0" to allow api key only authentication [GS-159].
 - Implement logs endpoint [GS-250].
+- Add "gs_listing_columns" query parameter to limit the columns (attributes) to be returned in the listing [GS-252].
 
 ### Changed
 - Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].
@@ -47,6 +48,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Rename "parentKeyNames" to "endpointKeyNames" in JSON config files [GS-159].
 - Reimplement API key authentication using a dedicated table "users_api_keys" [GS-159].
 - Remove example users_api_keys from app context.
+- Update send_email.py to return a resultset with error information when an error occurs.
 
 ### Fixed
 - Remove "/" prefix in the key to avoid double "/" in get_bucket_key_from_url() and fix encoded chars in get_s3_presigned_url() [GS-245].

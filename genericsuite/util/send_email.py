@@ -12,16 +12,19 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from email.utils import COMMASPACE, formatdate
 
+from genericsuite.util.utilities import get_default_resultset
 from genericsuite.util.app_logger import log_debug, log_error
 
 DEBUG = False
 
 
 def send_email(sender_email, receiver_email, subject, text,
-               html, files=None):
+               html, files=None) -> dict:
     """
     Send an Email
     """
+    result = get_default_resultset()
+
     files = [] if not files else files
     smtp_server = environ.get('SMTP_SERVER')
     smtp_port = environ.get('SMTP_PORT')  # For starttls
@@ -54,26 +57,27 @@ def send_email(sender_email, receiver_email, subject, text,
                 Name=basename(file_hdl)
             )
         # After the file is closed
-        # part['Content-Disposition'] = 'attachment; filename="%s"' % basename(f)
         part['Content-Disposition'] = 'attachment; filename=' + \
                                       f'"{basename(file_hdl)}"'
         message.attach(part)
 
     if DEBUG:
-        log_debug('SEND_EMAIL' +
-                   f'\n | smtp_server: {smtp_server}' +
-                   f'\n | smtp_port: {smtp_port}' +
-                   f'\n | smtp_user: {smtp_user}' +
-                   f'\n | smtp_password: {"*" * len(smtp_password)}' +
-                   f'\n | sender_email: {sender_email}' +
-                   f'\n | receiver_email: {receiver_email}' +
-                   f'\n | subject: {subject}' +
-                   f'\n | text: {text}' +
-                   f'\n | html: {html}' +
-                   f'\n | file_path: {files}')
+        log_debug(
+            'SEND_EMAIL' +
+            f'\n | smtp_server: {smtp_server}' +
+            f'\n | smtp_port: {smtp_port}' +
+            f'\n | smtp_user: {smtp_user}' +
+            f'\n | smtp_password: {"*" * len(smtp_password)}' +
+            f'\n | sender_email: {sender_email}' +
+            f'\n | receiver_email: {receiver_email}' +
+            f'\n | subject: {subject}' +
+            f'\n | text: {text}' +
+            f'\n | html: {html}' +
+            f'\n | file_path: {files}')
 
     # Create a secure SSL context
     context = ssl.create_default_context()
+
     # Try to log in to smtp server and send email
     try:
         smtp = smtplib.SMTP(smtp_server, smtp_port)
@@ -83,13 +87,20 @@ def send_email(sender_email, receiver_email, subject, text,
         smtp.login(smtp_user, smtp_password)
     except Exception as err:
         # Print any error messages to stdout
-        log_error(f'Send_Email ERROR (preparing phase): {err}')
-        return False
+        result['error'] = True
+        result['error_message'] = f'Send_Email ERROR (preparing phase): {err}'
+        log_error(result['error_message'])
+        return result
+
     try:
         smtp.sendmail(sender_email, receiver_email, message.as_string())
     except Exception as err:
         # Print any error messages to stdout
-        log_error(f'Send_Email ERROR (sending phase): {err}')
+        result['error'] = True
+        result['error_message'] = f'Send_Email ERROR (sending phase): {err}'
+        log_error(result['error_message'])
+        return result
     finally:
         smtp.close()
-    return True
+
+    return result
