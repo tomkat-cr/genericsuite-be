@@ -10,7 +10,7 @@ import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-from email.utils import COMMASPACE, formatdate
+from email.utils import COMMASPACE, formatdate, make_msgid
 
 from genericsuite.util.utilities import get_default_resultset
 from genericsuite.util.app_logger import log_debug, log_error
@@ -38,6 +38,7 @@ def send_email(sender_email, receiver_email, subject, text,
     message["From"] = sender_email
     message['To'] = COMMASPACE.join(receiver_email)
     message['Date'] = formatdate(localtime=True)
+    message["Message-ID"] = make_msgid()
 
     # Turn these into plain/html MIMEText objects
     body_plain_text = MIMEText(text, "plain")

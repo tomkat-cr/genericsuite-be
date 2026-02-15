@@ -35,6 +35,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - MCP_MANDATORY_USER_ID envvar to force MCP authentication with user_id and api_key. Default to "0" to allow api key only authentication [GS-159].
 - Implement logs endpoint [GS-250].
 - Add "gs_listing_columns" query parameter to limit the columns (attributes) to be returned in the listing [GS-252].
+- Add Message-ID header to outgoing emails [GS-37].
 
 ### Changed
 - Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].
