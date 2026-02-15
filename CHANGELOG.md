@@ -58,6 +58,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Update delete_params_file return type in app_context.py.
 - DynamoDB abstractor table object scan error "AttributeError: 'tuple' object has no attribute 'update'" [GS-102].
 - Robustify ObjectId conversion by casting to string in fetch_list() when "_id_ is in like_query_params.
+- Allow `Request` objects as input for current user data functions to make the users onboarding workflow work [GS-37].
 
 ### Security
 - Update "urllib3" to "^2.6.2" to fix security vulnerabilities [GS-219]:
