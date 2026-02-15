@@ -36,6 +36,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Implement logs endpoint [GS-250].
 - Add "gs_listing_columns" query parameter to limit the columns (attributes) to be returned in the listing [GS-252].
 - Add Message-ID header to outgoing emails [GS-37].
+- Allow configuring email debug mode via the SEND_EMAIL_DEBUG environment variable [GS-37].
 
 ### Changed
 - Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].

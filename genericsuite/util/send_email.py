@@ -15,7 +15,7 @@ from email.utils import COMMASPACE, formatdate, make_msgid
 from genericsuite.util.utilities import get_default_resultset
 from genericsuite.util.app_logger import log_debug, log_error
 
-DEBUG = False
+DEBUG = environ.get('SEND_EMAIL_DEBUG', '0') == '1'
 
 
 def send_email(sender_email, receiver_email, subject, text,
