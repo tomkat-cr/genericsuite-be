@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Security
 
 
-## [Unreleased]
+## [0.3.0] - 2026-02-18
 
 ### Added
 - API_VERSION envvar to set the API version, default to "v1" [GS-245].
@@ -50,7 +50,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Rename "parentKeyNames" to "endpointKeyNames" in JSON config files [GS-159].
 - Reimplement API key authentication using a dedicated table "users_api_keys" [GS-159].
 - Remove example users_api_keys from app context.
-- Update send_email.py to return a resultset with error information when an error occurs.
+- Enhance `send_email.py` to return a resultset with error information when an error occurs, parameters validation, HTML stripping, and type hints [GS-37].
 
 ### Fixed
 - Remove "/" prefix in the key to avoid double "/" in get_bucket_key_from_url() and fix encoded chars in get_s3_presigned_url() [GS-245].
@@ -59,6 +59,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - DynamoDB abstractor table object scan error "AttributeError: 'tuple' object has no attribute 'update'" [GS-102].
 - Robustify ObjectId conversion by casting to string in fetch_list() when "_id_ is in like_query_params.
 - Allow `Request` objects as input for current user data functions to make the users onboarding workflow work [GS-37].
+- Prevent "AssertionError: AuthenticationMiddleware must be installed to access request.user" in `get_curr_user_id` when it's a normal Request with no JWT authentication [GS-37].
+- `send_email` includes "Message-ID" header to prevent google (and others) from rejecting emails [GS-37].
 
 ### Security
 - Update "urllib3" to "^2.6.2" to fix security vulnerabilities [GS-219]:

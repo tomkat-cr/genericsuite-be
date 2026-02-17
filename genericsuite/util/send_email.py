@@ -3,10 +3,14 @@
 
 # https://realpython.com/python-send-email/
 
+from typing import Union
 from os import environ
 from os.path import basename
-import smtplib
+
+import re
 import ssl
+import smtplib
+
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
@@ -18,8 +22,21 @@ from genericsuite.util.app_logger import log_debug, log_error
 DEBUG = environ.get('SEND_EMAIL_DEBUG', '0') == '1'
 
 
-def send_email(sender_email, receiver_email, subject, text,
-               html, files=None) -> dict:
+def remove_html_tags(text):
+    """Remove html tags from a string using regex"""
+    # Pattern to match anything between '<' and '>'
+    clean = re.compile('<.*?>')
+    return re.sub(clean, '', text)
+
+
+def send_email(
+    sender_email: Union[str, None],
+    receiver_email: Union[list[str], str, None],
+    subject: str,
+    text: str,
+    html: str,
+    files: list[str] = None
+) -> dict:
     """
     Send an Email
     """
@@ -30,8 +47,46 @@ def send_email(sender_email, receiver_email, subject, text,
     smtp_port = environ.get('SMTP_PORT')  # For starttls
     smtp_user = environ.get('SMTP_USER')
     smtp_password = environ.get('SMTP_PASSWORD')
-    if sender_email is None or sender_email.strip() == '':
+
+    if not sender_email:
         sender_email = environ.get('SMTP_DEFAULT_SENDER')
+    if sender_email.strip() == '':
+        result['error'] = True
+        result['error_message'] = 'Sender email is required'
+        return result
+
+    if not receiver_email:
+        receiver_email = []
+    if isinstance(receiver_email, str):
+        receiver_email = [receiver_email]
+    if not receiver_email:
+        result['error'] = True
+        result['error_message'] = 'Receiver email is required'
+        return result
+
+    if not subject:
+        result['error'] = True
+        result['error_message'] = 'Subject is required'
+        return result
+
+    if not text and not html:
+        result['error'] = True
+        result['error_message'] = 'Text or HTML is required'
+        return result
+
+    if not html:
+        html = text
+    elif not text:
+        text = remove_html_tags(html)
+
+    _ = DEBUG and log_debug(
+        'SEND_EMAIL' +
+        f'\n | sender_email: {sender_email}' +
+        f'\n | receiver_email: {receiver_email}' +
+        f'\n | subject: {subject}' +
+        f'\n | text: {text}' +
+        f'\n | html: {html}' +
+        f'\n | files: {files}')
 
     message = MIMEMultipart("alternative")
     message["Subject"] = subject

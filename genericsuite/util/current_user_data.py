@@ -20,7 +20,22 @@ NON_AUTH_REQUEST_USER_ID = "[N/A/R]"
 def get_curr_user_id(request: Union[AuthorizedRequest, Request]) -> str:
     """Get the current user ID"""
     user_id = None
-    authorized_request = hasattr(request, 'user') and request.user
+    try:
+        # The following condition is enclosed in a try-catch block to
+        # avoid the error:
+        # "AssertionError: AuthenticationMiddleware must be installed to
+        # access request.user" when it's a normal Request with no JWT
+        # authentication
+        authorized_request = hasattr(request, 'user') and request.user
+    except Exception as e:
+        authorized_request = False
+        _ = DEBUG and log_debug(
+            ">> get_curr_user_id"
+            f" | Exception: {e}"
+            f" | request: {request}"
+            f" | authorized_request: {authorized_request}"
+            f" | user_id: {user_id}")
+
     if authorized_request:
         if get_current_framework() == 'chalice':
             user_id = request.user.get("public_id")
