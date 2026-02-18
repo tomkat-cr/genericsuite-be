@@ -30,8 +30,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - "requests-toolbelt" dependency because it's required by parse_multipart.py [GS-248].
 - "make test" command to run tests [GS-248].
 - "pymongo" and "boto3" to dev group dependencies to run tests [GS-248].
-- APP_LOGGER_OPTIONS envvar to configure logging options, initially to disable the debug mensage at the application startup when "silent" is set [GS-245].
-- MCP access token retrieval from headdrs (Authorization: Bearer <token>) with the get_access_token() function in mcplib utilities [GS-159].
+- APP_LOGGER_OPTIONS envvar to configure logging options, initially to disable the debug message at the application startup when "silent" is set [GS-245].
+- MCP access token retrieval from headers (Authorization: Bearer <token>) with the get_access_token() function in mcplib utilities [GS-159].
 - MCP_MANDATORY_USER_ID envvar to force MCP authentication with user_id and api_key. Default to "0" to allow api key only authentication [GS-159].
 - Implement logs endpoint [GS-250].
 - Add "gs_listing_columns" query parameter to limit the columns (attributes) to be returned in the listing [GS-252].
