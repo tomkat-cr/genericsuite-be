@@ -46,11 +46,18 @@ class SqlUtilities(DbAbstract):
             key_set["_id"] = str(key_set["_id"])
         return key_set
 
-    def _get_sql_operator(self, mongo_op: str) -> str:
+    def _quote_identifier(self, identifier: str,
+                          process_dot: bool = False) -> str:
         """
-        Map MongoDB operators to SQL operators
+        Quote a SQL identifier (table name or column name)
+        using double quotes.
         """
-        mapping = {
+        if process_dot:
+            identifier = identifier.replace(".", "\".\"")
+        return f'"{identifier}"'
+
+    def _get_sql_operator_mapping(self) -> dict:
+        return {
             "$eq": "=",
             "$ne": "<>",
             "$gt": ">",
@@ -62,7 +69,12 @@ class SqlUtilities(DbAbstract):
             "$and": "AND",
             "$or": "OR",
         }
-        return mapping.get(mongo_op, "=")
+
+    def _get_sql_operator(self, mongo_op: str) -> str:
+        """
+        Map MongoDB operators to SQL operators
+        """
+        return self._get_sql_operator_mapping().get(mongo_op, "=")
 
     def _normalize_objectid(self, value: Any) -> Any:
         """
@@ -101,6 +113,7 @@ class SqlUtilities(DbAbstract):
         conditions = []
         columns = []
         values = []
+        ops_mapping = self._get_sql_operator_mapping()
 
         def special_case_handling(col_name: str, op: str, op_val: Any):
             """
@@ -110,11 +123,13 @@ class SqlUtilities(DbAbstract):
                 f"||| special_case_handling | op: {op} "
                 f"| op_val: {op_val} | col_name: {col_name}")
 
+            quoted_col = self._quote_identifier(col_name)
+
             if op == "$regex":
                 # Simple regex mapping to LIKE or ~
                 # Assuming simple contains for now as per DynamoDB
                 # implementation
-                conditions.append(f"{col_name} LIKE %s")
+                conditions.append(f"{quoted_col} LIKE %s")
                 # op_val will be a dictionary with $regex and $options
                 # E.g. {'$regex': '.*1.*', '$options': 'si'}
                 regex_value = op_val.get("$regex")
@@ -138,26 +153,32 @@ class SqlUtilities(DbAbstract):
                         # E.g. '$options': 'si'
                         return
                     sub_conditions.append(
-                        f"{col_name} "
+                        f"{quoted_col} "
                         f"{self._get_sql_operator(sub_op)} %s")
                     columns.append(col_name)
                     values.append(sub_op_val)
                 conditions.append(
-                    f" {self._get_sql_operator(op)} ".join(
-                        sub_conditions))
+                    f"({f' {self._get_sql_operator(op)} '.join(
+                        sub_conditions)})")
 
             elif op in ["$in", "$nin"]:
                 placeholders = ", ".join(["%s"] * len(op_val))
                 sql_op = self._get_sql_operator(op)
                 columns.append(col_name)
                 conditions.append(
-                    f"{col_name} {sql_op} ({placeholders})")
+                    f"{quoted_col} {sql_op} ({placeholders})")
                 values.extend(op_val)
+
+            elif op in ops_mapping:
+                sql_op = ops_mapping[op]
+                columns.append(col_name)
+                conditions.append(f"{quoted_col} {sql_op} %s")
+                values.append(op_val)
 
             else:
                 sql_op = self._get_sql_operator(op)
                 columns.append(col_name)
-                conditions.append(f"{col_name} {sql_op} %s")
+                conditions.append(f"{quoted_col} {sql_op} %s")
                 values.append(op_val)
 
         for key, value in query_params.items():
@@ -172,19 +193,71 @@ class SqlUtilities(DbAbstract):
 
             if isinstance(value, list):
                 for item in value:
-                    op = col_name
-                    for col_name, op_val in item.items():
-                        special_case_handling(col_name, op, op_val)
-            # elif isinstance(value, dict):
-            #     for op, op_val in value.items():
-            #         special_case_handling(col_name, op, op_val)
+                    for sub_col_name, sub_val in item.items():
+
+                        if sub_col_name.startswith("$"):
+                            special_case_handling(
+                                col_name, sub_col_name, sub_val)
+
+                        elif col_name.startswith("$"):
+                            """
+                            Example:
+
+                            col_name: $or
+
+                            value: [
+                                {
+                                    'firstname': {
+                                        '$regex': '.*fyn.*',
+                                        '$options': 'si'
+                                    }
+                                },
+                                {
+                                    'creation_date': {
+                                        '$lte': 946771199.0,
+                                        '$gte': 946684800.0
+                                    }
+                                }
+                            ]
+                            """
+
+                            if isinstance(sub_val, dict):
+                                if list(sub_val.keys())[0] == "$regex":
+                                    special_case_handling(
+                                        sub_col_name, "$regex", sub_val)
+                                else:
+                                    for cond_key, cond_val in sub_val.items():
+                                        special_case_handling(
+                                            sub_col_name, cond_key, cond_val)
+                            else:
+                                special_case_handling(
+                                    sub_col_name, sub_val, sub_val)
+                        else:
+                            # Not an operator, treat as field-value pair
+                            conditions.append(
+                                f"{self._quote_identifier(sub_col_name)} = %s")
+                            values.append(self._normalize_objectid(sub_val))
+
+            elif isinstance(value, dict):
+                for op_key, op_val in value.items():
+                    if op_key.startswith("$"):
+                        special_case_handling(col_name, op_key, op_val)
+                    else:
+                        # Nested dict but not an operator?
+                        # Handle as json or just equality
+                        conditions.append(
+                            f"{self._quote_identifier(key)} = %s")
+                        values.append(self._normalize_objectid(value))
+                        break
             else:
-                conditions.append(f"{col_name} = %s")
+                conditions.append(f"{self._quote_identifier(col_name)} = %s")
                 values.append(self._normalize_objectid(value))
 
         _ = DEBUG and log_debug(
-            f"||| _get_conditions_and_values [2] | conditions: {conditions} "
-            f"| values: {values}")
+            "||| _get_conditions_and_values [2]" +
+            f"\n| columns: {columns} " +
+            f"\n| conditions: {conditions} " +
+            f"\n| values: {values}")
         return conditions, columns, values
 
     def get_cursor(self):
@@ -221,11 +294,27 @@ class SqlUtilities(DbAbstract):
         """
         Build a raw SQL query and return the cursor object.
         """
-        sql = f"SELECT {fields} FROM {table_name}"
+        fields_str = fields if isinstance(fields, str) else ", ".join(
+            [self._quote_identifier(f) for f in fields])
+        quoted_table = self._quote_identifier(table_name, process_dot=True)
+        sql = f"SELECT {fields_str} FROM {quoted_table}"
         if where:
             sql += f" WHERE {where}"
         if order_by:
-            sql += f" ORDER BY {order_by}"
+            # Basic order_by quoting, assuming simple column names
+            # or "col DESC"
+            if isinstance(order_by, list):
+                order_by_parts = []
+                for ob in order_by:
+                    parts = ob.split()
+                    quoted_col = self._quote_identifier(parts[0])
+                    if len(parts) > 1:
+                        order_by_parts.append(f"{quoted_col} {parts[1]}")
+                    else:
+                        order_by_parts.append(quoted_col)
+                sql += f" ORDER BY {', '.join(order_by_parts)}"
+            else:
+                sql += f" ORDER BY {order_by}"
         if limit:
             sql += f" LIMIT {limit}"
         if offset:
@@ -260,10 +349,7 @@ class SqlUtilities(DbAbstract):
             + f"\n | sql: {sql}"
             + f"\n | values: {values}")
         cursor = self.get_cursor()
-        # if values:
-        #     cursor.execute(sql, values)
-        # else:
-        #     cursor.execute(sql)
+
         try:
             cursor.execute(sql, values)
         except Exception as e:
@@ -280,15 +366,16 @@ class SqlUtilities(DbAbstract):
         Return fields of the table.
         """
         # Projection support (basic)
-        fields = "*"
+        fields_str = "*"
         if projection:
             # Filter fields with value 1
-            included = [k for k, v in projection.items() if v == 1]
+            included = [self._quote_identifier(
+                k) for k, v in projection.items() if v == 1]
             if included:
-                fields = ", ".join(included)
+                fields_str = ", ".join(included)
         if DEBUG:
-            log_debug(f"SqlUtilities.get_fields: {fields}")
-        return fields
+            log_debug(f"SqlUtilities.get_fields: {fields_str}")
+        return fields_str
 
     def info_schema_table_names(self):
         return {
@@ -322,7 +409,8 @@ class SqlFindIterator:
             for key, value in row.items():
                 if key in self._table_structure:
                     if self._table_structure[key] == "json":
-                        row[key] = json.loads(value)
+                        row[key] = json.loads(
+                            value) if value is not None else []
             _ = DEBUG and log_debug(
                 f"||| SqlFindIterator | __next__ | res: {row}")
             return fix_item_for_dump(row)
@@ -381,6 +469,11 @@ class SqlTable(SqlUtilities):
         """
         Fix value types
         """
+        _ = DEBUG and log_debug(
+            "SqlTable.fix_value_types:" +
+            f"\ncolumns: {columns}" +
+            f"\nvalues: {values}" +
+            f"\ntable_structure: {self._table_structure}")
         for i, column in enumerate(columns):
             if column in self._table_structure:
                 if self._table_structure[column] in [
@@ -393,6 +486,8 @@ class SqlTable(SqlUtilities):
                     "serial",
                     "bigserial"
                 ]:
+                    if values[i] is None or values[i] == "":
+                        values[i] = 0
                     values[i] = int(values[i])
                 elif self._table_structure[column] in [
                     "float",
@@ -400,11 +495,15 @@ class SqlTable(SqlUtilities):
                     "real",
                     "double precision"
                 ]:
+                    if values[i] is None or values[i] == "":
+                        values[i] = 0.0
                     values[i] = float(values[i])
                 elif self._table_structure[column] in [
                     "bool",
                     "boolean"
                 ]:
+                    if values[i] is None or values[i] == "":
+                        values[i] = False
                     values[i] = bool(values[i])
         return values
 
@@ -415,12 +514,15 @@ class SqlTable(SqlUtilities):
         """
         Build SQL WHERE clause from MongoDB-style query params
         """
+        _ = DEBUG and log_debug(
+            f"||| _build_where_clause | query_params: {query_params}")
         if not query_params:
             return "", [], []
+        condition_glue = "OR" if "$or" in query_params else "AND"
         conditions, columns, values = \
             self._get_conditions_and_values(query_params)
         where_clause = \
-            " AND ".join(conditions) if conditions else ""
+            f" {condition_glue} ".join(conditions) if conditions else ""
         values = self.fix_value_types(columns, values)
         return where_clause, columns, values
 
@@ -455,20 +557,24 @@ class SqlTable(SqlUtilities):
         """
         Execute INSERT query
         """
+        _ = DEBUG and log_debug(f"SqlTable.insert_one: {item}")
         if "_id" not in item:
             item["_id"] = self.new_id()
 
         columns = list(item.keys())
+        quoted_columns = [self._quote_identifier(c) for c in columns]
         values = self._prepare_values_for_sql(list(item.values()))
         values = self.fix_value_types(columns, values)
         placeholders = ["%s"] * len(values)
 
-        sql = f"INSERT INTO {self._table_name} ({', '.join(columns)}) " + \
+        quoted_table = self._quote_identifier(
+            self._table_name, process_dot=True)
+        sql = f"INSERT INTO {quoted_table} ({', '.join(quoted_columns)}) " + \
             f"VALUES ({', '.join(placeholders)})"
 
         cursor = self.get_cursor()
-        if DEBUG:
-            log_debug(f"SqlTable.insert_one: {sql} | values: {values}")
+        _ = DEBUG and log_debug(
+            f"SqlTable.insert_one: {sql} | values: {values}")
 
         try:
             cursor.execute(sql, values)
@@ -497,7 +603,7 @@ class SqlTable(SqlUtilities):
         # Handle $set
         if "$set" in update_data:
             for k, v in update_data["$set"].items():
-                set_clauses.append(f"{k} = %s")
+                set_clauses.append(f"{self._quote_identifier(k)} = %s")
                 set_values.append(self._prepare_value_for_sql(v))
         else:
             # Direct update (replace) - might not be standard Mongo behavior
@@ -509,14 +615,16 @@ class SqlTable(SqlUtilities):
                     "$push",
                     "$pull",
                 ]:  # Ignore other operators for now
-                    set_clauses.append(f"{k} = %s")
+                    set_clauses.append(f"{self._quote_identifier(k)} = %s")
                     set_values.append(self._prepare_value_for_sql(v))
 
         if not set_clauses:
             log_error("SqlTable.update_one error: No SET clauses")
             return self
 
-        sql = f"UPDATE {self._table_name} SET {', '.join(set_clauses)}" \
+        quoted_table = self._quote_identifier(
+            self._table_name, process_dot=True)
+        sql = f"UPDATE {quoted_table} SET {', '.join(set_clauses)}" \
             + f" WHERE {where}"
         values = set_values + where_values
 
@@ -560,7 +668,9 @@ class SqlTable(SqlUtilities):
             log_error("SqlTable.delete_one error: No WHERE clause")
             return self
 
-        sql = f"DELETE FROM {self._table_name} WHERE {where_clause}"
+        quoted_table = self._quote_identifier(
+            self._table_name, process_dot=True)
+        sql = f"DELETE FROM {quoted_table} WHERE {where_clause}"
 
         cursor = self.get_cursor()
         if DEBUG:
@@ -697,14 +807,31 @@ class SqlService(SqlUtilities):
         Returns a dictionary with the table structure
         """
         try:
-            return self.run_query(
+            cursor = self.run_query(
                 table_name=self.info_schema_table_names()["columns"],
                 fields="column_name, data_type",
                 where=f"table_name = '{table_name}'",
             )
+            table_structure = cursor.fetchall()
+            cursor.close()
+            _ = DEBUG and log_debug(
+                f"SqlService table_structure [1] | Table: {table_name}"
+                + f"\n | table_structure fetched: {table_structure}")
         except Exception as e:
             log_error(f"SqlService table_structure error: {e}")
-            return {}
+            raise e
+        try:
+            table_structure = {
+                column["column_name"]: column["data_type"]
+                for column in table_structure
+            }
+            _ = DEBUG and log_debug(
+                f"SqlService table_structure [2] | Table: {table_name}"
+                + f"\n | table_structure fetched: {table_structure}")
+            return table_structure
+        except Exception as e:
+            log_error(f"SqlService table_structure.map error: {e}")
+            raise e
 
     def __getitem__(self, table_name):
         _ = DEBUG and log_debug(

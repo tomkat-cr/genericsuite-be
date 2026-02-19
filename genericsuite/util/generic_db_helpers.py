@@ -97,8 +97,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             else v
             for k, v in like_query_params.items()
             # Exclude paging and search configuration parameters
-            if k not in ['page', 'limit', 'like', 'comb', 'order',
-                         'gs_listing_columns']
+            if k not in ['page', 'limit', 'like', 'comb', 'order']
         }
 
         if '_id' in listing_filter:
@@ -116,18 +115,10 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             return resultset
 
         if self.query_params.get("only_listing_cols", "1") == "1":
-            if 'gs_listing_columns' in like_query_params:
-                # Limit the columns (attributes) to be returned
-                projection_exclusion = self.cnf_db.get(
-                    'projection_exclusion', [])
-                projection = {
-                    k: 1 for k in like_query_params['gs_listing_columns']
-                    .split(',') if k not in projection_exclusion}
-            else:
-                # By default, include only listing enabled columns and
-                # exclude unprotected columns (those not in
-                # projection_exclusions)
-                projection = self.listing_disabled_columns_projection()
+            # By default, include only listing enabled columns and
+            # exclude unprotected columns (those not in
+            # projection_exclusions)
+            projection = self.listing_disabled_columns_projection()
         else:
             # Include only unprotected columns (those not in
             # projection_exclusions)
