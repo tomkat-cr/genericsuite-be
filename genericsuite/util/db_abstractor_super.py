@@ -102,6 +102,7 @@ class DbAbstract:
         self.db_name = self._app_config.DB_CONFIG.get("app_db_name")
         self.db_other_params = self._app_config.DB_CONFIG.get(
             "app_db_other_params")
+        self.db_engine = self._app_config.DB_ENGINE
         return
 
     def get_db_connection(self):

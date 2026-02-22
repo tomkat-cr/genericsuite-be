@@ -36,6 +36,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Implement logs endpoint [GS-250].
 - Add Message-ID header to outgoing emails [GS-37].
 - Allow configuring email debug mode via the SEND_EMAIL_DEBUG environment variable [GS-37].
+- `db_engine` configuration to SqlTable so methods like array_fields_management() and array_fields_value() can use the corresponding functions [GS-194].
+- Implement $inc, $push, $addToSet and $pull operations to the SQL abstraction [GS-194].
 
 ### Changed
 - Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].

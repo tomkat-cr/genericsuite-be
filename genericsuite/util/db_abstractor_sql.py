@@ -409,8 +409,11 @@ class SqlFindIterator:
             for key, value in row.items():
                 if key in self._table_structure:
                     if self._table_structure[key] == "json":
-                        row[key] = json.loads(
-                            value) if value is not None else []
+                        if isinstance(value, str):
+                            row[key] = json.loads(
+                                value) if value is not None else []
+                        else:
+                            row[key] = value
             _ = DEBUG and log_debug(
                 f"||| SqlFindIterator | __next__ | res: {row}")
             return fix_item_for_dump(row)
@@ -457,6 +460,7 @@ class SqlTable(SqlUtilities):
         self._db = connection
         self.db_uri = None
         self.db_name = None
+        self.db_engine = None
         self.db_other_params = None
         self.inserted_id = None
         self.modified_count = 0
@@ -586,6 +590,41 @@ class SqlTable(SqlUtilities):
             raise e
         return self
 
+    def array_fields_value(self, value: str):
+        """
+        Prepare value for array fields
+        """
+        if self.db_engine == "POSTGRES":
+            result = self._prepare_value_for_sql(value)
+        elif self.db_engine == "MYSQL":
+            result = self._prepare_value_for_sql(value)
+        _ = DEBUG and log_debug(f"SqlTable.array_fields_value: {result}")
+        return result
+
+    def array_fields_management(self, col_name: str, operation: str,
+                                value: Any):
+        """
+        Manage array type fields, for adding or removing elements operations
+        """
+        result = None
+        if operation == "add":
+            if self.db_engine == "POSTGRES":
+                result = f"{self._quote_identifier(col_name)} = " + \
+                    f"{self._quote_identifier(col_name)} || %s::jsonb"
+            elif self.db_engine == "MYSQL":
+                result = f"{self._quote_identifier(col_name)} = " + \
+                    "JSON_ARRAY_APPEND(" + \
+                    f"{self._quote_identifier(col_name)}, '$', %s)"
+
+        elif operation == "remove":
+            if self.db_engine == "POSTGRES":
+                result = f"{self._quote_identifier(col_name)} = " + \
+                    f"{self._quote_identifier(col_name)} - %s::jsonb"
+            elif self.db_engine == "MYSQL":
+                result = f"{self._quote_identifier(col_name)} = " + \
+                    f"JSON_REMOVE({self._quote_identifier(col_name)}, '$', %s)"
+        return result
+
     def update_one(self, query_params: Dict, update_data: Dict):
         """
         Execute UPDATE query
@@ -613,10 +652,59 @@ class SqlTable(SqlUtilities):
                     "$set",
                     "$inc",
                     "$push",
+                    "$addToSet",
                     "$pull",
-                ]:  # Ignore other operators for now
+                ]:
                     set_clauses.append(f"{self._quote_identifier(k)} = %s")
                     set_values.append(self._prepare_value_for_sql(v))
+
+                elif k == "$inc" or k == "$push" or k == "$addToSet":
+                    # Add element(s) to array column
+                    for k2, v2 in v.items():
+                        set_clauses.append(
+                            self.array_fields_management(k2, "add", v2))
+                        set_values.append(self.array_fields_value(v2))
+
+                elif k == "$pull":
+                    # Remove an element by its id from the array column
+
+                    # For example:
+                    # k = "$pull"
+                    # v = {'array_name': {'id_col_name': 'id_to_be_removed'}}
+
+                    # First retrieve the original content
+                    fields = ", ".join([self._quote_identifier(k2)
+                                       for k2 in v.keys()])
+                    cursor = self.run_query(
+                        table_name=self._table_name,
+                        fields=fields,
+                        where=where,
+                        values=where_values,
+                    )
+                    iterator = self.IteratorClass(
+                        cursor, self._table_structure)
+                    _ = DEBUG and log_debug(
+                        f"SqlTable.update_one: {iterator}")
+                    array_column_values = list(iterator)[0]
+
+                    for k2, v2 in v.items():
+                        # Remove the element(s) by its id
+                        filtered_array_elements = [
+                            item for item in array_column_values[k2]
+                            if item.get(list(v2.keys())[0]) !=
+                            list(v2.values())[0]
+                        ]
+                        if not filtered_array_elements:
+                            filtered_array_elements = []
+
+                        # Finally add the array column update
+                        set_clauses.append(
+                            f"{self._quote_identifier(k2)} = %s")
+                        set_values.append(self._prepare_value_for_sql(
+                            filtered_array_elements))
+                        # set_clauses.append(
+                        #     self.array_fields_management(k2, "remove", v2))
+                        # set_values.append(self.array_fields_value(v2))
 
         if not set_clauses:
             log_error("SqlTable.update_one error: No SET clauses")
@@ -814,9 +902,9 @@ class SqlService(SqlUtilities):
             )
             table_structure = cursor.fetchall()
             cursor.close()
-            _ = DEBUG and log_debug(
-                f"SqlService table_structure [1] | Table: {table_name}"
-                + f"\n | table_structure fetched: {table_structure}")
+            # _ = DEBUG and log_debug(
+            #     f"SqlService table_structure [1] | Table: {table_name}"
+            #     + f"\n | table_structure fetched: {table_structure}")
         except Exception as e:
             log_error(f"SqlService table_structure error: {e}")
             raise e
@@ -825,9 +913,9 @@ class SqlService(SqlUtilities):
                 column["column_name"]: column["data_type"]
                 for column in table_structure
             }
-            _ = DEBUG and log_debug(
-                f"SqlService table_structure [2] | Table: {table_name}"
-                + f"\n | table_structure fetched: {table_structure}")
+            # _ = DEBUG and log_debug(
+            #     f"SqlService table_structure [2] | Table: {table_name}"
+            #     + f"\n | table_structure fetched: {table_structure}")
             return table_structure
         except Exception as e:
             log_error(f"SqlService table_structure.map error: {e}")

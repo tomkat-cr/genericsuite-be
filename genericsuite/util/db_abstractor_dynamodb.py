@@ -1000,7 +1000,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         if "$set" in update_set_original:
             # Update the item, preserving the attributes not present in
             # the update_set_original
-            update_set = result["Item"].update(update_set_original["$set"])
+            result["Item"].update(update_set_original["$set"])
+            update_set = result["Item"]
         elif "$addToSet" in update_set_original:
             # Add a new element to an array in the item
             array_field, array_value = next(

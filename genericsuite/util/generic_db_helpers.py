@@ -735,6 +735,9 @@ class GenericDbHelper(GenericDbHelperWithRequest):
                       f'\narray_field_in_json={array_field_in_json}, ' +
                       'key value to REMOVE=' +
                       f'{data[array_field_in_json][self.array_field_key]}\n')
+
+        # For example:
+        # pull_element={'array_name': {'id_attrb_name': 'id_to_be_removed'}}
         pull_element = {
             self.array_field: {
                 self.array_field_key:
