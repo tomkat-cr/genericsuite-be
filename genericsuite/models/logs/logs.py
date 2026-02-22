@@ -29,8 +29,8 @@ def put_log(
     other_params: Optional[dict] = None
 ) -> Response:
     """
-    This endpoint is used to fetch food data from the FDA API.
-    It takes in a request and other parameters and returns a response.
+    This endpoint is used to receive and process log messages from clients.
+    It takes in a request containing a log message and its type.
 
     :param request: The request object containing the request data.
     :param other_params: Any other parameters that may be needed.
