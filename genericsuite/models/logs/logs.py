@@ -8,6 +8,7 @@ from genericsuite.util.app_logger import (
     log_error,
     log_info,
     log_warning,
+    sanitize_log_message,
 )
 from genericsuite.util.jwt import AuthorizedRequest
 from genericsuite.util.utilities import (
@@ -40,7 +41,7 @@ def put_log(
         other_params = {}
     params = get_request_body(request)
     log_type = params.get('log_type').lower()
-    message = params.get('message')
+    message = sanitize_log_message(params.get('message'))
 
     if log_type == 'info':
         log_info(message)

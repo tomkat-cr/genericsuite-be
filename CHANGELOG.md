@@ -64,11 +64,14 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - `send_email` includes "Message-ID" header to prevent google (and others) from rejecting emails [GS-37].
 
 ### Security
-- Update "urllib3" to "^2.6.2" to fix security vulnerabilities [GS-219]:
+- Update "urllib3" to "^2.6.3" to fix security vulnerabilities [GS-219]:
     * "Allocation of Resources Without Limits or Throttling": "CWE-770", "CVE-2025-66418", "CVSS 8.9", "SNYK-PYTHON-URLLIB3-14192443"
-    * "Improper Handling of Highly Compressed Data (Data Amplification)": "CWE-409", "CVSS 8.9", "CVE-2025-66471", "SNYK-PYTHON-URLLIB3-14192442".
-- Update "werkzeug" to "^3.1.4" to fix security vulnerabilities [GS-219]:
-    * "Improper Handling of Windows Device Names": "CWE-67", "CVSS 6.3", "CVE-2025-66221", "SNYK-PYTHON-WERKZEUG-14151620".
+    * "Improper Handling of Highly Compressed Data (Data Amplification)": "CWE-409", "CVSS 8.9", "CVE-2025-66471", "CVE-2026-21441", "CWE-409".
+- Update "werkzeug" to "^3.1.6" to fix security vulnerabilities [GS-219]:
+    * "Improper Handling of Windows Device Names": "CWE-67", "CVSS 6.3", "CVE-2025-66221", "CVE-2026-27199", "CWE-67".
+- Upgrade "cryptography" to "^46.0.5" to fix security vulnerabilities [GS-219]:
+    * "Insufficient Verification of Data Authenticity": "CVE-2026-26007", "CWE-345".
+- Add mandatory filters to get_item_from_db() and GenericEndpointHelper.generic_crud_main() [GS-262].
 
 ### Removed
 - "boto3" and "pymongo" dependencies, so each project can have its own dependencies depending on the selected database and cloud storage provider [GS-245].

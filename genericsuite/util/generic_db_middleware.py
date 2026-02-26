@@ -84,6 +84,10 @@ def get_item_from_db(
     if get_by_pk:
         result = dbo.fetch_row_raw(entry_value)
     else:
+        # Add table's mandatoy filters. E.g. user_id
+        filters.update({
+            k: v for k, v in dbo.mandatory_filters.items()
+        })
         result = dbo.fetch_row_by_entryname_raw(
             entry_name=entry_name,
             entry_value=entry_value,

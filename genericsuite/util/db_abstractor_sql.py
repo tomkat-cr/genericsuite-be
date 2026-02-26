@@ -50,8 +50,15 @@ class SqlUtilities(DbAbstract):
                           process_dot: bool = False) -> str:
         """
         Quote a SQL identifier (table name or column name)
-        using double quotes.
+        using double quotes to avoid SQL Injection.
         """
+        # Escape double quotes within the identifier, so an attacker
+        # cannot provide a malicious column name or table name (if
+        # user-controlled) containing double quotes to break out of the
+        # quoted string and inject arbitrary SQL commands. For example,
+        # an identifier like col" = 1 OR "1" = "1 would result in
+        # "col" = 1 OR "1" = "1", which alters the query logic.
+        identifier = identifier.replace('"', '\\"')
         if process_dot:
             identifier = identifier.replace(".", "\".\"")
         return f'"{identifier}"'
@@ -162,6 +169,15 @@ class SqlUtilities(DbAbstract):
                         sub_conditions)})")
 
             elif op in ["$in", "$nin"]:
+                """
+                For example:
+                    For "op_val" = ['1', '22', '333'],
+                       "placeholders" will be '%s, %s, %s'.
+                    Then "conditions" will have:
+                       ['"col_name" IN (%s, %s, %s)'].
+                    Finally it needs 3 values that "values.extend(op_val)"
+                    will add...
+                """
                 placeholders = ", ".join(["%s"] * len(op_val))
                 sql_op = self._get_sql_operator(op)
                 columns.append(col_name)
@@ -490,25 +506,38 @@ class SqlTable(SqlUtilities):
                     "serial",
                     "bigserial"
                 ]:
-                    if values[i] is None or values[i] == "":
-                        values[i] = 0
-                    values[i] = int(values[i])
+                    if isinstance(values[i], list):
+                        values[i] = [int(v) if v is not None and v !=
+                                     "" else 0 for v in values[i]]
+                    else:
+                        if values[i] is None or values[i] == "":
+                            values[i] = 0
+                        values[i] = int(values[i])
+
                 elif self._table_structure[column] in [
                     "float",
                     "numeric",
                     "real",
                     "double precision"
                 ]:
-                    if values[i] is None or values[i] == "":
-                        values[i] = 0.0
-                    values[i] = float(values[i])
+                    if isinstance(values[i], list):
+                        values[i] = [float(v) if v is not None and v !=
+                                     "" else 0.0 for v in values[i]]
+                    else:
+                        if values[i] is None or values[i] == "":
+                            values[i] = 0.0
+                        values[i] = float(values[i])
                 elif self._table_structure[column] in [
                     "bool",
                     "boolean"
                 ]:
-                    if values[i] is None or values[i] == "":
-                        values[i] = False
-                    values[i] = bool(values[i])
+                    if isinstance(values[i], list):
+                        values[i] = [bool(v) if v is not None and v !=
+                                     "" else False for v in values[i]]
+                    else:
+                        if values[i] is None or values[i] == "":
+                            values[i] = False
+                        values[i] = bool(values[i])
         return values
 
     def _build_where_clause(
@@ -758,7 +787,7 @@ class SqlTable(SqlUtilities):
 
         quoted_table = self._quote_identifier(
             self._table_name, process_dot=True)
-        sql = f"DELETE FROM {quoted_table} WHERE {where_clause}"
+        sql = f"DELETE FROM {quoted_table} WHERE {where_clause} LIMIT 1"
 
         cursor = self.get_cursor()
         if DEBUG:
@@ -779,7 +808,7 @@ class SqlTable(SqlUtilities):
         Count documents matching query
         """
         where, columns, values = self._build_where_clause(query_params)
-        fields = "COUNT(*)"
+        fields = "COUNT(*) AS doc_count"
         cursor = self.run_query(
             table_name=self._table_name,
             fields=fields,
@@ -792,7 +821,7 @@ class SqlTable(SqlUtilities):
         if isinstance(result, tuple):
             return result[0]
         if isinstance(result, dict):
-            return result.get("COUNT(*)", 0)
+            return result.get("doc_count", 0)
         return 0
 
 

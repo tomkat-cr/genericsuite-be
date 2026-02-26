@@ -181,9 +181,14 @@ class GenericEndpointHelper:
                     continue
                 param_name = key
                 param_value = self.query_params[key]
+                # Add table's mandatoy filters. E.g. user_id
+                filters = {
+                    k: v for k, v in self.dbo.mandatory_filters.items()
+                }
                 result = self.dbo.fetch_row_by_entryname_raw(
                     entry_name=param_name,
                     entry_value=param_value,
+                    filters=filters
                 )
                 if not result['resultset']:
                     result = error_resultset(

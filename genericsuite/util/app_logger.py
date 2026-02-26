@@ -73,6 +73,16 @@ def formatted_message(message: Any) -> str:
     )
 
 
+def sanitize_log_message(message: Any) -> str:
+    """
+    Sanitize the log message to avoid log injection.
+    """
+    if message is None:
+        return ""
+    result = str(message)
+    return result.replace("\n", "\\n").replace("\r", "\\r")
+
+
 def log_debug(message: Any) -> str:
     """Register a Debug log"""
     fmt_msg = formatted_message(message)
