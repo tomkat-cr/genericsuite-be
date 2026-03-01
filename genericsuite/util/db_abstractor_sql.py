@@ -2,7 +2,7 @@
 DbAbstractorSQL: Database abstraction layer for SQL databases
 """
 
-from typing import List, Dict, Any, Tuple, Union
+from typing import List, Dict, Any, Tuple, Union, Callable
 import json
 
 from bson.json_util import dumps, ObjectId
@@ -58,10 +58,14 @@ class SqlUtilities(DbAbstract):
         # quoted string and inject arbitrary SQL commands. For example,
         # an identifier like col" = 1 OR "1" = "1 would result in
         # "col" = 1 OR "1" = "1", which alters the query logic.
+        quote_char = "`" if self.db_engine == "MYSQL" else '"'
         identifier = identifier.replace('"', '\\"')
+        if self.db_engine == "MYSQL":
+            identifier = identifier.replace('`', '\\`')
         if process_dot:
-            identifier = identifier.replace(".", "\".\"")
-        return f'"{identifier}"'
+            # Normally this is for table names
+            identifier = identifier.replace(".", f"{quote_char}.{quote_char}")
+        return f'{quote_char}{identifier}{quote_char}'
 
     def _get_sql_operator_mapping(self) -> dict:
         return {
@@ -338,6 +342,30 @@ class SqlUtilities(DbAbstract):
         _ = DEBUG and log_debug(f"SqlUtilities.build_select_sql: {sql}")
         return sql
 
+    def cursor_execute(
+        self,
+        sql: str,
+        values: Union[List, Dict] = None,
+    ):
+        """
+        Execute a raw SQL query statement and return the cursor object.
+        """
+        _ = DEBUG and log_debug(
+            "SqlUtilities.cursor_execute"
+            + f"\n | sql: {sql}")
+        cursor = self.get_cursor()
+
+        try:
+            cursor.execute(sql, values)
+        except Exception as e:
+            _ = DEBUG and log_debug(
+                "SqlUtilities.cursor_execute | error: " + str(e))
+            raise e
+        _ = DEBUG and log_debug(
+            "SqlUtilities.cursor_execute | cursor.execute result:"
+            + f"\n{cursor}")
+        return cursor
+
     def run_query(
         self,
         table_name: str,
@@ -364,18 +392,7 @@ class SqlUtilities(DbAbstract):
             "SqlUtilities.run_query"
             + f"\n | sql: {sql}"
             + f"\n | values: {values}")
-        cursor = self.get_cursor()
-
-        try:
-            cursor.execute(sql, values)
-        except Exception as e:
-            _ = DEBUG and log_debug(
-                "SqlUtilities.run_query | error: " + str(e))
-            raise e
-        _ = DEBUG and log_debug(
-            "SqlUtilities.run_query | cursor.execute result:"
-            + f"\n{cursor}")
-        return cursor
+        return self.cursor_execute(sql, values)
 
     def get_fields(self, projection: Dict = None):
         """
@@ -405,18 +422,62 @@ class SqlFindIterator:
     SQL find iterator
     """
 
-    def __init__(self, cursor, table_structure: Dict = None):
-        self._cursor = cursor
+    def __init__(
+        self,
+        cursorOrSql: Any,
+        table_structure: Dict = None,
+        cursor_execute: Callable = None,
+        cursor_values: Union[List, Dict] = None
+    ):
+        self._type = "sql" if isinstance(cursorOrSql, str) else "cursor"
+        self._cursor = cursorOrSql if self._type == "cursor" else None
+        self._sql: str = cursorOrSql if self._type == "sql" else None
+        self._cursor_execute = cursor_execute
+        self._cursor_values = cursor_values
         self._results = None
         self._idx = 0
         self._table_structure = table_structure
+        self._defered_sort = None
+        self._defered_skip = None
+        self._defered_limit = None
+
+    def _is_json_field(self, field: str) -> bool:
+        return self._table_structure[field].lower() in [
+            "json",
+            "jsonb",
+            "json_array",
+            "json_object",
+            "json_array_agg",
+            "json_object_agg",
+        ]
+
+    def _load_cursor(self):
+        if self._type == "sql":
+            if self._defered_skip:
+                self._sql += f" OFFSET {self._defered_skip}"
+            if self._defered_limit:
+                self._sql += f" LIMIT {self._defered_limit}"
+            self._cursor = self._cursor_execute(self._sql, self._cursor_values)
+        self._results = self._cursor.fetchall()
+        if self._defered_sort:
+            self._sort(self._defered_sort[0], self._defered_sort[1])
+        self._idx = 0
+
+        # TODO: Remove this print
+        print('\n\nSqlFindIterator | _load_cursor() |' +
+              f'\nTable Structure: {self._table_structure}' +
+              f'\nSQL: {self._sql}'
+              f'\nResults: {self._results}')
 
     def __iter__(self):
-        self._results = self._cursor.fetchall()
-        self._idx = 0
+        if self._type == "cursor":
+            self._results = self._cursor.fetchall()
+            self._idx = 0
         return self
 
     def __next__(self):
+        if self._type == "sql" and self._results is None:
+            self._load_cursor()
         if self._results and self._idx < len(self._results):
             res = self._results[self._idx]
             self._idx += 1
@@ -424,7 +485,7 @@ class SqlFindIterator:
             row = dict(res)
             for key, value in row.items():
                 if key in self._table_structure:
-                    if self._table_structure[key] == "json":
+                    if self._is_json_field(key):
                         if isinstance(value, str):
                             row[key] = json.loads(
                                 value) if value is not None else []
@@ -435,26 +496,46 @@ class SqlFindIterator:
             return fix_item_for_dump(row)
         raise StopIteration
 
+    def _sort(self, key, direction):
+        if self._results:
+            self._results.sort(key=lambda x: x.get(
+                key), reverse=(direction != "asc"))
+        return self
+
     def sort(self, key, direction):
         # Sorting should ideally happen in the SQL query.
         # If we are here, we might need to sort in memory or this method
         # should have been called before executing the query.
         # For compatibility with the chainable API, we might just pass for now
         # or implement in-memory sort if results are already fetched.
+        if self._type == "sql" and self._cursor is None:
+            self._defered_sort = (key, direction)
+            return self
+
         if self._results:
             self._results.sort(key=lambda x: x.get(
                 key), reverse=(direction != "asc"))
         return self
 
-    def skip(self, skip):
-        # In-memory skip if query already executed
+    def skip(self, skip: int):
+        # If the query has not been executed, defer the skip
+        if self._type == "sql" and self._cursor is None:
+            self._defered_skip = skip
+            return self
+
+        # If the query has been executed, skip in memory
         if self._results:
             self._results = self._results[skip:]
             self._idx = 0
         return self
 
-    def limit(self, limit):
-        # In-memory limit
+    def limit(self, limit: int):
+        # If the query has not been executed, defer the limit
+        if self._type == "sql" and self._cursor is None:
+            self._defered_limit = limit
+            return self
+
+        # If the query has been executed, limit in memory
         if self._results:
             self._results = self._results[:limit]
         return self
@@ -484,6 +565,22 @@ class SqlTable(SqlUtilities):
         self._table_structure = table_structure
         self.IteratorClass = IteratorClass
         self.get_db_config_data()
+
+        # The $pull operation in update_one can be implemented by fetching the
+        # row, filtering the array in Python, and then updating the entire
+        # column. By the way this is not atomic and can lead to race conditions
+        # where concurrent updates overwrite each other.
+        # "self.atomic_pull = True" set to use database-native JSON functions
+        # like jsonb_set or - in PostgreSQL, and JSON_REMOVE in MySQL.
+        self.atomic_pull = True
+
+        # When calling `self.run_query()` the SqlFindIterator fetches all
+        # results into memory using cursor.fetchall(). For large tables, this
+        # is highly inefficient and can lead to memory exhaustion.
+        # "self.iterator_set_skip_limit = True" set the use of server-side
+        # pagination (LIMIT/OFFSET) in the SQL query instead of in-memory
+        # slicing in the iterator.
+        self.iterator_set_skip_limit = True
 
     def fix_value_types(self, columns: List, values: List) -> List:
         """
@@ -566,6 +663,19 @@ class SqlTable(SqlUtilities):
         query_params = query_params or {}
         where_clause, columns, values = self._build_where_clause(query_params)
         fields = self.get_fields(projection)
+
+        if self.iterator_set_skip_limit:
+            sql = self.build_select_sql(
+                table_name=self._table_name,
+                fields=fields,
+                where=where_clause,
+                values=values,
+            )
+            return self.IteratorClass(
+                sql, self._table_structure,
+                cursor_execute=self.cursor_execute,
+                cursor_values=values)
+
         cursor = self.run_query(
             table_name=self._table_name,
             fields=fields,
@@ -637,21 +747,65 @@ class SqlTable(SqlUtilities):
         """
         result = None
         if operation == "add":
+
             if self.db_engine == "POSTGRES":
+
                 result = f"{self._quote_identifier(col_name)} = " + \
                     f"{self._quote_identifier(col_name)} || %s::jsonb"
+
             elif self.db_engine == "MYSQL":
+
                 result = f"{self._quote_identifier(col_name)} = " + \
                     "JSON_ARRAY_APPEND(" + \
                     f"{self._quote_identifier(col_name)}, '$', %s)"
 
         elif operation == "remove":
+
             if self.db_engine == "POSTGRES":
+
+                where_contitions = " AND ".join([
+                    F"(elem->>'{key}') <> %s"
+                    for key in value.keys()
+                ])
                 result = f"{self._quote_identifier(col_name)} = " + \
-                    f"{self._quote_identifier(col_name)} - %s::jsonb"
+                    f"""COALESCE(
+    (
+        SELECT jsonb_agg(elem)
+        FROM jsonb_array_elements({self._quote_identifier(col_name)}) AS elem
+        WHERE {where_contitions}
+    ),
+    '[]'::jsonb  -- If all elements are filtered out, return an empty array
+)
+"""
             elif self.db_engine == "MYSQL":
+
+                row_path_col_names = ",".join([
+                    f"REPLACE(row_path_{key}, '$', '$.') as row_path_{key}"
+                    for key in value.keys()
+                ])
+                column_and_values = ",".join([
+                    f"row_val_{key} JSON PATH '$', " +
+                    f"row_path_{key} FOR ORDINALITY"
+                    for key in value.keys()
+                ])
+                where_contitions = " AND ".join([
+                    f"row_val_{key} = CAST('" + "{" +
+                    '"{key}": %s' + "}' AS JSON)"
+                    for key in value.keys()
+                ])
                 result = f"{self._quote_identifier(col_name)} = " + \
-                    f"JSON_REMOVE({self._quote_identifier(col_name)}, '$', %s)"
+                    f"""JSON_REMOVE({self._quote_identifier(col_name)},
+    (
+        SELECT JSON_UNQUOTE({row_path_col_names})
+        FROM JSON_TABLE(
+            {col_name}->'$.',
+            '$[*]' COLUMNS ({column_and_values})
+        ) AS jt
+        WHERE {where_contitions}
+        LIMIT 1
+    )
+)
+"""
         return result
 
     def update_one(self, query_params: Dict, update_data: Dict):
@@ -696,44 +850,60 @@ class SqlTable(SqlUtilities):
 
                 elif k == "$pull":
                     # Remove an element by its id from the array column
-
+                    #
                     # For example:
+                    #
                     # k = "$pull"
-                    # v = {'array_name': {'id_col_name': 'id_to_be_removed'}}
+                    # v = {'array_name': {
+                    #        'id_col_name_1': 'id_to_be_removed_1',
+                    #                           .
+                    #                           .
+                    #        'id_col_name_N': 'id_to_be_removed_N'}}
+                    #
+                    if self.atomic_pull:
 
-                    # First retrieve the original content
-                    fields = ", ".join([self._quote_identifier(k2)
-                                       for k2 in v.keys()])
-                    cursor = self.run_query(
-                        table_name=self._table_name,
-                        fields=fields,
-                        where=where,
-                        values=where_values,
-                    )
-                    iterator = self.IteratorClass(
-                        cursor, self._table_structure)
-                    _ = DEBUG and log_debug(
-                        f"SqlTable.update_one: {iterator}")
-                    array_column_values = list(iterator)[0]
+                        for k2, v2 in v.items():
+                            # E.g.
+                            # k2 = 'array_name'
+                            # v2 = {'id_col_name_1': 'id_to_be_removed_1', ...}
+                            set_clauses.append(
+                                self.array_fields_management(k2, "remove", v2))
+                            for val in v2.values():
+                                set_values.append(self.array_fields_value(val))
 
-                    for k2, v2 in v.items():
-                        # Remove the element(s) by its id
-                        filtered_array_elements = [
-                            item for item in array_column_values[k2]
-                            if item.get(list(v2.keys())[0]) !=
-                            list(v2.values())[0]
-                        ]
-                        if not filtered_array_elements:
-                            filtered_array_elements = []
+                    else:
+                        # Non-atomic pull operation...
 
-                        # Finally add the array column update
-                        set_clauses.append(
-                            f"{self._quote_identifier(k2)} = %s")
-                        set_values.append(self._prepare_value_for_sql(
-                            filtered_array_elements))
-                        # set_clauses.append(
-                        #     self.array_fields_management(k2, "remove", v2))
-                        # set_values.append(self.array_fields_value(v2))
+                        # First retrieve the original content
+                        fields = ", ".join([self._quote_identifier(k2)
+                                            for k2 in v.keys()])
+                        cursor = self.run_query(
+                            table_name=self._table_name,
+                            fields=fields,
+                            where=where,
+                            values=where_values,
+                        )
+                        iterator = self.IteratorClass(
+                            cursor, self._table_structure)
+                        _ = DEBUG and log_debug(
+                            f"SqlTable.update_one: {iterator}")
+                        array_column_values = list(iterator)[0]
+
+                        for k2, v2 in v.items():
+                            # Remove the element(s) by its id
+                            filtered_array_elements = [
+                                item for item in array_column_values[k2]
+                                if item.get(list(v2.keys())[0]) !=
+                                list(v2.values())[0]
+                            ]
+                            if not filtered_array_elements:
+                                filtered_array_elements = []
+
+                            # Finally add the array column update
+                            set_clauses.append(
+                                f"{self._quote_identifier(k2)} = %s")
+                            set_values.append(self._prepare_value_for_sql(
+                                filtered_array_elements))
 
         if not set_clauses:
             log_error("SqlTable.update_one error: No SET clauses")
@@ -746,8 +916,10 @@ class SqlTable(SqlUtilities):
         values = set_values + where_values
 
         cursor = self.get_cursor()
-        if DEBUG:
-            log_debug(f"SqlTable.update_one: {sql} | values: {values}")
+
+        # TODO: restore the DEBUG CONDITION
+        # if DEBUG:
+        log_debug(f"SqlTable.update_one: {sql} | values: {values}")
 
         try:
             cursor.execute(sql, values)

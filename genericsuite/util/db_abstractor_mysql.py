@@ -155,10 +155,19 @@ class MysqlService(SqlService, MysqlUtilities):
             _ = DEBUG and log_debug(
                 "MysqlService table_structure"
                 f" | result: {result}")
-            return result
         except Exception as e:
             log_error(f"MysqlService table_structure error: {e}")
             return {}
+
+        try:
+            table_structure = {
+                column["column_name"]: column["data_type"]
+                for column in result
+            }
+            return table_structure
+        except Exception as e:
+            log_error(f"SqlService table_structure.map error: {e}")
+            raise e
 
 
 class MysqlServiceBuilder(SqlServiceBuilder):

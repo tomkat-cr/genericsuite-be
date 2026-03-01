@@ -134,9 +134,11 @@ class Config:
             "app_db_name": os.environ["APP_DB_NAME"],
             "dynamdb_prefix": os.environ.get("DYNAMDB_PREFIX", ""),
         }
-        # DB_ENGINE = 'POSTGRESQL'
         # DB_ENGINE = 'MONGODB'
         # DB_ENGINE = 'DYNAMODB'
+        # DB_ENGINE = 'POSTGRESQL'
+        # DB_ENGINE = 'MYSQL'
+        # DB_ENGINE = 'SUPABASE'
         self.DB_ENGINE = os.environ["APP_DB_ENGINE"]
 
         # App general configuration

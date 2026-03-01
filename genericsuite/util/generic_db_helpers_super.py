@@ -1,6 +1,8 @@
 """
 Generic Database Helper super class
 """
+import os
+from datetime import datetime
 from uuid import uuid4
 
 from bson.json_util import ObjectId
@@ -547,3 +549,102 @@ class GenericDbHelperSuper:
             parent_keys["_id"] = ObjectId(parent_keys["id"])
             del parent_keys["id"]
         return parent_keys
+
+    def get_table_structure(self) -> dict:
+        structure = {}
+        mandatory_fields = self.cnf_db.get('mandatory_fields', [])
+        skip_types = ["label", "h1", "h2", "h3",
+                      "h4", "h5", "h6", "hr"]
+        partition_key = None
+        sort_key = None
+        for field in self.cnf_db.get('fieldElements', []):
+            field_type = field.get("type", "")
+            if field_type in skip_types:
+                continue
+
+            field_name = field.get("name", "")
+
+            if field_name.endswith("_repeat") \
+               and field_name.replace("_repeat", "") in \
+               self.cnf_db.get("passwords", []):
+                continue
+
+            structure[field_name] = field
+
+            structure[field_name]['required'] = field.get(
+                "required", False) is True
+            if field_name in mandatory_fields:
+                structure[field_name]['required'] = True
+
+            if field_type == "_id":
+                if not partition_key:
+                    if field_name == "id":
+                        partition_key = "_id"
+                    else:
+                        partition_key = field_name
+                    structure[field_name]['partition_key'] = True
+                elif not sort_key:
+                    sort_key = field_name
+                    structure[field_name]['sort_key'] = True
+
+            def_val = field.get("default_value")
+            if def_val is not None or \
+               (isinstance(def_val, int) and def_val == 0) or \
+               (isinstance(def_val, float) and def_val == 0.0):
+                structure[field_name]['default_value'] = \
+                    self.quote_value(
+                        field_type, def_val)
+
+        return structure
+
+    def quote_value(self, field_type: str, field_value: str) -> str:
+        db_engine = os.environ["APP_DB_ENGINE"]
+
+        if str(field_value) == "current_timestamp":
+            return datetime.now().timestamp()
+
+        if field_type in [
+            "array",
+        ]:
+            if db_engine == "postgres":
+                return f"'{field_value}'"
+            else:
+                return f"(JSON_ARRAY('{field_value}'))"
+
+        if field_type in [
+            "text",
+            "textarea",
+        ]:
+            if db_engine == "postgres":
+                return f"'{field_value}'"
+            else:
+                return f"'{field_value}'"
+
+        if field_type in [
+            "email",
+            "_id",
+            "select",
+            "select_table",
+            "select_component",
+            "suggestion_dropdown",
+            "component",
+        ]:
+            if db_engine == "postgres":
+                return f"'{field_value}'"
+            else:
+                return f'"{field_value}"'
+
+        if field_type in [
+            "number",
+            "date",
+            "datetime",
+            "datetime-local",
+        ]:
+            return float(field_value)
+
+        if field_type in [
+            "integer",
+        ]:
+            return int(field_value)
+
+        return None

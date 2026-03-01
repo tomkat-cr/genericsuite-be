@@ -224,10 +224,11 @@ def super_admin_create(
             "birthday": -131760000,
             "gender": 'm',
         }
+        structure = dbo.get_table_structure()
         for field in dbo.get_mandatory_fields(record=request_body,
                                               is_create=True):
             if field not in request_body:
-                request_body[field] = ''
+                request_body[field] = structure[field].get('default_value', '')
         result = dbo.create_row(request_body)
 
     return return_resultset_jsonified_or_exception(result)
