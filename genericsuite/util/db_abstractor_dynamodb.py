@@ -467,7 +467,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                     close_group = ")" if group_char == ")" else ""
             # Populates the condition values (to be used as the
             # ExpressionAttributeValues parameter)
-            if value:
+            if value is not None:
+                # Accepts values like zero or empty string (0 or "")...
                 if not isinstance(value, dict):
                     value = {key: value}
                 for key_name, key_value in value.items():
@@ -1016,9 +1017,36 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             # Remove an existing element from an array in the item
             array_field, array_value = next(
                 iter(update_set_original["$pull"].items()))
+
             if array_field in result["Item"]:
-                result["Item"][array_field].remove(array_value)
-            update_set = result["Item"]
+                # Get the array item filtering by the array_key_field
+                filter_key = list(array_value.keys())[0]
+                filter_value = array_value[filter_key]
+                array_item = next(
+                    iter(
+                        filter(
+                            lambda x: x[filter_key] == filter_value,
+                            result["Item"][array_field]
+                        )
+                    )
+                )
+
+                _ = DEBUG and log_debug(
+                    "DynamoDB | update_one() | $pull "
+                    + f" | array_field: {array_field}"
+                    + f" | array_value: {array_value}"
+                    + f" | filter_key: {filter_key}"
+                    + f" | filter_value: {filter_value}"
+                    + f" | array_item: {array_item}")
+
+                result["Item"][array_field].remove(array_item)
+                update_set = result["Item"]
+            else:
+                log_error(
+                    "DynamoDB | update_one() | $pull | " +
+                    f"Array field ({array_field}) not found"
+                )
+                return False
         else:
             # Replace what is was in the item
             update_set = update_set_original
