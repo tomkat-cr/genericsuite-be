@@ -105,69 +105,95 @@ class MysqlService(SqlService, MysqlUtilities):
         """
         return MysqlFindIterator
 
-    def list_collection_names(self) -> list:
+    def set_tables_and_structures(self):
         """
-        Returns a list of MySQL table names
-        """
-        try:
-            cursor = self.get_cursor()
-            cursor.execute(
-                "SELECT TABLE_NAME as table_name"
-                f" FROM {self.info_schema_table_names()['tables']}"
-                f" WHERE TABLE_SCHEMA = '{self.db_name}';"
-            )
-            table_names = cursor.fetchall()
-            cursor.close()
-            _ = DEBUG and log_debug(
-                "MysqlService list_collection_names"
-                f" | table_names: {table_names}")
-        except Exception as e:
-            log_error(f"MysqlService list_collection_names error: {e}")
-            raise e
-        try:
-            table_names = map(
-                lambda table_name: table_name["table_name"], table_names)
-            _ = DEBUG and log_debug(
-                "MysqlService list_collection_names.map"
-                f" | FINAL table_names: {table_names}")
-            return table_names
-        except Exception as e:
-            log_error(f"MysqlService list_collection_names.map error: {e}")
-            raise e
-
-    def table_structure(self, table_name: str) -> dict:
-        """
-        Returns a dictionary with the Postgres table structure
+        Sets the tables and structures in the database.
         """
         try:
             cursor = self.get_cursor()
-            sql = "SELECT COLUMN_NAME as column_name," \
+            sql = "SELECT TABLE_NAME as table_name," \
+                + " COLUMN_NAME as column_name," \
                 + " DATA_TYPE as data_type" \
                 + f" FROM {self.info_schema_table_names()['columns']}" \
-                + f" WHERE TABLE_SCHEMA = '{self.db_name}' AND" \
-                + f" TABLE_NAME = '{table_name}'"
+                + f" WHERE TABLE_SCHEMA = '{self.db_name}'"
             _ = DEBUG and log_debug(
-                "MysqlService table_structure"
+                "MysqlService set_tables_and_structures"
                 f" | sql: {sql}")
             cursor.execute(sql)
-            result = cursor.fetchall()
+            resultset = cursor.fetchall()
             cursor.close()
             _ = DEBUG and log_debug(
-                "MysqlService table_structure"
-                f" | result: {result}")
+                "MysqlService set_tables_and_structures"
+                f" | resultset: {resultset}")
         except Exception as e:
-            log_error(f"MysqlService table_structure error: {e}")
-            return {}
-
-        try:
-            table_structure = {
-                column["column_name"]: column["data_type"]
-                for column in result
-            }
-            return table_structure
-        except Exception as e:
-            log_error(f"SqlService table_structure.map error: {e}")
+            log_error(
+                f"MySqlService.set_tables_and_structures error: {e}")
             raise e
+        self.assign_tables_and_structures(resultset)
+
+    # def list_collection_names(self) -> list:
+    #     """
+    #     Returns a list of MySQL table names
+    #     """
+    #     try:
+    #         cursor = self.get_cursor()
+    #         cursor.execute(
+    #             "SELECT TABLE_NAME as table_name"
+    #             f" FROM {self.info_schema_table_names()['tables']}"
+    #             f" WHERE TABLE_SCHEMA = '{self.db_name}';"
+    #         )
+    #         table_names = cursor.fetchall()
+    #         cursor.close()
+    #         _ = DEBUG and log_debug(
+    #             "MysqlService list_collection_names"
+    #             f" | table_names: {table_names}")
+    #     except Exception as e:
+    #         log_error(f"MysqlService list_collection_names error: {e}")
+    #         raise e
+    #     try:
+    #         table_names = map(
+    #             lambda table_name: table_name["table_name"], table_names)
+    #         _ = DEBUG and log_debug(
+    #             "MysqlService list_collection_names.map"
+    #             f" | FINAL table_names: {table_names}")
+    #         return table_names
+    #     except Exception as e:
+    #         log_error(f"MysqlService list_collection_names.map error: {e}")
+    #         raise e
+
+    # def table_structure(self, table_name: str) -> dict:
+    #     """
+    #     Returns a dictionary with the MySQL table structure
+    #     """
+    #     try:
+    #         cursor = self.get_cursor()
+    #         sql = "SELECT COLUMN_NAME as column_name," \
+    #             + " DATA_TYPE as data_type" \
+    #             + f" FROM {self.info_schema_table_names()['columns']}" \
+    #             + f" WHERE TABLE_SCHEMA = '{self.db_name}' AND" \
+    #             + f" TABLE_NAME = '{table_name}'"
+    #         _ = DEBUG and log_debug(
+    #             "MysqlService table_structure"
+    #             f" | sql: {sql}")
+    #         cursor.execute(sql)
+    #         result = cursor.fetchall()
+    #         cursor.close()
+    #         _ = DEBUG and log_debug(
+    #             "MysqlService table_structure"
+    #             f" | result: {result}")
+    #     except Exception as e:
+    #         log_error(f"MysqlService table_structure error: {e}")
+    #         return {}
+
+    #     try:
+    #         table_structure = {
+    #             column["column_name"]: column["data_type"]
+    #             for column in result
+    #         }
+    #         return table_structure
+    #     except Exception as e:
+    #         log_error(f"SqlService table_structure.map error: {e}")
+    #         raise e
 
 
 class MysqlServiceBuilder(SqlServiceBuilder):

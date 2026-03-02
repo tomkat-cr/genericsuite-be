@@ -6,6 +6,8 @@ from itertools import islice
 import json
 import re
 
+import traceback
+
 from bson.json_util import dumps, ObjectId
 
 from genericsuite.util.app_logger import log_debug
@@ -161,8 +163,11 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             _ = DEBUG and \
                 log_debug(f"FETCH_LIST 020 | resultset: {resultset}")
         except BaseException as err:
+            call_stack = traceback.format_exc()
+            error_message = f"\nError Message: {err}\nCall Stack:" + \
+                f"\n{call_stack}" if DEBUG else str(err)
             resultset['error_message'] = get_standard_base_exception_msg(
-                err, 'FUL1'
+                error_message, 'FUL1'
             )
             resultset['error'] = True
         resultset = put_total_pages_in_resultset(

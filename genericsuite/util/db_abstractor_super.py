@@ -67,6 +67,8 @@ class DbAbstract:
         self.db_other_params = None
         self._db = None
         self.TableClass = self.get_table_class()
+        self.structures = None
+        self.tables = None
 
         self.get_db_config_data()
         self.get_db_connection()
@@ -120,6 +122,34 @@ class DbAbstract:
         """
         self.not_implemented("test_connection")
 
+    def assign_tables_and_structures(self, resultset: list):
+        """
+        Assigns the tables and structures class properties from the resultset.
+
+        Args:
+            resultset (list): The resultset from the database. It must
+                contain the following fields:
+                    - table_name (str): The name of the table.
+                    - column_name (str): The name of the column.
+                    - data_type (str): The data type of the column.
+        """
+        self.structures = {}
+        self.tables = []
+        table_name = ""
+        for table_item in resultset:
+            if table_item["table_name"] != table_name:
+                self.structures[table_item["table_name"]] = {}
+                table_name = table_item["table_name"]
+                self.tables.append(table_name)
+            self.structures[table_name][
+                table_item["column_name"]] = table_item["data_type"]
+
+    def set_tables_and_structures(self):
+        """
+        Sets the tables and structures in the database.
+        """
+        self.not_implemented("set_tables_and_structures")
+
     def list_collections(self, collection_name: str = None) -> list:
         """
         List the collections in the database.
@@ -128,6 +158,28 @@ class DbAbstract:
             list: The list of collections.
         """
         self.not_implemented("list_collections")
+
+    def list_collection_names(self) -> list:
+        """
+        Returns the list of collection names in the database.
+
+        Returns:
+            list: The list of collection names.
+        """
+        if self.tables is None:
+            self.set_tables_and_structures()
+        return self.tables
+
+    def table_structure(self, table_name: str) -> dict:
+        """
+        Returns a dictionary with the table structure.
+        In Supabase, it must be done calling a stored procedure because
+        it's not possible to access the "information_schema" schema.
+        For GenericSuite, it's "get_columns".
+        """
+        if self.structures is None:
+            self.set_tables_and_structures()
+        return self.structures[table_name]
 
     def collection_stats(self, collection_name: str = None):
         """

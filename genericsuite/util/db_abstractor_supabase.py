@@ -2,7 +2,7 @@
 DbAbstractorSupabase: Database abstraction layer for Supabase
 """
 
-from typing import Dict, List, Tuple, Union, Any
+from typing import Dict, List, Tuple, Union, Any, Callable
 import re
 
 # from genericsuite.config.config import Config
@@ -117,12 +117,47 @@ class SupabaseUtilities(SqlUtilities):
         offset: int = None,
     ):
         """
-        Execute a supabase query and return the cursor object.
+        Execute a raw SQL query and return the cursor object.
         """
+        sql_dict = {
+            "table_name": table_name,
+            "fields": fields,
+            "where": where,
+            "values": values,
+            "order_by": order_by,
+            "limit": limit,
+            "offset": offset,
+        }
+
+        _ = DEBUG and log_debug(
+            "Supabase | SupabaseUtilities.run_query"
+            + f"\n | sql: {sql_dict}"
+            + f"\n | values: {values}")
+        return self.cursor_execute(sql_dict, values)
+
+    def cursor_execute(
+        self,
+        sql: dict,
+        values: Union[List, Dict] = None,
+    ):
+        """
+        Execute a raw SQL query statement and return the cursor object.
+        """
+        _ = DEBUG and log_debug(
+            "Supabase | SupabaseUtilities.cursor_execute"
+            + f"\n | sql: {sql}")
+
+        table_name = sql.get("table_name")
+        fields = sql.get("fields")
+        where = sql.get("where")
+        order_by = sql.get("order_by")
+        limit = sql.get("limit")
+        offset = sql.get("offset")
+
         supabase = self.get_cursor()
         if DEBUG:
             log_debug(
-                f"SupabaseUtilities.run_query:"
+                f"SupabaseUtilities.cursor_execute:"
                 f"\n| supabase.client: {supabase}"
                 f"\n| table_name: {table_name}"
                 f"\n| fields: {fields}"
@@ -149,7 +184,8 @@ class SupabaseUtilities(SqlUtilities):
                 if isinstance(fields, list):
                     fields = ",".join(fields)
                     _ = DEBUG and log_debug(
-                        f"SupabaseUtilities.run_query | List fields: {fields}")
+                        "SupabaseUtilities.cursor_execute"
+                        f" | List fields: {fields}")
                     cursor = cursor.select(fields)
                 elif fields.startswith("COUNT"):
                     match = re.search(r"COUNT\((.*?)\)", fields)
@@ -157,50 +193,50 @@ class SupabaseUtilities(SqlUtilities):
                     cursor = cursor.select(count_argument, count="exact")
                     is_count = True
                     _ = DEBUG and log_debug(
-                        "SupabaseUtilities.run_query"
+                        "SupabaseUtilities.cursor_execute"
                         f" | COUNT fields: {fields}"
                         f" | count_argument: {count_argument}")
                 else:
                     _ = DEBUG and log_debug(
-                        f"SupabaseUtilities.run_query | fields: {fields}")
+                        f"SupabaseUtilities.cursor_execute | fields: {fields}")
                     cursor = cursor.select(fields)
 
             if where:
                 _ = DEBUG and log_debug(
-                    f"SupabaseUtilities.run_query | where: {where}")
+                    f"SupabaseUtilities.cursor_execute | where: {where}")
                 cursor = self.supabase_where(cursor, where, values)
 
             if order_by:
                 _ = DEBUG and log_debug(
-                    f"SupabaseUtilities.run_query | order_by: {order_by}")
+                    f"SupabaseUtilities.cursor_execute | order_by: {order_by}")
                 cursor = cursor.order_by(order_by)
 
             if limit:
                 _ = DEBUG and log_debug(
-                    f"SupabaseUtilities.run_query | limit: {limit}")
+                    f"SupabaseUtilities.cursor_execute | limit: {limit}")
                 cursor = cursor.limit(limit)
 
             if offset:
                 _ = DEBUG and log_debug(
-                    f"SupabaseUtilities.run_query | offset: {offset}")
+                    f"SupabaseUtilities.cursor_execute | offset: {offset}")
                 cursor = cursor.offset(offset)
 
             if DEBUG:
-                log_debug(f"SupabaseUtilities.run_query.cursor: {cursor}")
+                log_debug(f"SupabaseUtilities.cursor_execute.cursor: {cursor}")
 
             response = cursor.execute()
             if is_count:
                 response.data = response.count
 
         except Exception as e:
-            log_error(f"ERROR SupabaseUtilities.run_query: {e}")
+            log_error(f"ERROR SupabaseUtilities.cursor_execute: {e}")
             raise e
 
         if DEBUG:
             log_debug(
-                f"SupabaseUtilities.run_query.data: {response}")
+                f"SupabaseUtilities.cursor_execute.data: {response}")
         if not response:
-            raise Exception("SupabaseUtilities.run_query: No response")
+            raise Exception("SupabaseUtilities.cursor_execute: No response")
         return response
 
     def run_rpc(
@@ -213,12 +249,6 @@ class SupabaseUtilities(SqlUtilities):
         """
         supabase = self.get_cursor()
 
-        # func_to_call = rpc_name
-        # if params:
-        #     func_to_call += f" {', '.join(params)}"
-        # _ = DEBUG and log_debug(
-        #     f"SupabaseUtilities.run_rpc.func_to_call: {func_to_call}")
-        # response = supabase.rpc(func_to_call).execute()
         _ = DEBUG and log_debug(
             f"SupabaseUtilities.run_rpc | rpc_name: {rpc_name}"
             f" | params: {params}")
@@ -239,9 +269,54 @@ class SupabaseFindIterator(SqlFindIterator):
     Supabase find iterator
     """
 
-    def __iter__(self):
-        self._results = self._cursor.data
+    def __init__(
+        self,
+        cursorOrSql: Any,
+        table_structure: Dict = None,
+        cursor_execute: Callable = None,
+        cursor_values: Union[List, Dict] = None
+    ):
+        self._type = "sql" if isinstance(
+            cursorOrSql, (dict, str)) else "cursor"
+        self._cursor = cursorOrSql if self._type == "cursor" else None
+        self._sql_dict = cursorOrSql if self._type == "sql" else None
+        self._cursor_execute = cursor_execute
+        self._cursor_values = cursor_values
+        self._results = None
         self._idx = 0
+        self._table_structure = table_structure
+        self._defered_sort = None
+        self._defered_skip = None
+        self._defered_limit = None
+
+    def _load_cursor(self):
+        if self._type == "sql":
+            self._cursor = self._cursor_execute(
+                self._sql_dict, self._cursor_values)
+        self._results = self._cursor.data
+        if self._defered_sort:
+            self._sort(self._defered_sort[0], self._defered_sort[1])
+        self._idx = 0
+
+        _ = DEBUG and log_debug(
+            '\n\nSupabaseFindIterator | _load_cursor() |' +
+            f'\nSQL: {self._sql_dict}' +
+            f'\nValues: {self._cursor_values}' +
+            f'\nTable Structure: {self._table_structure}' +
+            f'\nCursor: {self._cursor}' +
+            f'\nResults: {self._results}')
+
+    def __iter__(self):
+        if self._type == "cursor":
+
+            _ = DEBUG and log_debug(
+                '\n\nSupabaseFindIterator | __iter__() |' +
+                f'\nSQL: {self._sql_dict}' +
+                f'\nTable Structure: {self._table_structure}' +
+                f'\nCursor: {self._cursor}')
+
+            self._results = self._cursor.data
+            self._idx = 0
         return self
 
 
@@ -262,6 +337,39 @@ class SupabaseTable(SqlTable, SupabaseUtilities):
         conditions, columns, values = self._get_conditions_and_values(
             query_params)
         return conditions, columns, values
+
+    def find(self, query_params: Dict = None, projection: Dict = None):
+        """
+        Execute SELECT query
+        """
+        query_params = query_params or {}
+        where_clause, columns, values = self._build_where_clause(query_params)
+        fields = self.get_fields(projection)
+
+        if self.iterator_set_skip_limit:
+            sql_dict = {
+                "table_name": self._table_name,
+                "fields": fields,
+                "where": where_clause,
+            }
+            _ = DEBUG and log_debug(
+                f"SupabaseUtilities.find | sql_dict: {sql_dict}")
+            return self.IteratorClass(
+                sql_dict,
+                self._table_structure,
+                cursor_execute=self.cursor_execute,
+                cursor_values=values
+            )
+
+        cursor = self.run_query(
+            table_name=self._table_name,
+            fields=fields,
+            where=where_clause,
+            values=values,
+        )
+        _ = DEBUG and log_debug(
+            f"SupabaseUtilities.find | cursor: {cursor}")
+        return self.IteratorClass(cursor, self._table_structure)
 
     def insert_one(self, item: Dict):
         """
@@ -318,9 +426,100 @@ class SupabaseTable(SqlTable, SupabaseUtilities):
             log_error("SupabaseTable.update_one error: No WHERE clause")
             return self
 
-        # Handle $set
-        if "$set" in update_data:
-            update_data = update_data["$set"].copy()
+        operators = ["$set", "$inc", "$push", "$addToSet", "$pull"]
+        has_operators = any(op in update_data for op in operators)
+
+        final_update_data = {}
+
+        if not has_operators:
+            final_update_data = update_data.copy()
+        else:
+            # Handle each operator
+            if "$set" in update_data:
+                final_update_data.update(update_data["$set"])
+
+            # Operators that require the current state
+            state_requiring_operators = ["$inc", "$push", "$addToSet", "$pull"]
+            needs_current_state = any(
+                op in update_data for op in state_requiring_operators)
+
+            if needs_current_state:
+                # Fetch existing record
+                # We only need the fields that are being modified by these
+                # operators
+                fields_to_fetch = []
+                for op in state_requiring_operators:
+                    if op in update_data:
+                        fields_to_fetch.extend(update_data[op].keys())
+
+                # Deduplicate
+                fields_to_fetch = list(set(fields_to_fetch))
+
+                existing_record = self.find_one(
+                    query_params,
+                    projection={f: 1 for f in fields_to_fetch}
+                )
+
+                if not existing_record:
+                    # If record doesn't exist, we might want to log or
+                    # handle it.
+                    # MongoDB update_one doesn't insert unless upsert=True
+                    # is passed (which isn't here)
+                    log_error(
+                        "SupabaseTable.update_one: " +
+                        "Record not found for state-requiring operators")
+                    return self
+
+                if "$inc" in update_data:
+                    for k, v in update_data["$inc"].items():
+                        current_val = existing_record.get(k, 0) or 0
+                        final_update_data[k] = current_val + v
+
+                if "$push" in update_data:
+                    for k, v in update_data["$push"].items():
+                        current_array = existing_record.get(k, []) or []
+                        if not isinstance(current_array, list):
+                            current_array = []
+                        current_array.append(v)
+                        final_update_data[k] = current_array
+
+                if "$addToSet" in update_data:
+                    for k, v in update_data["$addToSet"].items():
+                        current_array = existing_record.get(k, []) or []
+                        if not isinstance(current_array, list):
+                            current_array = []
+                        if v not in current_array:
+                            current_array.append(v)
+                        final_update_data[k] = current_array
+
+                if "$pull" in update_data:
+                    for k, v in update_data["$pull"].items():
+                        # v can be a value or a dict (for field-based pull)
+                        current_array = existing_record.get(k, []) or []
+                        if not isinstance(current_array, list):
+                            current_array = []
+
+                        if isinstance(v, dict):
+                            # Field-based pull (match by specific key)
+                            match_key = list(v.keys())[0]
+                            match_val = v[match_key]
+                            final_update_data[k] = [
+                                item for item in current_array
+                                if not (isinstance(item, dict) and
+                                        item.get(match_key) == match_val)
+                                and not (item == v)  # fallback
+                            ]
+                        else:
+                            # Direct value pull
+                            final_update_data[k] = [
+                                item for item in current_array if item != v
+                            ]
+
+            # Collect any other fields that are NOT operators but were passed
+            # directly
+            for k, v in update_data.items():
+                if k not in operators:
+                    final_update_data[k] = v
 
         supabase = self.get_cursor()
 
@@ -329,12 +528,13 @@ class SupabaseTable(SqlTable, SupabaseUtilities):
             f" | query_params: {query_params}"
             f" | where: {where}"
             f" | values: {values}"
-            f" | update_data: {update_data}")
+            f" | update_data: {final_update_data}")
 
         try:
             # Add table name and UPDATE method (which must be called prior
             # to where)
-            supabase = supabase.table(self._table_name).update(update_data)
+            supabase = supabase.table(self._table_name).update(
+                final_update_data)
 
             # Add WHERE clause condition
             supabase = self.supabase_where(supabase, where, values)
@@ -467,43 +667,57 @@ class SupabaseService(SqlService, SupabaseUtilities):
         """
         return SupabaseFindIterator
 
-    def list_collection_names(self) -> list:
+    def set_tables_and_structures(self):
         """
-        Returns a list of table names.
-        In Supabase, it must be done calling a stored procedure because
-        it's not possible to access the "information_schema" schema.
-        For GenericSuite, it's "get_tables".
+        Sets the tables and structures in the database.
         """
-        _ = DEBUG and log_debug(
-            ">> SupabaseService.list_collection_names")
         try:
-            table_names = self.run_rpc("get_tables")
-            return table_names
-
+            resultset = self.run_rpc(
+                "get_columns",
+                # params={"tablename": table_name},
+            )
         except Exception as e:
             log_error(
-                f"SupabaseService.list_collection_names.run_rpc error: {e}")
-            return []
+                f"SupabaseService.table_structure.run_rpc error: {e}")
+            raise e
 
-    def table_structure(self, table_name: str) -> dict:
-        """
-        Returns a dictionary with the table structure.
-        In Supabase, it must be done calling a stored procedure because
-        it's not possible to access the "information_schema" schema.
-        For GenericSuite, it's "get_columns".
-        """
-        _ = DEBUG and log_debug(
-            ">> SupabaseService.table_structure:"
-            f" | table_name: {table_name}")
-        try:
-            return self.run_rpc(
-                "get_columns",
-                params={"tablename": table_name},
-            )
+        self.assign_tables_and_structures(resultset)
 
-        except Exception as e:
-            log_error(f"SupabaseService.table_structure.run_rpc error: {e}")
-            return {}
+    # def list_collection_names(self) -> list:
+    #     """
+    #     Returns a list of table names.
+    #     In Supabase, it must be done calling a stored procedure because
+    #     it's not possible to access the "information_schema" schema.
+    #     For GenericSuite, it's "get_tables".
+    #     """
+    #     _ = DEBUG and log_debug(
+    #         ">> SupabaseService.list_collection_names")
+    #     if self.tables is None:
+    #         self.set_tables_and_structures()
+    #     return self.tables
+
+    #     # try:
+    #     #     table_names = self.run_rpc("get_tables")
+    #     #     return table_names
+
+    #     # except Exception as e:
+    #     #     log_error("SupabaseService" +
+    #     #         f".list_collection_names.run_rpc error: {e}")
+    #     #     return []
+
+    # def table_structure(self, table_name: str) -> dict:
+    #     """
+    #     Returns a dictionary with the table structure.
+    #     In Supabase, it must be done calling a stored procedure because
+    #     it's not possible to access the "information_schema" schema.
+    #     For GenericSuite, it's "get_columns".
+    #     """
+    #     _ = DEBUG and log_debug(
+    #         ">> SupabaseService.table_structure:"
+    #         f" | table_name: {table_name}")
+    #     if self.structures is None:
+    #         self.set_tables_and_structures()
+    #     return self.structures[table_name]
 
 
 class SupabaseServiceBuilder(SqlServiceBuilder):

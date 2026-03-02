@@ -451,6 +451,15 @@ class SqlFindIterator:
             "json_object_agg",
         ]
 
+    def _row_types_convertion(self, row: Dict):
+        for key, value in row.items():
+            if key in self._table_structure:
+                if self._is_json_field(key):
+                    if isinstance(value, str):
+                        row[key] = json.loads(
+                            value) if value is not None else []
+        return row
+
     def _load_cursor(self):
         if self._type == "sql":
             if self._defered_skip:
@@ -463,11 +472,11 @@ class SqlFindIterator:
             self._sort(self._defered_sort[0], self._defered_sort[1])
         self._idx = 0
 
-        # TODO: Remove this print
-        print('\n\nSqlFindIterator | _load_cursor() |' +
-              f'\nTable Structure: {self._table_structure}' +
-              f'\nSQL: {self._sql}'
-              f'\nResults: {self._results}')
+        _ = DEBUG and log_debug(
+            '\n\nSqlFindIterator | _load_cursor() |' +
+            f'\nSQL: {self._sql}' +
+            f'\nTable Structure: {self._table_structure}' +
+            f'\nResults: {self._results}')
 
     def __iter__(self):
         if self._type == "cursor":
@@ -481,16 +490,10 @@ class SqlFindIterator:
         if self._results and self._idx < len(self._results):
             res = self._results[self._idx]
             self._idx += 1
-            # Convert RealDictRow to dict and handle types if needed
+            # Convert RealDictRow to dict
             row = dict(res)
-            for key, value in row.items():
-                if key in self._table_structure:
-                    if self._is_json_field(key):
-                        if isinstance(value, str):
-                            row[key] = json.loads(
-                                value) if value is not None else []
-                        else:
-                            row[key] = value
+            # Handle types if needed
+            row = self._row_types_convertion(row)
             _ = DEBUG and log_debug(
                 f"||| SqlFindIterator | __next__ | res: {row}")
             return fix_item_for_dump(row)
@@ -729,14 +732,23 @@ class SqlTable(SqlUtilities):
             raise e
         return self
 
-    def array_fields_value(self, value: str):
+    def array_fields_value(self, value: Any) -> str:
         """
         Prepare value for array fields
         """
+        result = self._prepare_value_for_sql(value)
+        _ = DEBUG and log_debug(f"SqlTable.array_fields_value: {result}")
+        return result
+
+    def array_fields_value_as_list(self, value: dict) -> list:
+        """
+        Prepare value for array fields
+        """
+        result = [value]
         if self.db_engine == "POSTGRES":
-            result = self._prepare_value_for_sql(value)
+            result = [self._prepare_value_for_sql(value)]
         elif self.db_engine == "MYSQL":
-            result = self._prepare_value_for_sql(value)
+            result = [v for v in value.values()]
         _ = DEBUG and log_debug(f"SqlTable.array_fields_value: {result}")
         return result
 
@@ -754,10 +766,14 @@ class SqlTable(SqlUtilities):
                     f"{self._quote_identifier(col_name)} || %s::jsonb"
 
             elif self.db_engine == "MYSQL":
-
+                column_and_values = ", ".join([
+                    f"'{key}', %s"
+                    for key in value.keys()
+                ])
                 result = f"{self._quote_identifier(col_name)} = " + \
                     "JSON_ARRAY_APPEND(" + \
-                    f"{self._quote_identifier(col_name)}, '$', %s)"
+                    f"{self._quote_identifier(col_name)}, '$', " + \
+                    f"JSON_OBJECT({column_and_values}))"
 
         elif operation == "remove":
 
@@ -778,28 +794,24 @@ class SqlTable(SqlUtilities):
 )
 """
             elif self.db_engine == "MYSQL":
-
-                row_path_col_names = ",".join([
-                    f"REPLACE(row_path_{key}, '$', '$.') as row_path_{key}"
-                    for key in value.keys()
-                ])
                 column_and_values = ",".join([
-                    f"row_val_{key} JSON PATH '$', " +
-                    f"row_path_{key} FOR ORDINALITY"
+                    f"row_{key} VARCHAR(255) PATH '$.{key}'"
                     for key in value.keys()
                 ])
                 where_contitions = " AND ".join([
-                    f"row_val_{key} = CAST('" + "{" +
-                    '"{key}": %s' + "}' AS JSON)"
+                    f"jt.row_{key} = %s"
                     for key in value.keys()
                 ])
                 result = f"{self._quote_identifier(col_name)} = " + \
                     f"""JSON_REMOVE({self._quote_identifier(col_name)},
     (
-        SELECT JSON_UNQUOTE({row_path_col_names})
+        SELECT CONCAT('$[', jt.row_idx - 1, ']')
         FROM JSON_TABLE(
-            {col_name}->'$.',
-            '$[*]' COLUMNS ({column_and_values})
+            {self._quote_identifier(col_name)},
+            '$[*]' COLUMNS (
+                {column_and_values},
+                row_idx FOR ORDINALITY
+            )
         ) AS jt
         WHERE {where_contitions}
         LIMIT 1
@@ -846,7 +858,7 @@ class SqlTable(SqlUtilities):
                     for k2, v2 in v.items():
                         set_clauses.append(
                             self.array_fields_management(k2, "add", v2))
-                        set_values.append(self.array_fields_value(v2))
+                        set_values.extend(self.array_fields_value_as_list(v2))
 
                 elif k == "$pull":
                     # Remove an element by its id from the array column
@@ -917,9 +929,8 @@ class SqlTable(SqlUtilities):
 
         cursor = self.get_cursor()
 
-        # TODO: restore the DEBUG CONDITION
-        # if DEBUG:
-        log_debug(f"SqlTable.update_one: {sql} | values: {values}")
+        _ = DEBUG and log_debug(
+            f"SqlTable.update_one: {sql} | values: {values}")
 
         try:
             cursor.execute(sql, values)
@@ -1065,62 +1076,80 @@ class SqlService(SqlUtilities):
                 table_structure,
                 self.IteratorClass))
 
-    def list_collection_names(self) -> list:
+    def set_tables_and_structures(self):
         """
-        Returns a list of table names
-        """
-        try:
-            cursor = self.run_query(
-                table_name=self.info_schema_table_names()["tables"],
-                fields="table_name",
-                where="table_schema = 'public'"
-            )
-            table_names = cursor.fetchall()
-            cursor.close()
-            _ = DEBUG and log_debug(
-                "SqlService list_collection_names"
-                + f"\n | table_names fetched: {table_names}")
-        except Exception as e:
-            log_error(f"SqlService list_collection_names.run_query error: {e}")
-            raise e
-        try:
-            table_names = map(
-                lambda table_name: table_name["table_name"], table_names)
-            return table_names
-        except Exception as e:
-            log_error(f"SqlService list_collection_names.map error: {e}")
-            raise e
-
-    def table_structure(self, table_name: str) -> dict:
-        """
-        Returns a dictionary with the table structure
+        Sets the tables and structures in the database.
         """
         try:
             cursor = self.run_query(
                 table_name=self.info_schema_table_names()["columns"],
-                fields="column_name, data_type",
-                where=f"table_name = '{table_name}'",
+                fields="table_name, column_name, data_type",
             )
-            table_structure = cursor.fetchall()
+            resultset = cursor.fetchall()
             cursor.close()
-            # _ = DEBUG and log_debug(
-            #     f"SqlService table_structure [1] | Table: {table_name}"
-            #     + f"\n | table_structure fetched: {table_structure}")
         except Exception as e:
-            log_error(f"SqlService table_structure error: {e}")
+            log_error(
+                f"SqlService.set_tables_and_structures error: {e}")
             raise e
-        try:
-            table_structure = {
-                column["column_name"]: column["data_type"]
-                for column in table_structure
-            }
-            # _ = DEBUG and log_debug(
-            #     f"SqlService table_structure [2] | Table: {table_name}"
-            #     + f"\n | table_structure fetched: {table_structure}")
-            return table_structure
-        except Exception as e:
-            log_error(f"SqlService table_structure.map error: {e}")
-            raise e
+        self.assign_tables_and_structures(resultset)
+
+    # def list_collection_names(self) -> list:
+    #     """
+    #     Returns a list of table names
+    #     """
+    #     try:
+    #         cursor = self.run_query(
+    #             table_name=self.info_schema_table_names()["tables"],
+    #             fields="table_name",
+    #             where="table_schema = 'public'"
+    #         )
+    #         table_names = cursor.fetchall()
+    #         cursor.close()
+    #         _ = DEBUG and log_debug(
+    #             "SqlService list_collection_names"
+    #             + f"\n | table_names fetched: {table_names}")
+    #     except Exception as e:
+    #         log_error(
+    #             f"SqlService list_collection_names.run_query error: {e}")
+    #         raise e
+    #     try:
+    #         table_names = map(
+    #             lambda table_name: table_name["table_name"], table_names)
+    #         return table_names
+    #     except Exception as e:
+    #         log_error(f"SqlService list_collection_names.map error: {e}")
+    #         raise e
+
+    # def table_structure(self, table_name: str) -> dict:
+    #     """
+    #     Returns a dictionary with the table structure
+    #     """
+    #     try:
+    #         cursor = self.run_query(
+    #             table_name=self.info_schema_table_names()["columns"],
+    #             fields="column_name, data_type",
+    #             where=f"table_name = '{table_name}'",
+    #         )
+    #         table_structure = cursor.fetchall()
+    #         cursor.close()
+    #         # _ = DEBUG and log_debug(
+    #         #     f"SqlService table_structure [1] | Table: {table_name}"
+    #         #     + f"\n | table_structure fetched: {table_structure}")
+    #     except Exception as e:
+    #         log_error(f"SqlService table_structure error: {e}")
+    #         raise e
+    #     try:
+    #         table_structure = {
+    #             column["column_name"]: column["data_type"]
+    #             for column in table_structure
+    #         }
+    #         # _ = DEBUG and log_debug(
+    #         #     f"SqlService table_structure [2] | Table: {table_name}"
+    #         #     + f"\n | table_structure fetched: {table_structure}")
+    #         return table_structure
+    #     except Exception as e:
+    #         log_error(f"SqlService table_structure.map error: {e}")
+    #         raise e
 
     def __getitem__(self, table_name):
         _ = DEBUG and log_debug(

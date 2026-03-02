@@ -614,13 +614,6 @@ class GenericDbHelperSuper:
         if field_type in [
             "text",
             "textarea",
-        ]:
-            if db_engine == "postgres":
-                return f"'{field_value}'"
-            else:
-                return f"'{field_value}'"
-
-        if field_type in [
             "email",
             "_id",
             "select",
@@ -629,10 +622,7 @@ class GenericDbHelperSuper:
             "suggestion_dropdown",
             "component",
         ]:
-            if db_engine == "postgres":
-                return f"'{field_value}'"
-            else:
-                return f'"{field_value}"'
+            return f"{field_value}"
 
         if field_type in [
             "number",

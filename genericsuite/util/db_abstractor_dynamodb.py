@@ -1293,6 +1293,9 @@ class DynamodbService(DynamodbServiceSuper):
         Returns:
             list: A list of table names.
         """
+        if self.tables is not None:
+            return self.tables
+
         try:
             # Initialize an empty list to hold table names
             table_names = []
@@ -1331,7 +1334,9 @@ class DynamodbService(DynamodbServiceSuper):
             _ = DEBUG and log_debug(
                 f"||| list_collections | table_names: {table_names}"
             )
-            return table_names
+            self.tables = table_names
+            return self.tables
+
         except Exception as err:
             # Log the exception and return an empty list in case of an error
             log_debug(f"Error fetching table names: {str(err)}")

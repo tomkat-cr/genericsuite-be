@@ -2,7 +2,7 @@
 Date/time utilities
 """
 from typing import Union, Any
-from datetime import timedelta
+# from datetime import timedelta
 from datetime import timezone
 from datetime import datetime
 
@@ -26,6 +26,7 @@ def get_datetime_utc(float_timestamp: float):
     """
     utc_dt = datetime.utcfromtimestamp(float_timestamp)
     return utc_dt
+
 
 def ts_to_ymd(tstamp: float, only_date: bool = False) -> str:
     """
@@ -112,13 +113,13 @@ def get_date_range_filter(v: str, other_entries: dict = None
     date_filter.update(other_entries)
     # if DEBUG:
     log_debug(f"GET_DATE_RANGE_FILTER | v: {v}" +
-        f"\n | dates: {dates}" +
-        f"\n | dates[0]: {dates[0]}" +
-        f"\n | dates[1]: {dates[1]}" +
-        f"\n | date_filter: {date_filter}" +
-        f"\n | date_filter['$gte']: {ts_to_ymd(date_filter['$gte'])}" +
-        f"\n | date_filter['$lte']: {ts_to_ymd(date_filter['$lte'])}" +
-        "\n")
+              f"\n | dates: {dates}" +
+              f"\n | dates[0]: {dates[0]}" +
+              f"\n | dates[1]: {dates[1]}" +
+              f"\n | date_filter: {date_filter}" +
+              f"\n | date_filter['$gte']: {ts_to_ymd(date_filter['$gte'])}" +
+              f"\n | date_filter['$lte']: {ts_to_ymd(date_filter['$lte'])}" +
+              "\n")
     return date_filter
 
 
