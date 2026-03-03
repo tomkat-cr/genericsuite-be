@@ -440,7 +440,7 @@ class GenericDbHelperSuper:
         except ValueError:
             resultset['error_message'] = \
                 f'Id `{row_id}` is invalid [FUR1].'
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'FUR2')
             # raise
@@ -453,7 +453,7 @@ class GenericDbHelperSuper:
             resultset['resultset'] = self.table_obj.find_one(
                 {'_id': str_id}, projection
             )
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'FUR3')
             resultset['error'] = True
@@ -492,7 +492,7 @@ class GenericDbHelperSuper:
             resultset['resultset'] = self.table_obj.find_one(
                 filters
             )
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'FUBEN1')
             resultset['error'] = True

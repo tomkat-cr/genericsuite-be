@@ -111,7 +111,7 @@ def put_total_pages_in_resultset(
         resultset['totalPages'] = get_total_pages(
             count_docs, limit
         )
-    except BaseException as err:
+    except Exception as err:
         resultset['error_message'] = get_standard_base_exception_msg(
             err, error_code
         )

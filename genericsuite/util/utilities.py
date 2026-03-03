@@ -299,7 +299,7 @@ def get_request_body(request: Request) -> dict:
     """Returns the request body (Chalice)"""
     try:
         request_body = request.json_body
-    except BaseException:
+    except Exception:
         request_body = dict()
     return request_body
 

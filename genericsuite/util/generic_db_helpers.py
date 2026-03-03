@@ -108,7 +108,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             except ValueError:
                 resultset['error_message'] = \
                     f"_id `{listing_filter['_id']}` is invalid [FUL3]."
-            except BaseException as err:
+            except Exception as err:
                 resultset['error_message'] = \
                     get_standard_base_exception_msg(err, 'FUL4')
 
@@ -162,7 +162,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             resultset['resultset'] = dumps(db_result)
             _ = DEBUG and \
                 log_debug(f"FETCH_LIST 020 | resultset: {resultset}")
-        except BaseException as err:
+        except Exception as err:
             call_stack = traceback.format_exc()
             error_message = f"\nError Message: {err}\nCall Stack:" + \
                 f"\n{call_stack}" if DEBUG else str(err)
@@ -214,7 +214,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
 
         try:
             resultset['resultset'] = dumps(db_row['resultset'])
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'FU2')
             resultset['error'] = True
@@ -300,7 +300,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
         try:
             insert_obj = self.table_obj.insert_one(data)
             resultset['resultset']['_id'] = str(insert_obj.inserted_id)
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'CU5')
             resultset['error'] = True
@@ -398,7 +398,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             resultset['resultset']['rows_affected'] = str(op_result)
             # Ensure the _id is returned for the specific function
             resultset['resultset']['_id'] = str(record['_id'])
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'UU2')
             resultset['error'] = True
@@ -444,7 +444,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             )
             # Ensure the _id is returned for the specific function
             resultset['resultset']['_id'] = str(remove_id)
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'DU2')
             resultset['error'] = True
@@ -565,7 +565,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
 
         try:
             resultset['resultset'] = dumps(response)
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = get_standard_base_exception_msg(
                 err, 'FUFT2'
             )
@@ -639,7 +639,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             # Get the array field ID, if not exists, returns an error
             try:
                 key_value = data[self.array_field].get(self.array_field_key)
-            except BaseException as err:
+            except Exception as err:
                 resultset['error_message'] = \
                     get_standard_base_exception_msg(err, 'AFTTU2')
                 resultset['error'] = True
@@ -674,7 +674,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             )
             # Ensure the _id is returned for the specific function
             resultset['resultset']['_id'] = str(parent_keys['_id'])
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'AFTTU1')
             resultset['error'] = True
@@ -765,7 +765,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             )
             # Ensure the _id is returned for the specific function
             resultset['resultset']['_id'] = str(parent_keys['_id'])
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'RFTTU')
             resultset['error'] = True
@@ -808,7 +808,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             resultset['resultset']['rows_count'] = str(
                 self.table_obj.count_documents(find_criteria)
             )
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'GFMIU-010')
             resultset['error'] = True

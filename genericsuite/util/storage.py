@@ -252,8 +252,6 @@ def upload_file_to_storage(
 
 
 def storage_retieval(
-    request: Request,
-    blueprint: Any,
     item_id: Union[str, None],
     other_params: Optional[dict] = None,
 ) -> dict:
@@ -277,14 +275,6 @@ def storage_retieval(
         cloud_provider = get_cloud_provider()
     except Exception as e:
         return error_resultset(str(e))
-
-    # TODO: if this is not needed, remove the request and blueprint parameters
-    # Set environment variables from the database configurations.
-    # app_context = app_context_and_set_env(
-    #   request=request, blueprint=blueprint)
-    # if app_context.has_error():
-    #     return app_context.get_error_resultset()
-    # settings = Config(app_context)
 
     if cloud_provider == "AWS":
         caller_function = aws_storage_retieval

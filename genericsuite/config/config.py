@@ -160,9 +160,10 @@ class Config:
         self.STORAGE_URL_ENCRYPTION = os.environ.get(
             "STORAGE_URL_ENCRYPTION", "0")
 
-        self.STORAGE_URL_SEED = os.environ.get("STORAGE_URL_SEED") \
-            if self.STORAGE_URL_ENCRYPTION == "1" \
-            else os.environ.get("STORAGE_URL_SEED")
+        if self.STORAGE_URL_ENCRYPTION == "1":
+            self.STORAGE_URL_SEED = os.environ["STORAGE_URL_SEED"]
+        else:
+            self.STORAGE_URL_SEED = os.environ.get("STORAGE_URL_SEED")
 
         self.GIT_SUBMODULE_LOCAL_PATH = os.environ["GIT_SUBMODULE_LOCAL_PATH"]
 
