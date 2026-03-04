@@ -46,6 +46,33 @@ class SqlUtilities(DbAbstract):
             key_set["_id"] = str(key_set["_id"])
         return key_set
 
+    def null_comparison(self, operator: str, placeholder: str, value: Any
+                        ) -> str:
+        """
+        Dynamically adjust the comparison operator to IS when the value is
+        None.
+
+        In SQL, comparing with NULL using = (i.e., column = NULL) evaluates to
+        unknown, not true, so it's required to use IS NULL for NULL
+        comparisons. The database driver will likely substitute Python's None
+        with SQL NULL, leading to this issue.
+
+        Args:
+            operator (str): the comparison operator. It only can be "=" or "<>"
+            placeholder (str): normally it should be "%s"
+            value (Any): the value that will replace the placeholder.
+                If it is None the IS NULL / NOT IS NULL will be returned
+
+        Returns:
+            (str): if value is None and operator is "=", "IS NULL"
+                if value is None and operator is "<>", "IS NOT NULL"
+                Otherwise "{operator} {placeholder}", e.g. "= %s" or "<> %s"
+        """
+        if value is None:
+            return " IS NULL" if operator == "=" \
+                else "IS NOT NULL"
+        return f"{operator} {placeholder}"
+
     def _quote_identifier(self, identifier: str,
                           process_dot: bool = False) -> str:
         """
@@ -143,11 +170,25 @@ class SqlUtilities(DbAbstract):
                 conditions.append(f"{quoted_col} LIKE %s")
                 # op_val will be a dictionary with $regex and $options
                 # E.g. {'$regex': '.*1.*', '$options': 'si'}
-                regex_value = op_val.get("$regex")
+                regex_value = op_val.get("$regex") if isinstance(
+                    op_val, dict) else str(op_val)
                 regex_value = regex_value.replace(".*", "")
                 # Very basic regex support
                 columns.append(col_name)
                 values.append(f"%{regex_value}%")
+
+            elif op == "$elemMatch":
+                # op_val will be a dictionary with $elemMatch condition(s)
+                # E.g. {'id': 'xyz'}
+                array_cond = self.array_fields_management(
+                    col_name, "$elemMatch", op_val)
+                _ = DEBUG and log_debug(
+                    f"||| special_case_handling [$elemMatch]"
+                    f" | col_name: {col_name} "
+                    f"| array_cond: {array_cond}"
+                )
+                conditions.append(array_cond)
+                values.extend([one_val for one_val in op_val.values()])
 
             elif op in ["$and", "$or"]:
                 # Handle $and and $or
@@ -254,9 +295,14 @@ class SqlUtilities(DbAbstract):
                                     sub_col_name, sub_val, sub_val)
                         else:
                             # Not an operator, treat as field-value pair
+                            # Condition: "sub_col_name = %s"
+                            value_normalized = self._normalize_objectid(
+                                sub_val)
                             conditions.append(
-                                f"{self._quote_identifier(sub_col_name)} = %s")
-                            values.append(self._normalize_objectid(sub_val))
+                                f"{self._quote_identifier(sub_col_name)} " +
+                                self.null_comparison("=", "%s",
+                                                     value_normalized))
+                            values.append(value_normalized)
 
             elif isinstance(value, dict):
                 for op_key, op_val in value.items():
@@ -265,19 +311,28 @@ class SqlUtilities(DbAbstract):
                     else:
                         # Nested dict but not an operator?
                         # Handle as json or just equality
+                        # Condition: "key = %s"
+                        value_normalized = self._normalize_objectid(value)
                         conditions.append(
-                            f"{self._quote_identifier(key)} = %s")
-                        values.append(self._normalize_objectid(value))
+                            f"{self._quote_identifier(key)}" +
+                            self.null_comparison("=", "%s", value_normalized)
+                        )
+                        values.append(value_normalized)
                         break
             else:
-                conditions.append(f"{self._quote_identifier(col_name)} = %s")
-                values.append(self._normalize_objectid(value))
+                # Condition: col_name = %s
+                value_normalized = self._normalize_objectid(value)
+                conditions.append(
+                    f"{self._quote_identifier(col_name)} " +
+                    self.null_comparison("=", "%s", value_normalized))
+                values.append(value_normalized)
 
         _ = DEBUG and log_debug(
             "||| _get_conditions_and_values [2]" +
             f"\n| columns: {columns} " +
             f"\n| conditions: {conditions} " +
             f"\n| values: {values}")
+
         return conditions, columns, values
 
     def get_cursor(self):
@@ -758,6 +813,7 @@ class SqlTable(SqlUtilities):
         Manage array type fields, for adding or removing elements operations
         """
         result = None
+
         if operation == "add":
 
             if self.db_engine == "POSTGRES":
@@ -778,10 +834,11 @@ class SqlTable(SqlUtilities):
         elif operation == "remove":
 
             if self.db_engine == "POSTGRES":
-
+                # Condition: (elem->>'{key}') <> %s
                 where_contitions = " AND ".join([
-                    F"(elem->>'{key}') <> %s"
-                    for key in value.keys()
+                    (f"(elem->>'{key}') " +
+                     self.null_comparison("<>", "%s", val))
+                    for key, val in value.items()
                 ])
                 result = f"{self._quote_identifier(col_name)} = " + \
                     f"""COALESCE(
@@ -798,9 +855,11 @@ class SqlTable(SqlUtilities):
                     f"row_{key} VARCHAR(255) PATH '$.{key}'"
                     for key in value.keys()
                 ])
+                # Condition: jt.row_{key} = %s
                 where_contitions = " AND ".join([
-                    f"jt.row_{key} = %s"
-                    for key in value.keys()
+                    (f"jt.row_{key} " +
+                     self.null_comparison("=", "%s", val))
+                    for key, val in value.items()
                 ])
                 result = f"{self._quote_identifier(col_name)} = " + \
                     f"""JSON_REMOVE({self._quote_identifier(col_name)},
@@ -818,6 +877,37 @@ class SqlTable(SqlUtilities):
     )
 )
 """
+        elif operation == "$elemMatch":
+            # Search an element in the array and returns True if
+            # condition(s) are met
+
+            if self.db_engine == "POSTGRES":
+                # result = " AND ".join([
+                #     f"{self._quote_identifier(col_name)} @> '[" + "{" +
+                #     f'"{key}": %s' + "}]'"
+                #     for key, val in value.items()
+                # ])
+
+                # Condition: obj->>'{key}' <> %s
+                where_contitions = " AND ".join([
+                    (f"obj->>'{key}' " +
+                     self.null_comparison("=", "%s", val))
+                    for key, val in value.items()
+                ])
+                result = "EXISTS (" + \
+                    f"""SELECT 1
+FROM jsonb_array_elements({self._quote_identifier(col_name)}) AS obj
+WHERE {where_contitions}
+)
+"""
+
+            elif self.db_engine == "MYSQL":
+                result = "AND ".join([
+                    f"JSON_CONTAINS({self._quote_identifier(col_name)}, "
+                    + f"JSON_OBJECT('{key}', %s))"
+                    for key, val in value.items()
+                ])
+
         return result
 
     def update_one(self, query_params: Dict, update_data: Dict):
@@ -837,8 +927,12 @@ class SqlTable(SqlUtilities):
         # Handle $set
         if "$set" in update_data:
             for k, v in update_data["$set"].items():
-                set_clauses.append(f"{self._quote_identifier(k)} = %s")
-                set_values.append(self._prepare_value_for_sql(v))
+                # Condition: k = %s
+                val_prepared = self._prepare_value_for_sql(v)
+                set_clauses.append(
+                    f"{self._quote_identifier(k)} " +
+                    self.null_comparison("=", "%s", val_prepared))
+                set_values.append(val_prepared)
         else:
             # Direct update (replace) - might not be standard Mongo behavior
             # for update_one but handling generic case
@@ -850,8 +944,12 @@ class SqlTable(SqlUtilities):
                     "$addToSet",
                     "$pull",
                 ]:
-                    set_clauses.append(f"{self._quote_identifier(k)} = %s")
-                    set_values.append(self._prepare_value_for_sql(v))
+                    # Condition: k = %s
+                    val_prepared = self._prepare_value_for_sql(v)
+                    set_clauses.append(
+                        f"{self._quote_identifier(k)} " +
+                        self.null_comparison("=", "%s", val_prepared))
+                    set_values.append(val_prepared)
 
                 elif k == "$inc" or k == "$push" or k == "$addToSet":
                     # Add element(s) to array column
@@ -912,10 +1010,13 @@ class SqlTable(SqlUtilities):
                                 filtered_array_elements = []
 
                             # Finally add the array column update
+                            # Condition: k = %s
+                            val_prepared = self._prepare_value_for_sql(
+                                filtered_array_elements)
                             set_clauses.append(
-                                f"{self._quote_identifier(k2)} = %s")
-                            set_values.append(self._prepare_value_for_sql(
-                                filtered_array_elements))
+                                f"{self._quote_identifier(k2)} " +
+                                self.null_comparison("=", "%s", val_prepared))
+                            set_values.append(val_prepared)
 
         if not set_clauses:
             log_error("SqlTable.update_one error: No SET clauses")

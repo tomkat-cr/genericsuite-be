@@ -1,10 +1,9 @@
-from typing import Optional, Union, Any, Callable
+from typing import Optional, Union, Callable
 from urllib.parse import urlparse
 import requests
 import os
 
 from genericsuite.config.config import Config
-from genericsuite.util.framework_abs_layer import Request
 from genericsuite.util.utilities import error_resultset, get_default_resultset
 from genericsuite.util.app_logger import log_debug
 from genericsuite.util.cloud_provider_abstractor import get_cloud_provider

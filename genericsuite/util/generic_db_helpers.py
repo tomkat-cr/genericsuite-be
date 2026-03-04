@@ -82,7 +82,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
         # The resulting will be something like:
         # listing_filter BEFORE: {'meal_date': {'$lte': 946702800.0,
         # '$gte': 946616400.0}, 'observations': {'$regex':
-        # '.*sancocho.*', '$options': 'si'}, 'user_id': 'XXXX'}
+        # '.*mondongo.*', '$options': 'si'}, 'user_id': 'XXXX'}
         listing_filter = {
             # SQL LIKE in MongoDb
             k: {
@@ -130,7 +130,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
         # {'$or': [{'$and': [{'user_id': 'XXXX'},
         # {'meal_date': {'$lte': 946702800.0, '$gte': 946616400.0}}]},
         # {'$and': [{'user_id': 'XXXX'}, {'observations':
-        # {'$regex': '.*sanncocho.*', '$options': 'si'}}]}]}
+        # {'$regex': '.*mondongo.*', '$options': 'si'}}]}]}
         listing_filter = self.add_mandatory_filters(listing_filter, combinator)
 
         _ = DEBUG and \

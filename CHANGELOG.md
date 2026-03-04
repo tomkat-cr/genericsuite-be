@@ -39,6 +39,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - `db_engine` configuration to SqlTable so methods like array_fields_management() and array_fields_value() can use the corresponding functions [GS-194].
 - Implement $inc, $push, $addToSet and $pull operations to the SQL abstraction [GS-194].
 - Add `get_table_structure()` and `quote_value()` on generic DB helpers to fix the  `super_admin_create()` ("supad-create" endpoint) execution on apps with specific user table mandatory attributes needing defult values [GS-125].
+- Introduce $elemMatch support in all database abstractions. Enhance query handling by extracting and filtering $elemMatch conditions, improving data retrieval accuracy [GS-161] [GS-194] [GS-249] [GS-102].
 
 ### Changed
 - Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].
@@ -63,6 +64,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Allow `Request` objects as input for current user data functions to make the users onboarding workflow work [GS-37].
 - Prevent "AssertionError: AuthenticationMiddleware must be installed to access request.user" in `get_curr_user_id` when it's a normal Request with no JWT authentication [GS-37].
 - `send_email` includes "Message-ID" header to prevent google (and others) from rejecting emails [GS-37].
+- Update SQL abstraction to handle NULL comparisons dynamically [GS-262]. 
+- "bson.errors.InvalidId" error when creating a new user with Supabase, assigning `parent_keys["_id"] = ObjectId(parent_keys["id"])` [GS-251].
 
 ### Security
 - Update "urllib3" to "^2.6.3" to fix security vulnerabilities [GS-219]:

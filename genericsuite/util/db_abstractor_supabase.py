@@ -5,7 +5,6 @@ DbAbstractorSupabase: Database abstraction layer for Supabase
 from typing import Dict, List, Tuple, Union, Any, Callable
 import re
 
-# from genericsuite.config.config import Config
 from genericsuite.util.db_abstractor_sql import (
     SqlUtilities,
     SqlFindIterator,
@@ -13,9 +12,11 @@ from genericsuite.util.db_abstractor_sql import (
     SqlService,
     SqlServiceBuilder,
 )
+from genericsuite.util.db_abstractor_elem_match import DbAbstractorElemMatch
 from genericsuite.util.app_logger import log_debug, log_error
 
 DEBUG = False
+DETAILED_DEBUG = False
 
 
 class SupabaseUtilities(SqlUtilities):
@@ -259,7 +260,7 @@ class SupabaseUtilities(SqlUtilities):
             response = supabase.rpc(rpc_name).execute()
         if not response:
             raise Exception("SupabaseUtilities.run_rpc: No response.data")
-        if DEBUG:
+        if DETAILED_DEBUG:
             log_debug(f"SupabaseUtilities.run_rpc.response: {response}")
         return response.data
 
@@ -320,7 +321,7 @@ class SupabaseFindIterator(SqlFindIterator):
         return self
 
 
-class SupabaseTable(SqlTable, SupabaseUtilities):
+class SupabaseTable(SqlTable, SupabaseUtilities, DbAbstractorElemMatch):
     """
     Supabase Table abstraction
     """
@@ -340,10 +341,15 @@ class SupabaseTable(SqlTable, SupabaseUtilities):
 
     def find(self, query_params: Dict = None, projection: Dict = None):
         """
-        Execute SELECT query
+        Execute SELECT query with $elemMatch support
         """
         query_params = query_params or {}
-        where_clause, columns, values = self._build_where_clause(query_params)
+
+        cleaned_params, elem_match_conditions = self._extract_elem_match(
+            query_params)
+
+        where_clause, columns, values = self._build_where_clause(
+            cleaned_params)
         fields = self.get_fields(projection)
 
         if self.iterator_set_skip_limit:
@@ -354,6 +360,14 @@ class SupabaseTable(SqlTable, SupabaseUtilities):
             }
             _ = DEBUG and log_debug(
                 f"SupabaseUtilities.find | sql_dict: {sql_dict}")
+
+            if elem_match_conditions:
+                cursor = self.cursor_execute(sql_dict, values)
+                filtered_data = self._filter_elem_match(
+                    cursor.data, elem_match_conditions)
+                cursor.data = filtered_data
+                return self.IteratorClass(cursor, self._table_structure)
+
             return self.IteratorClass(
                 sql_dict,
                 self._table_structure,
@@ -367,6 +381,12 @@ class SupabaseTable(SqlTable, SupabaseUtilities):
             where=where_clause,
             values=values,
         )
+
+        if elem_match_conditions:
+            filtered_data = self._filter_elem_match(
+                cursor.data, elem_match_conditions)
+            cursor.data = filtered_data
+
         _ = DEBUG and log_debug(
             f"SupabaseUtilities.find | cursor: {cursor}")
         return self.IteratorClass(cursor, self._table_structure)
@@ -609,20 +629,43 @@ class SupabaseTable(SqlTable, SupabaseUtilities):
 
     def count_documents(self, query_params: Dict) -> int:
         """
-        Count documents matching query
+        Count documents matching query with $elemMatch support
         """
-        where, columns, values = self._build_where_clause(query_params)
-        fields = "COUNT(*)"
+        cleaned_params, elem_match_conditions = self._extract_elem_match(
+            query_params)
+
+        if not elem_match_conditions:
+            where, columns, values = self._build_where_clause(cleaned_params)
+            fields = "COUNT(*)"
+            cursor = self.run_query(
+                table_name=self._table_name,
+                fields=fields,
+                where=where,
+                values=values,
+            )
+            result = cursor.data
+            if DEBUG:
+                log_debug(f"SupabaseTable.count_documents: {result}")
+            return result if result else 0
+
+        where, columns, values = self._build_where_clause(cleaned_params)
+        fields = "*"
         cursor = self.run_query(
             table_name=self._table_name,
             fields=fields,
             where=where,
             values=values,
         )
-        result = cursor.data
+
+        filtered_data = self._filter_elem_match(
+            cursor.data, elem_match_conditions)
+        count = len(filtered_data) if isinstance(filtered_data, list) else \
+            (1 if filtered_data else 0)
+
         if DEBUG:
-            log_debug(f"SupabaseTable.count_documents: {result}")
-        return result if result else 0
+            log_debug(
+                f"SupabaseTable.count_documents (with $elemMatch): {count}")
+        return count
 
 
 class SupabaseService(SqlService, SupabaseUtilities):

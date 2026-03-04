@@ -10,10 +10,7 @@ from decimal import Decimal
 from genericsuite.config.config import Config, is_local_service
 from genericsuite.util.app_logger import log_debug, log_error, log_warning
 from genericsuite.util.db_abstractor_super import DbAbstract
-
-# from lib.models.dynamodb_table_structures \
-#     import dynamodb_table_structures, \
-#     DEFAULT_WRITE_CAPACITY_UNITS, DEFAULT_READ_CAPACITY_UNITS
+from genericsuite.util.db_abstractor_elem_match import DbAbstractorElemMatch
 
 
 DEBUG = False
@@ -28,7 +25,7 @@ DEFAULT_READ_CAPACITY_UNITS = int(
 # ----------------------- DynamoDb  -----------------------
 
 
-class DynamoDbUtilities:
+class DynamoDbUtilities(DbAbstractorElemMatch):
     """
     DynamoDb Utilities class
     """
@@ -649,10 +646,16 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 [k for k, v in projection.items() if v == 1]
             )
         select = select.upper()
+
+        cleaned_params, elem_match_conditions = self._extract_elem_match(
+            query_params)
+
         if DEBUG:
             log_debug(
                 f">>--> generic_query() | table: {self.get_table_name()}"
                 + f" | query_params: {query_params}"
+                + f" | cleaned_params: {cleaned_params}"
+                + f" | elem_match_conditions: {elem_match_conditions}"
                 + f" | projection: {projection}"
                 + f" | query_type: {query_type}"
                 + f" | select: {select}"
@@ -663,25 +666,29 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
             f"generic_query | table object: {table}"
         )
 
-        if not query_params or len(query_params) == 0:
+        if not cleaned_params or len(cleaned_params) == 0:
             response = table.scan()
+            items = response.get("Items", [])
+
+            if elem_match_conditions:
+                items = self._filter_elem_match(items, elem_match_conditions)
+
             if select == "COUNT":
-                count = len(response.get("Items", []))
+                count = len(items)
                 _ = DEBUG and log_debug(f"generic_query | COUNT 4: {count}")
                 return count
             _ = DEBUG and log_debug(
                 "generic_query | response.get(Items):" +
-                f' {response.get("Items")}'
+                f' {items}'
             )
-            return self.remove_decimal_types_list(response.get("Items", []),
-                                                  projection)
+            return self.remove_decimal_types_list(items, projection)
 
-        top_and_or = "$and" in query_params or "$or" in query_params
+        top_and_or = "$and" in cleaned_params or "$or" in cleaned_params
         keys = None
 
         if not top_and_or:
-            query_params = self.id_conversion(query_params)
-            keys = self.get_primary_keys(query_params)
+            cleaned_params = self.id_conversion(cleaned_params)
+            keys = self.get_primary_keys(cleaned_params)
             if keys:
                 # Get only one item
                 _ = DEBUG and log_debug(
@@ -694,19 +701,23 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                     params["ProjectionExpression"] = projection_expression
                 response = table.get_item(**params)
                 _ = DEBUG and log_debug(response)
+                item = response.get("Item", {})
+
+                if elem_match_conditions and item:
+                    item = self._filter_elem_match(item, elem_match_conditions)
+
                 if select == "COUNT":
-                    count = 1 if response and response.get("Item") else 0
+                    count = 1 if item else 0
                     _ = DEBUG and log_debug(
                         f"generic_query | COUNT 1: {count}")
                     return count
-                return self.remove_decimal_types(response.get("Item", {}),
-                                                 projection)
+                return self.remove_decimal_types(item, projection)
             keys, index_name = self.get_global_secondary_indexes_keys(
-                query_params)
+                cleaned_params)
 
         if not keys:
             condition_values, condition_expresion, attr_names = (
-                self.get_condition_expresion_values([query_params])
+                self.get_condition_expresion_values([cleaned_params])
             )
             if DEBUG:
                 log_debug(
@@ -733,36 +744,27 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 + f"\n | params: {params}"
             )
             response = table.scan(**params)
+            items = response.get("Items", [])
+
+            if elem_match_conditions:
+                items = self._filter_elem_match(items, elem_match_conditions)
+
             if query_type == "find_one":
                 # Get only one item
                 if select == "COUNT":
-                    count = (
-                        1
-                        if response
-                        and response.get("Items")
-                        and len(response.get("Items")) > 0
-                        else 0
-                    )
+                    count = 1 if items and len(items) > 0 else 0
                     _ = DEBUG and log_debug(
                         f"generic_query | COUNT 2: {count}")
                     return count
-                return self.remove_decimal_types(
-                    (
-                        response.get("Items")[0]
-                        if response
-                        and response.get("Items")
-                        and len(response.get("Items")) > 0
-                        else {}
-                    ),
-                    projection,
-                )
+                item = items[0] if items and len(items) > 0 else {}
+                return self.remove_decimal_types(item, projection)
+
             # Get more than one item
             if select == "COUNT":
-                count = len(response.get("Items", []))
+                count = len(items)
                 _ = DEBUG and log_debug(f"generic_query | COUNT 3: {count}")
                 return count
-            return self.remove_decimal_types_list(response.get("Items", []),
-                                                  projection)
+            return self.remove_decimal_types_list(items, projection)
 
         if DEBUG:
             log_debug(f"generic_query | ===> secondary Keys found: {keys}")
@@ -792,13 +794,18 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         response = table.query(**params)
         if DEBUG:
             log_debug(response)
+
+        items = response.get("Items", [])
+
+        if elem_match_conditions:
+            items = self._filter_elem_match(items, elem_match_conditions)
+
         if query_type == "find_one":
             # Get only one item
-            return self.remove_decimal_types(response.get("Items", [])[0],
-                                             projection)
+            item = items[0] if items and len(items) > 0 else {}
+            return self.remove_decimal_types(item, projection)
         # Get more than one item
-        return self.remove_decimal_types_list(response.get("Items", []),
-                                              projection)
+        return self.remove_decimal_types_list(items, projection)
 
     def find(self, query_params, projection=None):
         """
@@ -1020,16 +1027,25 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
 
             if array_field in result["Item"]:
                 # Get the array item filtering by the array_key_field
+
+                # NOTE: GenericSuite always uses only one item (the "id")
+                # to identify each array sub-elements. No need to gather
+                # multiple "filter_key"
+
                 filter_key = list(array_value.keys())[0]
                 filter_value = array_value[filter_key]
-                array_item = next(
-                    iter(
-                        filter(
-                            lambda x: x[filter_key] == filter_value,
-                            result["Item"][array_field]
+
+                try:
+                    array_item = next(
+                        iter(
+                            filter(
+                                lambda x: x[filter_key] == filter_value,
+                                result["Item"][array_field]
+                            )
                         )
                     )
-                )
+                except StopIteration:
+                    array_item = None
 
                 _ = DEBUG and log_debug(
                     "DynamoDB | update_one() | $pull "
@@ -1038,6 +1054,14 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                     + f" | filter_key: {filter_key}"
                     + f" | filter_value: {filter_value}"
                     + f" | array_item: {array_item}")
+
+                if array_item is None:
+                    log_error(
+                        "DynamoDB | update_one() | $pull | " +
+                        f"Array field ({array_field}) element with " +
+                        f"{filter_key} = '{filter_value}' not found"
+                    )
+                    return False
 
                 result["Item"][array_field].remove(array_item)
                 update_set = result["Item"]

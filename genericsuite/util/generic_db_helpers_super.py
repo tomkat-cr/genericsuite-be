@@ -144,14 +144,14 @@ class GenericDbHelperSuper:
 
         listing_filter BEFORE: {'meal_date': {'$lte': 946702800.0,
         '$gte': 946616400.0}, 'observations': {'$regex':
-        '.*sancocho.*', '$options': 'si'}, 'user_id': 'XXXX'}
+        '.*mondongo.*', '$options': 'si'}, 'user_id': 'XXXX'}
 
         mandatory_filter_to_add: [{'user_id': 'XXXX'}]
 
         listing_filter AFTER: {'$or': [{'$and': [{'user_id': 'XXXX'},
         {'meal_date': {'$lte': 946702800.0, '$gte': 946616400.0}}]},
         {'$and': [{'user_id': 'XXXX'}, {'observations':
-        {'$regex': '.*sanncocho.*', '$options': 'si'}}]}]}
+        {'$regex': '.*mondongo.*', '$options': 'si'}}]}]}
 
         Args:
             listing_filter (dict): The original listing filter.
@@ -436,7 +436,7 @@ class GenericDbHelperSuper:
             projection = {}
 
         try:
-            str_id = ObjectId(row_id)
+            str_id = ObjectId(row_id.strip())
         except ValueError:
             resultset['error_message'] = \
                 f'Id `{row_id}` is invalid [FUR1].'
@@ -545,8 +545,7 @@ class GenericDbHelperSuper:
             for v in self.parent_key_names
         }
         if "id" in parent_keys:
-            # {'_id': ObjectId(data[self.parent_key_field])}
-            parent_keys["_id"] = ObjectId(parent_keys["id"])
+            parent_keys["_id"] = ObjectId(parent_keys["id"].strip())
             del parent_keys["id"]
         return parent_keys
 
