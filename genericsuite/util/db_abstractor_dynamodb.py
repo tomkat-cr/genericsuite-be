@@ -1026,40 +1026,46 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 iter(update_set_original["$pull"].items()))
 
             if array_field in result["Item"]:
-                # Get the array item filtering by the array_key_field
-
-                # NOTE: GenericSuite always uses only one item (the "id")
-                # to identify each array sub-elements. No need to gather
-                # multiple "filter_key"
-
-                filter_key = list(array_value.keys())[0]
-                filter_value = array_value[filter_key]
-
-                try:
-                    array_item = next(
-                        iter(
-                            filter(
-                                lambda x: x[filter_key] == filter_value,
-                                result["Item"][array_field]
+                # Find the array element to remove: match by all key-value
+                # pairs when array_value is a dict, or by identity when scalar.
+                if isinstance(array_value, dict):
+                    def _matches(x):
+                        return (
+                            isinstance(x, dict)
+                            and all(
+                                x.get(k) == v
+                                for k, v in array_value.items()
                             )
                         )
+                    array_item = next(
+                        (
+                            x
+                            for x in result["Item"][array_field]
+                            if _matches(x)
+                        ),
+                        None,
                     )
-                except StopIteration:
-                    array_item = None
+                else:
+                    array_item = next(
+                        (
+                            x
+                            for x in result["Item"][array_field]
+                            if x == array_value
+                        ),
+                        None,
+                    )
 
                 _ = DEBUG and log_debug(
                     "DynamoDB | update_one() | $pull "
                     + f" | array_field: {array_field}"
                     + f" | array_value: {array_value}"
-                    + f" | filter_key: {filter_key}"
-                    + f" | filter_value: {filter_value}"
                     + f" | array_item: {array_item}")
 
                 if array_item is None:
                     log_error(
-                        "DynamoDB | update_one() | $pull | " +
-                        f"Array field ({array_field}) element with " +
-                        f"{filter_key} = '{filter_value}' not found"
+                        "DynamoDB | update_one() | $pull | "
+                        + f"Array field ({array_field}) element matching "
+                        + f"{array_value} not found"
                     )
                     return False
 

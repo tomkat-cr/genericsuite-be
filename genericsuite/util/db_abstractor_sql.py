@@ -86,13 +86,31 @@ class SqlUtilities(DbAbstract):
         # an identifier like col" = 1 OR "1" = "1 would result in
         # "col" = 1 OR "1" = "1", which alters the query logic.
         quote_char = "`" if self.db_engine == "MYSQL" else '"'
-        identifier = identifier.replace('"', '\\"')
         if self.db_engine == "MYSQL":
-            identifier = identifier.replace('`', '\\`')
+            identifier = identifier.replace('`', '``')
+        else:
+            identifier = identifier.replace('"', '""')
         if process_dot:
             # Normally this is for table names
             identifier = identifier.replace(".", f"{quote_char}.{quote_char}")
         return f'{quote_char}{identifier}{quote_char}'
+
+    def _escape_sql_string_literal(self, s: str) -> str:
+        """
+        Escape a string for safe use inside a single-quoted SQL string literal
+        to prevent SQL injection when interpolating user-supplied keys (e.g.
+        in JSON_OBJECT, JSON path, or ->> key).
+        """
+        if not isinstance(s, str):
+            s = str(s)
+        # Single quote is escaped by doubling in standard SQL (MySQL and
+        # PostgreSQL).
+        s = s.replace("'", "''")
+        # MySQL also interprets backslash as escape; escape it so a trailing
+        # quote cannot be escaped by user input.
+        if self.db_engine == "MYSQL":
+            s = s.replace("\\", "\\\\")
+        return s
 
     def _get_sql_operator_mapping(self) -> dict:
         return {
@@ -822,8 +840,9 @@ class SqlTable(SqlUtilities):
                     f"{self._quote_identifier(col_name)} || %s::jsonb"
 
             elif self.db_engine == "MYSQL":
+
                 column_and_values = ", ".join([
-                    f"'{key}', %s"
+                    f"'{self._escape_sql_string_literal(key)}', %s"
                     for key in value.keys()
                 ])
                 result = f"{self._quote_identifier(col_name)} = " + \
@@ -834,9 +853,11 @@ class SqlTable(SqlUtilities):
         elif operation == "remove":
 
             if self.db_engine == "POSTGRES":
-                # Condition: (elem->>'{key}') <> %s
+
+                # Condition: (elem->>'{key}') <> %s (key escaped for SQL
+                # injection safety)
                 where_contitions = " AND ".join([
-                    (f"(elem->>'{key}') " +
+                    (f"(elem->>'{self._escape_sql_string_literal(key)}') " +
                      self.null_comparison("<>", "%s", val))
                     for key, val in value.items()
                 ])
@@ -851,15 +872,20 @@ class SqlTable(SqlUtilities):
 )
 """
             elif self.db_engine == "MYSQL":
+                # Use index-based column aliases (row_0, row_1, ...) to avoid
+                # user-supplied key in identifier position; path uses
+                # escaped key.
+                keys_list = list(value.keys())
                 column_and_values = ",".join([
-                    f"row_{key} VARCHAR(255) PATH '$.{key}'"
-                    for key in value.keys()
+                    f"row_{i} VARCHAR(255) PATH " +
+                    f"'$.{self._escape_sql_string_literal(key)}'"
+                    for i, key in enumerate(keys_list)
                 ])
-                # Condition: jt.row_{key} = %s
+                # Condition: jt.row_{i} = %s
                 where_contitions = " AND ".join([
-                    (f"jt.row_{key} " +
+                    (f"jt.row_{i} " +
                      self.null_comparison("=", "%s", val))
-                    for key, val in value.items()
+                    for i, (key, val) in enumerate(value.items())
                 ])
                 result = f"{self._quote_identifier(col_name)} = " + \
                     f"""JSON_REMOVE({self._quote_identifier(col_name)},
@@ -888,9 +914,10 @@ class SqlTable(SqlUtilities):
                 #     for key, val in value.items()
                 # ])
 
-                # Condition: obj->>'{key}' <> %s
+                # Condition: obj->>'{key}' = %s (key escaped for SQL injection
+                # safety)
                 where_contitions = " AND ".join([
-                    (f"obj->>'{key}' " +
+                    (f"obj->>'{self._escape_sql_string_literal(key)}' " +
                      self.null_comparison("=", "%s", val))
                     for key, val in value.items()
                 ])
@@ -902,10 +929,13 @@ WHERE {where_contitions}
 """
 
             elif self.db_engine == "MYSQL":
+
                 result = "AND ".join([
                     f"JSON_CONTAINS({self._quote_identifier(col_name)}, "
-                    + f"JSON_OBJECT('{key}', %s))"
-                    for key, val in value.items()
+                    + "JSON_OBJECT(" +
+                    f"'{self._escape_sql_string_literal(key)}', %s)" +
+                    ")"
+                    for key in value.keys()
                 ])
 
         return result
@@ -1003,8 +1033,10 @@ WHERE {where_contitions}
                             # Remove the element(s) by its id
                             filtered_array_elements = [
                                 item for item in array_column_values[k2]
-                                if item.get(list(v2.keys())[0]) !=
-                                list(v2.values())[0]
+                                # if item.get(list(v2.keys())[0]) !=
+                                # list(v2.values())[0]
+                                if not all(item.get(key) == val for key, val
+                                           in v2.items())
                             ]
                             if not filtered_array_elements:
                                 filtered_array_elements = []

@@ -587,9 +587,7 @@ class GenericDbHelperSuper:
                     structure[field_name]['sort_key'] = True
 
             def_val = field.get("default_value")
-            if def_val is not None or \
-               (isinstance(def_val, int) and def_val == 0) or \
-               (isinstance(def_val, float) and def_val == 0.0):
+            if def_val is not None:
                 structure[field_name]['default_value'] = \
                     self.quote_value(
                         field_type, def_val)
