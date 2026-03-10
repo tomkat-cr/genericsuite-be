@@ -69,6 +69,7 @@ class DbAbstract:
         self.TableClass = self.get_table_class()
         self.structures = None
         self.tables = None
+        self.primary_keys = None
 
         self.get_db_config_data()
         self.get_db_connection()
@@ -140,15 +141,42 @@ class DbAbstract:
             if table_item["table_name"] != table_name:
                 self.structures[table_item["table_name"]] = {}
                 table_name = table_item["table_name"]
-                self.tables.append(table_name)
+                if table_name not in self.tables:
+                    self.tables.append(table_name)
             self.structures[table_name][
                 table_item["column_name"]] = table_item["data_type"]
+
+    def assign_primary_keys(self, resultset: list):
+        """
+        Assigns the primary keys class property from the resultset.
+
+        Args:
+            resultset (list): The resultset from the database. It must
+                contain the following fields:
+                    - table_name (str): The name of the table.
+                    - primary_key (str): The name of the primary key.
+                    - sort_key (str): The name of the sort key
+                      (optional. e.g. for DynamoDB). Defaults to None.
+        """
+        self.primary_keys = {
+            item["table_name"]: {
+                "pk": item["primary_key"],
+                "sk": item.get("sort_key")
+            }
+            for item in resultset
+        }
 
     def set_tables_and_structures(self):
         """
         Sets the tables and structures in the database.
         """
         self.not_implemented("set_tables_and_structures")
+
+    def set_primary_keys(self):
+        """
+        Sets the primary keys in the database.
+        """
+        self.not_implemented("set_primary_keys")
 
     def list_collections(self, collection_name: str = None) -> list:
         """
@@ -168,6 +196,8 @@ class DbAbstract:
         """
         if self.tables is None:
             self.set_tables_and_structures()
+        if self.primary_keys is None:
+            self.set_primary_keys()
         return self.tables
 
     def table_structure(self, table_name: str) -> dict:
@@ -180,6 +210,14 @@ class DbAbstract:
         if self.structures is None:
             self.set_tables_and_structures()
         return self.structures[table_name]
+
+    def primary_key(self, table_name: str) -> dict:
+        """
+        Returns the primary key of the table.
+        """
+        if self.primary_keys is None:
+            self.set_primary_keys()
+        return self.primary_keys[table_name]
 
     def collection_stats(self, collection_name: str = None):
         """

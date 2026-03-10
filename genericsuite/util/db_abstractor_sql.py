@@ -2,6 +2,7 @@
 DbAbstractorSQL: Database abstraction layer for SQL databases
 """
 
+from functools import lru_cache
 from typing import List, Dict, Any, Tuple, Union, Callable
 import json
 
@@ -46,7 +47,8 @@ class SqlUtilities(DbAbstract):
             key_set["_id"] = str(key_set["_id"])
         return key_set
 
-    def null_comparison(self, operator: str, placeholder: str, value: Any
+    def null_comparison(self, operator: str, placeholder: str,
+                        value: Any, context: str = "where"
                         ) -> str:
         """
         Dynamically adjust the comparison operator to IS when the value is
@@ -62,15 +64,26 @@ class SqlUtilities(DbAbstract):
             placeholder (str): normally it should be "%s"
             value (Any): the value that will replace the placeholder.
                 If it is None the IS NULL / NOT IS NULL will be returned
+            context (str): the context of the null comparison.
+                It can be "where" or "update"
+                It is used to determine the correct comparison or
+                assignment operator.
+                For example, in the where clause, we use "=" to compare
+                with IS NULL or IS NOT NULL,
+                but in the update statement, we use "= NULL" to assign NULL.
 
         Returns:
             (str): if value is None and operator is "=", "IS NULL"
                 if value is None and operator is "<>", "IS NOT NULL"
                 Otherwise "{operator} {placeholder}", e.g. "= %s" or "<> %s"
         """
-        if value is None:
-            return " IS NULL" if operator == "=" \
-                else "IS NOT NULL"
+        if context == "where":
+            if value is None:
+                return "IS NULL" if operator == "=" \
+                    else "IS NOT NULL"
+        elif context == "update":
+            if value is None:
+                return "= NULL"
         return f"{operator} {placeholder}"
 
     def _quote_identifier(self, identifier: str,
@@ -185,7 +198,7 @@ class SqlUtilities(DbAbstract):
                 # Simple regex mapping to LIKE or ~
                 # Assuming simple contains for now as per DynamoDB
                 # implementation
-                conditions.append(f"{quoted_col} LIKE %s")
+                conditions.append(f"LOWER({quoted_col}) LIKE LOWER(%s)")
                 # op_val will be a dictionary with $regex and $options
                 # E.g. {'$regex': '.*1.*', '$options': 'si'}
                 regex_value = op_val.get("$regex") if isinstance(
@@ -206,30 +219,63 @@ class SqlUtilities(DbAbstract):
                     f"| array_cond: {array_cond}"
                 )
                 conditions.append(array_cond)
-                values.extend([one_val for one_val in op_val.values()])
+                values.extend(
+                    [one_val for one_val in op_val.values()
+                     if one_val is not None])
 
             elif op in ["$and", "$or"]:
-                # Handle $and and $or
-                sub_conditions = []
-                for sub_op, sub_op_val in op_val.items():
-                    if sub_op == "$regex":
-                        # In this case, the sub_op is regex:
-                        # E.g. {'$regex': '.*1.*', '$options': 'si'}
-                        # "op_val.items()"" will have 2 items. We need to
-                        # extract the value from the first item.
-                        special_case_handling(
-                            col_name, sub_op, op_val)
-                        # Break here because the next one is not needed.
-                        # E.g. '$options': 'si'
-                        return
-                    sub_conditions.append(
-                        f"{quoted_col} "
-                        f"{self._get_sql_operator(sub_op)} %s")
-                    columns.append(col_name)
-                    values.append(sub_op_val)
-                conditions.append(
-                    f"({f' {self._get_sql_operator(op)} '.join(
-                        sub_conditions)})")
+                # This is a NESTED $and / $or scenario where
+                # op_val is a list with the sub-operators
+                # and their values. For example the
+                # <SuggestionDropdown /> component uses
+                # this scenario
+
+                """
+                Special_case_handling NESTED [$and, $or]
+
+                _build_where_clause | query_params: {
+                    '$and': [
+                        {
+                            '$and': [
+                                {
+                                    'user_id': '69a95a361a76f4d9cba8f32e'
+                                },
+                                {
+                                    'name': {
+                                        '$regex': '.*arep.*', '$options': 'si'
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+
+                op: $and
+                col_name: $and
+                op_val: [{'user_id': '69a95a361a76f4d9cba8f32e'},
+                         {'name': {'$regex': '.*arep.*', '$options': 'si'}}]
+                """
+
+                _ = DEBUG and log_debug(
+                    "||| special_case_handling NESTED [$and, $or] # 1" +
+                    f"\n| op: {op}"
+                    f"\n| col_name: {col_name} "
+                    f"\n| op_val: {op_val}"
+                )
+
+                sub_cond, sub_cols, sub_vals = self._get_conditions_and_values(
+                    {col_name: op_val})
+
+                _ = DEBUG and log_debug(
+                    "||| special_case_handling NESTED [$and, $or] # 2" +
+                    f"\n| sub_cond: {sub_cond}"
+                    f"\n| sub_cols: {sub_cols} "
+                    f"\n| sub_vals: {sub_vals}"
+                )
+
+                conditions.extend(sub_cond)
+                columns.extend(sub_cols)
+                values.extend(sub_vals)
 
             elif op in ["$in", "$nin"]:
                 """
@@ -320,7 +366,8 @@ class SqlUtilities(DbAbstract):
                                 f"{self._quote_identifier(sub_col_name)} " +
                                 self.null_comparison("=", "%s",
                                                      value_normalized))
-                            values.append(value_normalized)
+                            if value_normalized is not None:
+                                values.append(value_normalized)
 
             elif isinstance(value, dict):
                 for op_key, op_val in value.items():
@@ -335,7 +382,8 @@ class SqlUtilities(DbAbstract):
                             f"{self._quote_identifier(key)}" +
                             self.null_comparison("=", "%s", value_normalized)
                         )
-                        values.append(value_normalized)
+                        if value_normalized is not None:
+                            values.append(value_normalized)
                         break
             else:
                 # Condition: col_name = %s
@@ -343,7 +391,8 @@ class SqlUtilities(DbAbstract):
                 conditions.append(
                     f"{self._quote_identifier(col_name)} " +
                     self.null_comparison("=", "%s", value_normalized))
-                values.append(value_normalized)
+                if value_normalized is not None:
+                    values.append(value_normalized)
 
         _ = DEBUG and log_debug(
             "||| _get_conditions_and_values [2]" +
@@ -627,7 +676,9 @@ class SqlTable(SqlUtilities):
                  connection,
                  table_name: str,
                  table_structure: Dict,
+                 primary_key: Dict = None,
                  IteratorClass=None):
+
         self._app_config = app_config
         self._table_name = table_name
         self._db = connection
@@ -639,7 +690,9 @@ class SqlTable(SqlUtilities):
         self.modified_count = 0
         self.deleted_count = 0
         self._table_structure = table_structure
+        self._primary_key = primary_key
         self.IteratorClass = IteratorClass
+
         self.get_db_config_data()
 
         # The $pull operation in update_one can be implemented by fetching the
@@ -653,14 +706,15 @@ class SqlTable(SqlUtilities):
         # When calling `self.run_query()` the SqlFindIterator fetches all
         # results into memory using cursor.fetchall(). For large tables, this
         # is highly inefficient and can lead to memory exhaustion.
-        # "self.iterator_set_skip_limit = True" set the use of server-side
+        # "self.iterator_run_queries = True" set the use of server-side
         # pagination (LIMIT/OFFSET) in the SQL query instead of in-memory
         # slicing in the iterator.
-        self.iterator_set_skip_limit = True
+        self.iterator_run_queries = True
 
     def fix_value_types(self, columns: List, values: List) -> List:
         """
-        Fix value types
+        Fix value types, so strings numbers have no quotes, and booleans
+        are just True/False.
         """
         _ = DEBUG and log_debug(
             "SqlTable.fix_value_types:" +
@@ -740,7 +794,7 @@ class SqlTable(SqlUtilities):
         where_clause, columns, values = self._build_where_clause(query_params)
         fields = self.get_fields(projection)
 
-        if self.iterator_set_skip_limit:
+        if self.iterator_run_queries:
             sql = self.build_select_sql(
                 table_name=self._table_name,
                 fields=fields,
@@ -817,11 +871,12 @@ class SqlTable(SqlUtilities):
         """
         Prepare value for array fields
         """
-        result = [value]
+        cleaned_value = {k: v for k, v in value.items() if v is not None}
+        result = [cleaned_value]
         if self.db_engine == "POSTGRES":
             result = [self._prepare_value_for_sql(value)]
         elif self.db_engine == "MYSQL":
-            result = [v for v in value.values()]
+            result = [v for v in cleaned_value.values()]
         _ = DEBUG and log_debug(f"SqlTable.array_fields_value: {result}")
         return result
 
@@ -957,12 +1012,14 @@ WHERE {where_contitions}
         # Handle $set
         if "$set" in update_data:
             for k, v in update_data["$set"].items():
-                # Condition: k = %s
+                # Assignment: k = %s
                 val_prepared = self._prepare_value_for_sql(v)
                 set_clauses.append(
                     f"{self._quote_identifier(k)} " +
-                    self.null_comparison("=", "%s", val_prepared))
-                set_values.append(val_prepared)
+                    self.null_comparison("=", "%s", val_prepared,
+                                         context="update"))
+                if val_prepared is not None:
+                    set_values.append(val_prepared)
         else:
             # Direct update (replace) - might not be standard Mongo behavior
             # for update_one but handling generic case
@@ -974,12 +1031,14 @@ WHERE {where_contitions}
                     "$addToSet",
                     "$pull",
                 ]:
-                    # Condition: k = %s
+                    # Assignment: k = %s
                     val_prepared = self._prepare_value_for_sql(v)
                     set_clauses.append(
                         f"{self._quote_identifier(k)} " +
-                        self.null_comparison("=", "%s", val_prepared))
-                    set_values.append(val_prepared)
+                        self.null_comparison("=", "%s", val_prepared,
+                                             context="update"))
+                    if val_prepared is not None:
+                        set_values.append(val_prepared)
 
                 elif k == "$inc" or k == "$push" or k == "$addToSet":
                     # Add element(s) to array column
@@ -1009,7 +1068,9 @@ WHERE {where_contitions}
                             set_clauses.append(
                                 self.array_fields_management(k2, "remove", v2))
                             for val in v2.values():
-                                set_values.append(self.array_fields_value(val))
+                                if val is not None:
+                                    set_values.append(
+                                        self.array_fields_value(val))
 
                     else:
                         # Non-atomic pull operation...
@@ -1048,7 +1109,8 @@ WHERE {where_contitions}
                             set_clauses.append(
                                 f"{self._quote_identifier(k2)} " +
                                 self.null_comparison("=", "%s", val_prepared))
-                            set_values.append(val_prepared)
+                            if val_prepared is not None:
+                                set_values.append(val_prepared)
 
         if not set_clauses:
             log_error("SqlTable.update_one error: No SET clauses")
@@ -1103,7 +1165,25 @@ WHERE {where_contitions}
 
         quoted_table = self._quote_identifier(
             self._table_name, process_dot=True)
-        sql = f"DELETE FROM {quoted_table} WHERE {where_clause} LIMIT 1"
+
+        if self.db_engine == "POSTGRES":
+            pk_column = self._primary_key.get("pk")
+            if pk_column:
+                sql = f"DELETE FROM {quoted_table} WHERE" + \
+                    f" {self._quote_identifier(pk_column)} IN" + \
+                    " (SELECT" + \
+                    f" {self._quote_identifier(pk_column)}" + \
+                    f" FROM {quoted_table}" + \
+                    f" WHERE {where_clause} LIMIT 1)"
+            else:
+                # Primary key not found...
+                log_error(
+                    "Delete operation error: PK not found for table:" +
+                    f" {self._table_name} [SQL_DEL_ERR_010]")
+                raise Exception("Primary key not found")
+        else:
+            # E.g. MySQL, SQLite, etc.
+            sql = f"DELETE FROM {quoted_table} WHERE {where_clause} LIMIT 1"
 
         cursor = self.get_cursor()
         if DEBUG:
@@ -1207,8 +1287,11 @@ class SqlService(SqlUtilities):
                 self._db,
                 table_name,
                 table_structure,
-                self.IteratorClass))
+                primary_key=self.primary_key(table_name),
+                IteratorClass=self.IteratorClass,
+            ))
 
+    @lru_cache(maxsize=32)
     def set_tables_and_structures(self):
         """
         Sets the tables and structures in the database.
@@ -1217,14 +1300,44 @@ class SqlService(SqlUtilities):
             cursor = self.run_query(
                 table_name=self.info_schema_table_names()["columns"],
                 fields="table_name, column_name, data_type",
+                where="table_schema = 'public'",
+                order_by=["table_name"]
             )
             resultset = cursor.fetchall()
             cursor.close()
         except Exception as e:
             log_error(
-                f"SqlService.set_tables_and_structures error: {e}")
+                "SqlService.set_tables_and_structures |" +
+                f" Error: {e}")
             raise e
+
         self.assign_tables_and_structures(resultset)
+
+    @lru_cache(maxsize=32)
+    def set_primary_keys(self):
+        """
+        Sets the primary keys in the database.
+        """
+        try:
+            sql = """SELECT
+    t.table_name,
+    k.column_name as primary_key
+FROM information_schema.table_constraints t
+JOIN information_schema.key_column_usage k
+    ON k.constraint_name = t.constraint_name
+    AND k.table_schema = t.table_schema
+WHERE t.constraint_type = 'PRIMARY KEY'
+    AND k.table_schema = 'public'
+ORDER BY t.table_name;
+"""
+            resultset = self.cursor_execute(sql)
+        except Exception as e:
+            log_error(
+                "SqlService.set_primary_keys |" +
+                f" Error: {e}")
+            raise e
+
+        self.assign_primary_keys(resultset)
 
     # def list_collection_names(self) -> list:
     #     """

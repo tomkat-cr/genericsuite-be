@@ -3,7 +3,9 @@ DbAbstractorMysql: Database abstraction layer for MySQL
 """
 
 from typing import Dict
+from functools import lru_cache
 from urllib.parse import urlparse
+
 from genericsuite.util.db_abstractor_sql import (
     SqlUtilities,
     SqlFindIterator,
@@ -105,6 +107,7 @@ class MysqlService(SqlService, MysqlUtilities):
         """
         return MysqlFindIterator
 
+    @lru_cache(maxsize=32)
     def set_tables_and_structures(self):
         """
         Sets the tables and structures in the database.
@@ -115,7 +118,8 @@ class MysqlService(SqlService, MysqlUtilities):
                 + " COLUMN_NAME as column_name," \
                 + " DATA_TYPE as data_type" \
                 + f" FROM {self.info_schema_table_names()['columns']}" \
-                + f" WHERE TABLE_SCHEMA = '{self.db_name}'"
+                + f" WHERE TABLE_SCHEMA = '{self.db_name}'" \
+                + " ORDER BY TABLE_NAME"
             _ = DEBUG and log_debug(
                 "MysqlService set_tables_and_structures"
                 f" | sql: {sql}")
@@ -130,6 +134,33 @@ class MysqlService(SqlService, MysqlUtilities):
                 f"MySqlService.set_tables_and_structures error: {e}")
             raise e
         self.assign_tables_and_structures(resultset)
+
+    @lru_cache(maxsize=32)
+    def set_primary_keys(self):
+        """
+        Sets the primary keys in the database.
+        """
+        try:
+            sql = f"""SELECT
+  TABLE_NAME as table_name,
+  COLUMN_NAME as primary_key
+FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+WHERE
+  TABLE_SCHEMA = '{self.db_name}'
+  AND CONSTRAINT_NAME = 'PRIMARY'
+  ORDER BY TABLE_NAME;
+"""
+            _ = DEBUG and log_debug(
+                "MysqlService set_primary_keys"
+                f" | sql: {sql}")
+            resultset = self.cursor_execute(sql)
+        except Exception as e:
+            log_error(
+                "SqlService.set_primary_keys |" +
+                f" Error: {e}")
+            raise e
+
+        self.assign_primary_keys(resultset)
 
     # def list_collection_names(self) -> list:
     #     """

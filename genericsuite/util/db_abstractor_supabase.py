@@ -4,6 +4,7 @@ DbAbstractorSupabase: Database abstraction layer for Supabase
 
 from typing import Dict, List, Tuple, Union, Any, Callable
 import re
+from functools import lru_cache
 
 from genericsuite.util.db_abstractor_sql import (
     SqlUtilities,
@@ -45,28 +46,58 @@ class SupabaseUtilities(SqlUtilities):
         operator: str,
         value: Any
     ):
+        """
+        Add a condition to the cursor.
+
+        Supabase filters reference:
+        https://supabase.com/docs/reference/python/using-filters
+        """
         if operator == "<>":
             cursor = cursor.neq(col_name, value)
+
         elif operator == ">":
             cursor = cursor.gt(col_name, value)
+
         elif operator == "<":
             cursor = cursor.lt(col_name, value)
+
         elif operator == ">=":
             cursor = cursor.gte(col_name, value)
+
         elif operator == "<=":
             cursor = cursor.lte(col_name, value)
+
         elif operator == "IN":
-            cursor = cursor.in_(col_name, value)
+            cursor = cursor.in_(
+                col_name,
+                str(value).lstrip("[").rstrip("]").split(",")
+            )
+
         elif operator == "NOT IN":
-            cursor = cursor.not_in(col_name, value)
+            cursor = cursor.not_.in_(
+                col_name,
+                str(value).lstrip("[").rstrip("]").split(",")
+            )
+
         elif operator == "LIKE":
-            cursor = cursor.like(col_name, value)
+            cursor = cursor.ilike(
+                str(col_name).lstrip("LOWER(").rstrip(")"),
+                str(value).replace("*", "%")
+            )
+
         elif operator == "NOT LIKE":
-            cursor = cursor.not_like(col_name, value)
+            cursor = cursor.not_.ilike(
+                str(col_name).lstrip("LOWER(").rstrip(")"),
+                str(value).replace("*", "%")
+            )
         elif operator == "IS NULL":
-            cursor = cursor.is_null(col_name)
+            cursor = cursor.is_(col_name, "null")
+
         elif operator == "IS NOT NULL":
-            cursor = cursor.is_not_null(col_name)
+            cursor = cursor.not_.is_(col_name, "null")
+
+        elif operator == "=":
+            cursor = cursor.eq(col_name, value)
         else:
             cursor = cursor.eq(col_name, value)
         return cursor
@@ -78,13 +109,34 @@ class SupabaseUtilities(SqlUtilities):
         values: List[Any]
     ) -> Any:
         if isinstance(where, list):
+            idx_val = 0
             for idx, col_name_op_val in enumerate(where):
                 col_name, operator, placeholder = \
                     col_name_op_val.split(" ")
-                value = values[idx] if isinstance(
-                    values, list) else placeholder
-            _ = DEBUG and log_debug(
-                f"SupabaseUtilities.supabase_where | idx: {idx}"
+
+                # _ = DEBUG and
+                log_debug(
+                    f"SupabaseUtilities.supabase_where # 1"
+                    f" | idx: {idx} | idx_val: {idx_val}"
+                    f" | col_name_op_val: {col_name_op_val}"
+                    f" | col_name: {col_name}"
+                    f" | operator: {operator}"
+                    f" | placeholder: {placeholder}")
+
+                if 'IS NULL' in col_name_op_val:
+                    operator = 'IS NULL'
+                    value = None
+                elif 'IS NOT NULL' in col_name_op_val:
+                    operator = 'IS NOT NULL'
+                    value = None
+                else:
+                    value = values[idx_val] if isinstance(
+                        values, list) else placeholder
+                    idx_val += 1
+            # _ = DEBUG and
+            log_debug(
+                f"SupabaseUtilities.supabase_where # 2"
+                f" | idx: {idx} | idx_val: {idx_val}"
                 f" | col_name: {col_name}"
                 f" | operator: {operator}"
                 f" | placeholder: {placeholder}"
@@ -352,7 +404,7 @@ class SupabaseTable(SqlTable, SupabaseUtilities, DbAbstractorElemMatch):
             cleaned_params)
         fields = self.get_fields(projection)
 
-        if self.iterator_set_skip_limit:
+        if self.iterator_run_queries:
             sql_dict = {
                 "table_name": self._table_name,
                 "fields": fields,
@@ -710,6 +762,7 @@ class SupabaseService(SqlService, SupabaseUtilities):
         """
         return SupabaseFindIterator
 
+    @lru_cache(maxsize=32)
     def set_tables_and_structures(self):
         """
         Sets the tables and structures in the database.
@@ -725,6 +778,23 @@ class SupabaseService(SqlService, SupabaseUtilities):
             raise e
 
         self.assign_tables_and_structures(resultset)
+
+    @lru_cache(maxsize=32)
+    def set_primary_keys(self):
+        """
+        Sets the tables and structures in the database.
+        """
+        try:
+            resultset = self.run_rpc(
+                "get_primary_keys",
+                # params={"tablename": table_name},
+            )
+        except Exception as e:
+            log_error(
+                f"SupabaseService.set_primary_keys.run_rpc error: {e}")
+            raise e
+
+        self.assign_primary_keys(resultset)
 
     # def list_collection_names(self) -> list:
     #     """

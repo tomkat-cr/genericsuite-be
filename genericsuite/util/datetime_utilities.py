@@ -111,15 +111,15 @@ def get_date_range_filter(v: str, other_entries: dict = None
     if not other_entries:
         other_entries = {}
     date_filter.update(other_entries)
-    # if DEBUG:
-    log_debug(f"GET_DATE_RANGE_FILTER | v: {v}" +
-              f"\n | dates: {dates}" +
-              f"\n | dates[0]: {dates[0]}" +
-              f"\n | dates[1]: {dates[1]}" +
-              f"\n | date_filter: {date_filter}" +
-              f"\n | date_filter['$gte']: {ts_to_ymd(date_filter['$gte'])}" +
-              f"\n | date_filter['$lte']: {ts_to_ymd(date_filter['$lte'])}" +
-              "\n")
+    _ = DEBUG and log_debug(
+        f"GET_DATE_RANGE_FILTER | v: {v}" +
+        f"\n | dates: {dates}" +
+        f"\n | dates[0]: {dates[0]}" +
+        f"\n | dates[1]: {dates[1]}" +
+        f"\n | date_filter: {date_filter}" +
+        f"\n | date_filter['$gte']: {ts_to_ymd(date_filter['$gte'])}" +
+        f"\n | date_filter['$lte']: {ts_to_ymd(date_filter['$lte'])}" +
+        "\n")
     return date_filter
 
 

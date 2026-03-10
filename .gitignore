@@ -166,3 +166,4 @@ cython_debug/
 
 # Big lambdas deployment
 tmp
+*_IMPLEMENTATION.md

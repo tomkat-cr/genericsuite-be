@@ -436,7 +436,7 @@ class GenericDbHelperSuper:
             projection = {}
 
         try:
-            str_id = ObjectId(row_id.strip())
+            str_id = ObjectId(str(row_id).strip())
         except ValueError:
             resultset['error_message'] = \
                 f'Id `{row_id}` is invalid [FUR1].'
@@ -545,7 +545,7 @@ class GenericDbHelperSuper:
             for v in self.parent_key_names
         }
         if "id" in parent_keys:
-            parent_keys["_id"] = ObjectId(parent_keys["id"].strip())
+            parent_keys["_id"] = ObjectId(str(parent_keys["id"]).strip())
             del parent_keys["id"]
         return parent_keys
 

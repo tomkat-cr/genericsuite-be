@@ -542,7 +542,8 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             # Create a list of filters based on lf (acronim of listing filters)
             all_filters = [
                 lambda x, key=filter_key:
-                re.search(lf[key]["$regex"], x.get(key, ''),
+                # Use "str(x.get(key, ''))" to handle numeric-only values
+                re.search(lf[key]["$regex"], str(x.get(key, '')),
                           re.IGNORECASE) is not None
                 if lf[key]["type"] == "regex"
                 else (x.get(key) <= lf[key]["$lte"] and
@@ -553,8 +554,11 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             ]
             _ = DEBUG and \
                 log_debug(
-                    f'\nfetch_array_rows | lf: {lf}' +
-                    f'\nfetch_array_rows | all_filters: {all_filters}\n')
+                    '\n>>> fetch_array_rows:' +
+                    f'\n| like_query_params: {like_query_params}' +
+                    f'\n| lf (list filters): {lf}' +
+                    f'\n| all_filters: {all_filters}' +
+                    '\n')
             # Apply filters using OR logic
             response = list(
                 filter(
