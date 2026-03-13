@@ -38,7 +38,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Allow configuring email debug mode via the SEND_EMAIL_DEBUG environment variable [GS-37].
 - `db_engine` configuration to SqlTable so methods like array_fields_management() and array_fields_value() can use the corresponding functions [GS-194].
 - Implement $inc, $push, $addToSet and $pull operations to the SQL abstraction [GS-194].
-- Add `get_table_structure()` and `quote_value()` on generic DB helpers to fix the  `super_admin_create()` ("supad-create" endpoint) execution on apps with specific user table mandatory attributes needing defult values [GS-125].
+- Add `get_table_structure()` and `quote_value()` on generic DB helpers to fix the  `super_admin_create()` ("supad-create" endpoint) execution on apps with specific user table mandatory attributes needing default values [GS-125].
 - Introduce $elemMatch support in all database abstractions. Enhance query handling by extracting and filtering $elemMatch conditions, improving data retrieval accuracy [GS-161] [GS-194] [GS-249] [GS-102].
 
 ### Changed
