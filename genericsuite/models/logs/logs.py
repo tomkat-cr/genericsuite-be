@@ -40,7 +40,7 @@ def put_log(
     if other_params is None:
         other_params = {}
     params = get_request_body(request)
-    log_type = params.get('log_type').lower()
+    log_type = (params.get('log_type') or 'info').lower()
     message = sanitize_log_message(params.get('message'))
 
     if log_type == 'info':

@@ -1021,13 +1021,15 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                 result["Item"][array_field] = [array_value]
             update_set = result["Item"]
         elif "$pull" in update_set_original:
-            # Remove an existing element from an array in the item
+            # Remove existing elements from an array in the item
             array_field, array_value = next(
                 iter(update_set_original["$pull"].items()))
 
             if array_field in result["Item"]:
-                # Find the array element to remove: match by all key-value
+                # Find the array elements to remove: match by all key-value
                 # pairs when array_value is a dict, or by identity when scalar.
+                original_length = len(result["Item"][array_field])
+
                 if isinstance(array_value, dict):
                     def _matches(x):
                         return (
@@ -1037,31 +1039,22 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                                 for k, v in array_value.items()
                             )
                         )
-                    array_item = next(
-                        (
-                            x
-                            for x in result["Item"][array_field]
-                            if _matches(x)
-                        ),
-                        None,
-                    )
+                    result["Item"][array_field] = [
+                        x for x in result["Item"][array_field]
+                        if not _matches(x)
+                    ]
                 else:
-                    array_item = next(
-                        (
-                            x
-                            for x in result["Item"][array_field]
-                            if x == array_value
-                        ),
-                        None,
-                    )
+                    result["Item"][array_field] = [
+                        x for x in result["Item"][array_field]
+                        if x != array_value
+                    ]
 
                 _ = DEBUG and log_debug(
                     "DynamoDB | update_one() | $pull "
                     + f" | array_field: {array_field}"
-                    + f" | array_value: {array_value}"
-                    + f" | array_item: {array_item}")
+                    + f" | array_value: {array_value}")
 
-                if array_item is None:
+                if len(result["Item"][array_field]) == original_length:
                     log_error(
                         "DynamoDB | update_one() | $pull | "
                         + f"Array field ({array_field}) element matching "
@@ -1069,7 +1062,6 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                     )
                     return False
 
-                result["Item"][array_field].remove(array_item)
                 update_set = result["Item"]
             else:
                 log_error(
