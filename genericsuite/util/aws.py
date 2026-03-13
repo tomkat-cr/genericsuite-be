@@ -24,6 +24,28 @@ from genericsuite.util.storage_commons import (
 
 DEBUG = os.environ.get('CLOUD_AWS_DEBUG', '0') == '1'
 
+CLOUD_STORAGE_PRESIGNED_ACTIVE = os.environ.get(
+    'CLOUD_STORAGE_PRESIGNED_ACTIVE', '1') == '1'
+
+
+def get_s3_client():
+    """
+    Get the S3 client.
+    """
+    import boto3
+    from botocore.config import Config
+    # region = os.environ.get('AWS_REGION')
+    my_config = Config(
+        # Region is not specified to avoid the error:
+        # "Error parsing the X-Amz-Credential parameter; the region
+        #  'aws-region' is wrong; expecting 'us-east-1'"
+        # loading assets from the cloud...
+        # region_name=region,
+        signature_version='s3v4'
+    )
+    s3_client = boto3.client('s3', config=my_config)
+    return s3_client
+
 
 def s3_base_url(bucket_name: str) -> str:
     """
@@ -77,14 +99,13 @@ def upload_file_to_s3(
             error (bool): True if there was any error.
             error_message (str): The eventual error message
     """
-    import boto3
     from botocore.exceptions import NoCredentialsError
 
     error = None
     result = get_default_resultset()
 
     # Initialize S3 client
-    s3_client = boto3.client('s3')
+    s3_client = get_s3_client()
 
     try:
         # Upload the file
@@ -166,10 +187,9 @@ def remove_from_s3(bucket_name: str, key: str) -> dict:
         bucket_name (str): The base path of the S3 bucket.
         key (str): The S3 key of the object to be removed.
     """
-    import boto3
     result = get_default_resultset()
     try:
-        s3 = boto3.client('s3')
+        s3 = get_s3_client()
         s3.delete_object(Bucket=bucket_name, Key=key)
         _ = DEBUG and log_debug(
             "remove_from_s3" +
@@ -194,10 +214,9 @@ def get_s3_object(bucket_name: str, key: str) -> dict:
             with the file content in the 'content' element
             or error/error_message elements.
     """
-    import boto3
     result = get_default_resultset()
     try:
-        s3 = boto3.client('s3')
+        s3 = get_s3_client()
         obj = s3.get_object(Bucket=bucket_name, Key=key)
         # result['content'] = obj['Body'].read().decode('utf-8')
         result['content'] = obj['Body'].read()
@@ -229,12 +248,11 @@ def download_s3_object(bucket_name: str, key: str,
             with the file temp_path/filename in the 'local_file_path' element
             or error/error_message elements.
     """
-    import boto3
     result = get_default_resultset()
     if not local_file_path:
         local_file_path = temp_filename(get_file_extension(file_path=key))
     try:
-        s3_client = boto3.client('s3')
+        s3_client = get_s3_client()
         s3_client.download_file(bucket_name, key, local_file_path)
         result['local_file_path'] = local_file_path
         _ = DEBUG and log_debug(
@@ -255,15 +273,7 @@ def get_s3_presigned_url(
         int, str,
         None] = None
 ):
-    import boto3
-    from botocore.config import Config
-
-    region = os.environ.get('AWS_REGION')
-    my_config = Config(
-        region_name=region,
-        signature_version='s3v4'
-    )
-    s3_client = boto3.client('s3', config=my_config)
+    s3_client = get_s3_client()
     result = get_default_resultset()
     expires_in = get_storage_presigned_expiration_seconds(
         expiration_seconds)
@@ -362,6 +372,10 @@ def prepare_asset_url(public_url):
         str: The prepared asset URL.
     """
     final_public_url = public_url
+
+    # Check if presigned URLs are enabled
+    if not CLOUD_STORAGE_PRESIGNED_ACTIVE:
+        return final_public_url
 
     bucket_name, key = get_bucket_key_from_url(public_url)
     presigned_url_result = get_s3_presigned_url(bucket_name, key)
