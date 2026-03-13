@@ -16,17 +16,22 @@ app_logs: Union[logging.Logger, None] = None
 
 
 def log_config(log_file: str = None) -> logging:
-    """ Logging configuration """
+    """Logging configuration"""
+    logger_options = os.getenv("APP_LOGGER_OPTIONS", "")
     logger = logging.getLogger(settings.APP_NAME)
     logger.propagate = False
     if settings.DEBUG:
         logger.setLevel(logging.DEBUG)
+        if "silent" not in logger_options:
+            print("Logger configured in DEBUG mode")
     else:
         logger.setLevel(logging.INFO)
+        if "silent" not in logger_options:
+            print("Logger configured in INFO mode")
     handler = logging.StreamHandler(sys.stdout)
     if log_file:
         handler = logging.FileHandler(log_file)
-    formatter = logging.Formatter('%(name)s-%(levelname)s - %(message)s')
+    formatter = logging.Formatter("%(name)s-%(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     return logger
@@ -46,8 +51,8 @@ def _get_logger() -> logging.Logger:
 
 
 def db_stamp() -> str:
-    db_engine = os.environ['APP_DB_ENGINE']
-    if db_engine == 'DYNAMO_DB':
+    db_engine = os.environ["APP_DB_ENGINE"]
+    if db_engine == "DYNAMODB":
         response = f"{db_engine}|" + \
             f"{os.environ.get('DYNAMDB_PREFIX', 'No-Prefix')}"
     else:
@@ -60,10 +65,22 @@ def db_stamp() -> str:
 
 
 def formatted_message(message: Any) -> str:
-    """ Returns a formatted message with database name and date/time """
-    return f"[{db_stamp()}]" + \
-        f" {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}" + \
-        f" | {message}"
+    """Returns a formatted message with database name and date/time"""
+    return (
+        f"[{db_stamp()}]"
+        + f" {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        + f" | {message}"
+    )
+
+
+def sanitize_log_message(message: Any) -> str:
+    """
+    Sanitize the log message to avoid log injection.
+    """
+    if message is None:
+        return ""
+    result = str(message)
+    return result.replace("\n", "\\n").replace("\r", "\\r")
 
 
 def log_debug(message: Any) -> str:

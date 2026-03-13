@@ -79,14 +79,16 @@ def menu_options_element(
         oa_response['error_message'] = "'element' parameter must" + \
             " be specified [MOEEP-010]"
         return return_resultset_jsonified_or_exception(
-            oa_response, 403
+            result=oa_response,
+            status_code=403,
         )
     # Get menu element configuration
     oa_response = get_option_access(app_context, element)
     if oa_response['error']:
         # Access denied
         return return_resultset_jsonified_or_exception(
-            oa_response, 401
+            result=oa_response,
+            status_code=401,
         )
     # Access granted
     oa_response['response'] = True

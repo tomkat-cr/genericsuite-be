@@ -123,12 +123,6 @@ class ParamsFile():
                     "id": "00a72c28-58c9-499d-957a-f2cfad12670d"
                 }
             ]
-            "users_api_keys": [
-                {
-                    "access_token": "ExampleToken",
-                    "id": "00a72c28-58c9-499d-957a-f2cfad12670d"
-                }
-            ]
         }
 
         cat /tmp/params_GENERAL.json
@@ -380,13 +374,13 @@ def get_app_context(app_context_or_blueprint: Any):
 def delete_params_file(
     app_context_or_blueprint: Any,
     action_data: Optional[Union[dict, None]]
-) -> None:
+) -> dict:
     """
     GenericDbHelper specific function to delete the parameters file (e.g. when
     general_config or user's users_config array is changed).
 
     Args:
-        app_context (AppContext): the application context object
+        app_context_or_blueprint (AppContext): the application context object
         action_data (dict, optional): the action data. Defaults to None.
             If it's not None, it must have the following keys (attributes):
             "action": "list", "read", "create", "update" or "delete"
@@ -503,52 +497,3 @@ def save_user_param_file(user_id: str) -> dict:
     pfc = ParamsFile(user_id)
     filename = pfc.get_params_filename(user_id)
     return pfc.save_params_file(filename, user_response['resultset'])
-
-
-def save_all_users_params_files() -> dict:
-    """
-    Save all users params files, to enable use of API keys
-    Check out "CAUJF: Create All User JSON Files" for more info
-    """
-    self_debug = DEBUG
-    # self_debug = True
-    response = get_default_resultset()
-    dbo = GenericDbHelper(json_file="users")
-
-    users_params_files = dbo.fetch_list(skip=0, limit=0)
-    if users_params_files['error']:
-        response['error'] = True
-        response['error_message'] = \
-            users_params_files['error_message']
-        log_error(
-            f"save_all_users_params_files"
-            f" | ERROR: {users_params_files['error_message']}")
-        return response
-
-    errors = []
-    _ = self_debug and log_debug(
-        f"save_all_users_params_files"
-        f" | users_params_files: {users_params_files}")
-    for user in json.loads(users_params_files['resultset']):
-        # Get user's data
-        user_id = get_id_as_string(user)
-        save_response = save_user_param_file(user_id)
-        if save_response['error']:
-            response['error'] = True
-            errors.append(f"UserId: {user_id} | Error: "
-                          f"{save_response['error_message']}")
-            continue
-
-    if response['error']:
-        response['error_message'] = \
-            f"Errors saving params files: {', '.join(errors)}"
-        log_error(
-            f"save_all_users_params_files"
-            f" | ERROR: {response['error_message']}")
-    else:
-        _ = self_debug and log_debug(
-            f"save_all_users_params_files"
-            f" | All params files saved"
-            f"\n | response: {response}")
-
-    return response

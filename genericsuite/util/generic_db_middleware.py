@@ -48,7 +48,7 @@ def fetch_all_from_db(
     if result['error']:
         log_error(
             f'AI_FAFD-E1) ERROR: Fetch all from {json_file}' +
-            ' | result: {result}')
+            f' | result: {result}')
     elif DEBUG:
         log_debug(f'AI_FAFD-1) Fetch all from {json_file} | result: {result}')
     return result
@@ -84,6 +84,10 @@ def get_item_from_db(
     if get_by_pk:
         result = dbo.fetch_row_raw(entry_value)
     else:
+        # Add table's mandatoy filters. E.g. user_id
+        filters.update({
+            k: v for k, v in dbo.mandatory_filters.items()
+        })
         result = dbo.fetch_row_by_entryname_raw(
             entry_name=entry_name,
             entry_value=entry_value,

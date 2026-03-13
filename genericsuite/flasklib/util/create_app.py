@@ -12,9 +12,12 @@ from genericsuite.util.app_logger import log_info
 from genericsuite.config.config import Config
 from genericsuite.config.config_from_db import set_init_custom_data
 
-from genericsuite.flasklib.endpoints import users
-from genericsuite.flasklib.endpoints import menu_options
-from genericsuite.flasklib.endpoints import storage_retrieval
+from genericsuite.flasklib.endpoints import (
+    users,
+    menu_options,
+    storage_retrieval,
+    logs
+)
 from genericsuite.flasklib.util.generic_endpoint_builder import (
     generate_blueprints_from_json
 )
@@ -49,6 +52,7 @@ def create_app(app_name: str, settings=None) -> Any:
     app.register_blueprint(menu_options.bp)
     app.register_blueprint(users.bp)
     app.register_blueprint(storage_retrieval.bp)
+    app.register_blueprint(logs.bp)
 
     # Register generic endpoints (from the "endpoints.json" file)
     generate_blueprints_from_json(app, 'endpoints')

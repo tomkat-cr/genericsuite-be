@@ -3,6 +3,7 @@ import json
 import os
 
 import jwt
+from fastmcp.server.dependencies import get_http_headers
 
 from genericsuite.models.users.users import (
     login_user as login_user_model,
@@ -30,6 +31,8 @@ from genericsuite.mcplib.util.McpServerApp import McpServerApp
 
 DEBUG: bool = False
 DEFAULT_JSON_INDENT = 2
+
+MCP_MANDATORY_USER_ID = os.getenv("MCP_MANDATORY_USER_ID", "0") == "1"
 
 
 def get_app_request(
@@ -172,8 +175,8 @@ def mcp_authenticate_api_key(
         path="user/login",
         method="POST",
     )
-    blueprint = get_request_blueprint("login", app, request)
-    if not user_id:
+    if MCP_MANDATORY_USER_ID and not user_id:
+        blueprint = get_request_blueprint("login", app, request)
         user_data = get_user_data_by_username(
             username=username,
             request=request,
@@ -184,8 +187,8 @@ def mcp_authenticate_api_key(
         user_id = user_data['resultset']['_id']
     authorized_request = get_api_key_auth(
         request,
+        api_key,
         user_id,
-        api_key
     )
     if isinstance(authorized_request, dict):
         return authorized_request
@@ -200,6 +203,14 @@ def mcp_authenticate_api_key(
     return get_default_resultset()
 
 
+def get_access_token():
+    """
+    Get the access token
+    """
+    headers = get_http_headers()
+    return headers.get("authorization")
+
+
 def verify_app_context(
     app: McpServerApp,
     cac_object_list: list
@@ -207,9 +218,10 @@ def verify_app_context(
     """
     Verify the app context
     """
+    access_token = get_access_token()
     for cac in cac_object_list:
         if cac.app_context is None:
-            if not os.environ.get("GS_API_KEY") or (
+            if not os.environ.get("GS_API_KEY", access_token) or (
                 not os.environ.get("GS_USER_ID") and
                 not os.environ.get("GS_USER_NAME")
             ):
@@ -218,7 +230,7 @@ def verify_app_context(
                 result = mcp_authenticate_api_key(
                     user_id=os.environ.get("GS_USER_ID"),
                     username=os.environ.get("GS_USER_NAME"),
-                    api_key=os.environ.get("GS_API_KEY"),
+                    api_key=access_token or os.environ.get("GS_API_KEY"),
                     app=app,
                     cac_object_list=cac_object_list,
                 )

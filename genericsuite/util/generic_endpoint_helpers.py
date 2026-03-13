@@ -26,6 +26,7 @@ class GenericEndpointHelper:
     """
     Helper class for generic endpoint CRUD operations.
     """
+
     def __init__(
         self,
         app_context: AppContext,
@@ -98,7 +99,7 @@ class GenericEndpointHelper:
             self.dbo.cnf_db.get('additional_query_params')
 
         (limit, skip, page) = get_navigation_params(self.request)
-
+        http_status_code = None
         _ = DEBUG and log_debug(
             f' | row_id: {row_id}'
             f' | additional_query_params: {additional_query_params}'
@@ -106,16 +107,19 @@ class GenericEndpointHelper:
             f' | like_param: {like_param} | comb_param: {comb_param}'
             f'\n | request_body: {self.request_body}')
 
+        # Create (POST)
         if self.request.method.upper() == 'POST':
-            # Create
             _ = DEBUG and log_debug(f'GCM-1.1) CREATE {self.data["name"]}...')
             result = self.dbo.create_row(self.request_body)
+            if not result['error']:
+                http_status_code = 201
             _ = DEBUG and log_debug(
                 f'GCM-1.2) CREATE {self.data["name"]}'
                 f'\n | request_body: {self.request_body}'
                 f'\n | result: {result}')
+
+        # Update (PUT)
         elif self.request.method.upper() == 'PUT':
-            # Update
             _ = DEBUG and log_debug(f'GCM-2.1) UPDATE {self.data["name"]}...')
             options = {"update_item": self.query_params.get("update_item",
                                                             "0")}
@@ -125,24 +129,27 @@ class GenericEndpointHelper:
                 f'GCM-2.2) UPDATE {self.data["name"]}'
                 f'\n | request_body: {self.request_body}'
                 f'\n | result: {result}')
+
+        # Delete (DELETE)
         elif self.request.method.upper() == 'DELETE' and row_id is not None:
-            # Delete
             _ = DEBUG and log_debug(f'GCM-3.1) DELETE {self.data["name"]}'
                                     f' | row_id: {row_id}...')
             result = self.dbo.delete_row(row_id)
             _ = DEBUG and log_debug(
                 f'GCM-3.2) DELETE {self.data["name"]}'
                 f' | row_id: {row_id}\n | result: {result}')
+
+        # Get one row by _id (GET)
         elif row_id is not None:
-            # Get one row by _id
             _ = DEBUG and log_debug(
                 f'GCM-4.1) GET ROW {self.data["name"]}'
                 f' BY ID: {row_id}...')
             result = self.dbo.fetch_row(row_id)
             _ = DEBUG and log_debug(f'GCM-4.2) GET ROW {self.data["name"]}'
                                     f' BY ID: {row_id}\n | result: {result}')
+
+        # Like Search (GET)
         elif like_param == "1":
-            # Like Search
             like_query_params = self.get_like_query_params()
             _ = DEBUG and log_debug(f'GCM-5.1) LIKE SEARCH {self.data["name"]}'
                                     f'\n | {like_query_params}...')
@@ -159,10 +166,11 @@ class GenericEndpointHelper:
             _ = DEBUG and log_debug(
                 f'GCM-5.2) LIKE SEARCH {self.data["name"]}'
                 f'\n | {like_query_params}\n | result: {result}')
+
+        # Get one row by additional_query_params (GET)
         elif additional_query_params is not None and \
             all(param in self.query_params
                 for param in additional_query_params):
-            # Get one row by additional_query_params
             _ = DEBUG and log_debug('GCM-6.1) SEARCH BY ATTRIBUTE' +
                                     f' {self.data["name"]}...')
             result = get_default_resultset()
@@ -173,9 +181,14 @@ class GenericEndpointHelper:
                     continue
                 param_name = key
                 param_value = self.query_params[key]
+                # Add table's mandatoy filters. E.g. user_id
+                filters = {
+                    k: v for k, v in self.dbo.mandatory_filters.items()
+                }
                 result = self.dbo.fetch_row_by_entryname_raw(
                     entry_name=param_name,
                     entry_value=param_value,
+                    filters=filters
                 )
                 if not result['resultset']:
                     result = error_resultset(
@@ -188,8 +201,9 @@ class GenericEndpointHelper:
                 'GCM-6.2) SEARCH BY ATTRIBUTE'
                 f' {self.data["name"]} BY {param_name}: {param_value}'
                 f'\n | result: {result}')
+
+        # Fetch row list (GET)
         else:
-            # Fetch row list
             _ = DEBUG and log_debug(
                 f'GCM-7.1) {self.data["name"]} list |'
                 f' skip: {skip}, limit: {limit}, page: {page}'
@@ -199,7 +213,9 @@ class GenericEndpointHelper:
                 f'GCM-7.2) {self.data["name"]} list |'
                 f' skip: {skip}, limit: {limit}, page: {page}'
                 f'\n | result {result}')
-        return return_resultset_jsonified_or_exception(result)
+
+        return return_resultset_jsonified_or_exception(
+            result, status_code=http_status_code)
 
     def generic_raw_json(self) -> dict:
         """

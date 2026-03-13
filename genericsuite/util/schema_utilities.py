@@ -1,14 +1,14 @@
 """
 Schema utilities
 """
-from typing import Union
+from typing import Union, Type
 from logging import Logger
-from marshmallow import Schema, ValidationError
+from pydantic import BaseModel, ValidationError
 
 
 def schema_verification(
     json_body: dict,
-    schema_validator: Schema,
+    schema_validator: Type[BaseModel],
     app_logger: Logger,
 ) -> Union[dict, None]:
     """
@@ -16,7 +16,7 @@ def schema_verification(
 
     Args:
         json_body (dict): The input data to be validated.
-        schema (Schema): The schema to validate input data.
+        schema (BaseModel): The schema to validate input data.
         app_logger (Logger): The logger to log validation errors.
 
     Returns:
@@ -24,7 +24,8 @@ def schema_verification(
             does not conform to the schema.
     """
     try:
-        return schema_validator.load(json_body)
+        # Pydantic v2 usage
+        return schema_validator.model_validate(json_body).model_dump()
     except ValidationError as error:
-        app_logger.error(f'Query error: {error.messages}')
+        app_logger.error(f'Query error: {error.errors()}')
     return None

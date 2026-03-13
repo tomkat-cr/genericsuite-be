@@ -3,38 +3,97 @@
 
 # https://realpython.com/python-send-email/
 
+from typing import Union
 from os import environ
 from os.path import basename
-import smtplib
+
+import re
 import ssl
+import smtplib
+
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-from email.utils import COMMASPACE, formatdate
+from email.utils import COMMASPACE, formatdate, make_msgid
 
+from genericsuite.util.utilities import get_default_resultset
 from genericsuite.util.app_logger import log_debug, log_error
 
-DEBUG = False
+DEBUG = environ.get('SEND_EMAIL_DEBUG', '0') == '1'
 
 
-def send_email(sender_email, receiver_email, subject, text,
-               html, files=None):
+def remove_html_tags(text):
+    """Remove html tags from a string using regex"""
+    # Pattern to match anything between '<' and '>'
+    clean = re.compile('<.*?>')
+    return re.sub(clean, '', text)
+
+
+def send_email(
+    sender_email: Union[str, None],
+    receiver_email: Union[list[str], str, None],
+    subject: str,
+    text: str,
+    html: str,
+    files: list[str] = None
+) -> dict:
     """
     Send an Email
     """
+    result = get_default_resultset()
+
     files = [] if not files else files
     smtp_server = environ.get('SMTP_SERVER')
     smtp_port = environ.get('SMTP_PORT')  # For starttls
     smtp_user = environ.get('SMTP_USER')
     smtp_password = environ.get('SMTP_PASSWORD')
-    if sender_email is None or sender_email.strip() == '':
+
+    if not sender_email:
         sender_email = environ.get('SMTP_DEFAULT_SENDER')
+    if sender_email.strip() == '':
+        result['error'] = True
+        result['error_message'] = 'Sender email is required'
+        return result
+
+    if not receiver_email:
+        receiver_email = []
+    if isinstance(receiver_email, str):
+        receiver_email = [receiver_email]
+    if not receiver_email:
+        result['error'] = True
+        result['error_message'] = 'Receiver email is required'
+        return result
+
+    if not subject:
+        result['error'] = True
+        result['error_message'] = 'Subject is required'
+        return result
+
+    if not text and not html:
+        result['error'] = True
+        result['error_message'] = 'Text or HTML is required'
+        return result
+
+    if not html:
+        html = text
+    elif not text:
+        text = remove_html_tags(html)
+
+    _ = DEBUG and log_debug(
+        'SEND_EMAIL' +
+        f'\n | sender_email: {sender_email}' +
+        f'\n | receiver_email: {receiver_email}' +
+        f'\n | subject: {subject}' +
+        f'\n | text: {text}' +
+        f'\n | html: {html}' +
+        f'\n | files: {files}')
 
     message = MIMEMultipart("alternative")
     message["Subject"] = subject
     message["From"] = sender_email
     message['To'] = COMMASPACE.join(receiver_email)
     message['Date'] = formatdate(localtime=True)
+    message["Message-ID"] = make_msgid()
 
     # Turn these into plain/html MIMEText objects
     body_plain_text = MIMEText(text, "plain")
@@ -54,26 +113,27 @@ def send_email(sender_email, receiver_email, subject, text,
                 Name=basename(file_hdl)
             )
         # After the file is closed
-        # part['Content-Disposition'] = 'attachment; filename="%s"' % basename(f)
         part['Content-Disposition'] = 'attachment; filename=' + \
                                       f'"{basename(file_hdl)}"'
         message.attach(part)
 
     if DEBUG:
-        log_debug('SEND_EMAIL' +
-                   f'\n | smtp_server: {smtp_server}' +
-                   f'\n | smtp_port: {smtp_port}' +
-                   f'\n | smtp_user: {smtp_user}' +
-                   f'\n | smtp_password: {"*" * len(smtp_password)}' +
-                   f'\n | sender_email: {sender_email}' +
-                   f'\n | receiver_email: {receiver_email}' +
-                   f'\n | subject: {subject}' +
-                   f'\n | text: {text}' +
-                   f'\n | html: {html}' +
-                   f'\n | file_path: {files}')
+        log_debug(
+            'SEND_EMAIL' +
+            f'\n | smtp_server: {smtp_server}' +
+            f'\n | smtp_port: {smtp_port}' +
+            f'\n | smtp_user: {smtp_user}' +
+            f'\n | smtp_password: {"*" * len(smtp_password)}' +
+            f'\n | sender_email: {sender_email}' +
+            f'\n | receiver_email: {receiver_email}' +
+            f'\n | subject: {subject}' +
+            f'\n | text: {text}' +
+            f'\n | html: {html}' +
+            f'\n | file_path: {files}')
 
     # Create a secure SSL context
     context = ssl.create_default_context()
+
     # Try to log in to smtp server and send email
     try:
         smtp = smtplib.SMTP(smtp_server, smtp_port)
@@ -83,13 +143,20 @@ def send_email(sender_email, receiver_email, subject, text,
         smtp.login(smtp_user, smtp_password)
     except Exception as err:
         # Print any error messages to stdout
-        log_error(f'Send_Email ERROR (preparing phase): {err}')
-        return False
+        result['error'] = True
+        result['error_message'] = f'Send_Email ERROR (preparing phase): {err}'
+        log_error(result['error_message'])
+        return result
+
     try:
         smtp.sendmail(sender_email, receiver_email, message.as_string())
     except Exception as err:
         # Print any error messages to stdout
-        log_error(f'Send_Email ERROR (sending phase): {err}')
+        result['error'] = True
+        result['error_message'] = f'Send_Email ERROR (sending phase): {err}'
+        log_error(result['error_message'])
+        return result
     finally:
         smtp.close()
-    return True
+
+    return result

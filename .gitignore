@@ -163,3 +163,7 @@ cython_debug/
 
 # Kiro IDE
 .kiro
+
+# Big lambdas deployment
+tmp
+*_IMPLEMENTATION.md

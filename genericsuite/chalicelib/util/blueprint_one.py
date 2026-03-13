@@ -2,13 +2,15 @@
 Blueprint wrapper to add authorization, other data and schema validation
 to requests.
 """
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Type
 from functools import partial, wraps
+
+from pydantic import BaseModel
 
 from chalice.app import Blueprint, Request
 # from genericsuite.util.framework_abs_layer import Blueprint, Request
 from genericsuite.util.app_logger import log_debug
-from genericsuite.util.schema_utilities import Schema, schema_verification
+from genericsuite.util.schema_utilities import schema_verification
 
 
 DEBUG = False
@@ -36,7 +38,7 @@ class BlueprintOne(Blueprint):
         self,
         path: str,
         authorizor: Optional[Callable[[Request], Request]] = None,
-        schema: Optional[Schema] = None,
+        schema: Optional[Type[BaseModel]] = None,
         other_params: Optional[dict] = None,
         **kwargs: Any,
     ) -> Callable:
@@ -45,8 +47,8 @@ class BlueprintOne(Blueprint):
 
         Args:
             path (str): The URL path for the route.
-            schema (Optional[Schema]): The schema to validate the request
-                against.
+            schema (Optional[Type[BaseModel]]): The schema to validate the
+                request against.
             authorizor (Optional[Callable[[Request], Request]]): The
                 authorization function.
             other_params (Optional[dict]): Additional parameters to pass to the

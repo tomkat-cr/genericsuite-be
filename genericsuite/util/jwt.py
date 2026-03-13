@@ -1,7 +1,7 @@
 """
 JWT Library
 """
-from typing import Callable, Union
+from typing import Callable, Union, Optional
 import os
 import base64
 import datetime
@@ -39,7 +39,7 @@ PARAMS_FILE_USER_FILENAME_TEMPLATE = os.environ.get(
     'PARAMS_FILE_USER_FILENAME_TEMPLATE', 'params_[user_id].json')
 
 INVALID_TOKEN_ERROR_MESSAGE = 'Token is invalid'
-USER_ID_REQUIRED_ERROR_MESSAGE = 'User ID is required to get access token data'
+OTHER_TOKEN_ERROR_MESSAGE = 'Token error'
 
 
 class AuthTokenPayload(BaseModel):
@@ -123,7 +123,10 @@ def generate_access_token(length=64):
     return secrets.token_hex(length)
 
 
-def get_access_token_data(access_token: str, user_id: str = None) -> dict:
+def get_access_token_data(
+        access_token: str,
+        user_id: Optional[str] = None
+) -> dict:
     """
     Get the access token data from the database.
 
@@ -134,52 +137,96 @@ def get_access_token_data(access_token: str, user_id: str = None) -> dict:
     Returns:
         dict: The access token data.
     """
-    if not user_id:
-        return error_resultset(USER_ID_REQUIRED_ERROR_MESSAGE)
-    dbo = GenericDbHelperSuper(json_file="users")
-    user_data = dbo.fetch_row_raw(user_id)
-    if user_data['error']:
-        return error_resultset(user_data['error_message'])
     try:
-        # Check if the access token is valid
-        user_data['valid_token'] = False
+        dbo = GenericDbHelperSuper(json_file="users_api_keys")
+        api_key_data = dbo.fetch_row_by_entryname_raw(
+            'access_token', access_token)
+        if api_key_data['error']:
+            _ = DEBUG and log_error(
+                'get_access_token_data | Table: users_api_keys | ' +
+                'dbo.fetch_row_by_entryname_raw | Error:' +
+                f' {str(api_key_data["error_message"])}')
+            return error_resultset(api_key_data['error_message'])
+        resultset = api_key_data['resultset']
         _ = DEBUG and log_debug(
-            f'JWT.py | get_access_token_data | user_data: {user_data}')
-        resultset = user_data['resultset']
-        for api_key in resultset.get('users_api_keys', []):
-            if api_key['access_token'] == access_token and \
-               api_key['active'] == '1':
-                user_data['valid_token'] = True
-                break
-        if user_data['valid_token']:
-            user_data['user_id'] = get_id_as_string(resultset)
-            return user_data
+            "get_access_token_data | Api Key resultset: "
+            f"{resultset}")
+        if not resultset:
+            _ = DEBUG and log_error(
+                'get_access_token_data | Api Key not found')
+            return error_resultset(INVALID_TOKEN_ERROR_MESSAGE)
+        if user_id and resultset['user_id'] != user_id:
+            _ = DEBUG and log_error(
+                "get_access_token_data | Api key user_id "
+                f"'{resultset['user_id']}' does not match with "
+                f"passed user_id: {user_id}")
+            return error_resultset(INVALID_TOKEN_ERROR_MESSAGE)
+        if resultset['active'] != '1':
+            _ = DEBUG and log_error(
+                'get_access_token_data | Api key is not active')
+            return error_resultset(INVALID_TOKEN_ERROR_MESSAGE)
+
+        user_id = resultset['user_id']
+        try:
+            dbo = GenericDbHelperSuper(json_file="users")
+            user_data = dbo.fetch_row_raw(user_id)
+            _ = DEBUG and log_debug(
+                "get_access_token_data | user_id: "
+                f"{user_id} | User resultset: {user_data['resultset']}")
+            if user_data['error']:
+                _ = DEBUG and log_error(
+                    'get_access_token_data | Table: users | ' +
+                    'dbo.fetch_row_raw(user_id) | Error:' +
+                    f' {str(user_data["error_message"])}')
+                return error_resultset(user_data['error_message'])
+            if not user_data['resultset']:
+                _ = DEBUG and log_error(
+                    'get_access_token_data | User not found')
+                return error_resultset(INVALID_TOKEN_ERROR_MESSAGE)
+            if user_data['resultset'].get('status') != '1':
+                _ = DEBUG and log_error(
+                    'get_access_token_data | User is not active')
+                return error_resultset(INVALID_TOKEN_ERROR_MESSAGE)
+
+            user_data['valid_token'] = True
+            user_data['user_id'] = get_id_as_string(user_data['resultset'])
+
+        except Exception as err:
+            _ = DEBUG and log_error(
+                'get_access_token_data | Table: users | ' +
+                'dbo.fetch_row_raw(user_id) | Exception:'
+                f' {str(err)}')
+            return error_resultset(INVALID_TOKEN_ERROR_MESSAGE)
+        return user_data
+
     except Exception as err:
         _ = DEBUG and log_error(
-            'REQUEST_AUTHENTICATION@get_api_key_auth | Exception:'
+            'get_access_token_data | Exception:'
             f' {str(err)}')
     return error_resultset(INVALID_TOKEN_ERROR_MESSAGE)
 
 
 def get_api_key_auth(
     request: Request,
-    user_id: str,
-    access_token: str
+    access_token: str,
+    user_id: Optional[str] = None,
 ) -> Union[AuthorizedRequest, dict]:
     """
     Get the authorized request from the request object.
 
     Args:
         request (Request): The request object.
+        access_token (str): The access token (with or without the
+            'Bearer ' prefix). Required for API Keys.
         user_id (str): The user ID specified as customer_id in the POST
-            body.
-        access_token (str): The access token (without 'Bearer ' prefix).
-            (required for API Keys)
+            body. Optional for API Keys.
 
     Returns:
         Union[AuthorizedRequest, dict]: The authorized request or an error
             message.
     """
+    if access_token.startswith('Bearer '):
+        access_token = access_token[7:]
     access_token_data = get_access_token_data(access_token, user_id)
     if access_token_data['error']:
         return access_token_data
@@ -189,7 +236,7 @@ def get_api_key_auth(
         public_id=access_token_data['user_id']
     )
     _ = DEBUG and log_debug(
-        '||| REQUEST_AUTHENTICATION@get_api_key_auth' +
+        '||| get_api_key_auth' +
         f' | jws_token_data = {jws_token_data}')
     authorized_request = get_authorized_request(request, jws_token_data)
     return authorized_request
@@ -213,7 +260,7 @@ def get_general_authorized_request(request: Request
         token_raw = request.headers[settings.HEADER_TOKEN_ENTRY_NAME]
         jwt_token = token_raw.replace('Bearer ', '')
         _ = DEBUG and log_debug(
-            'REQUEST_AUTHENTICATION@get_general_authorized_request' +
+            'REQUEST_AUTHENTICATION | get_general_authorized_request' +
             '\n | HEADER_TOKEN_ENTRY_NAME: ' +
             f'{settings.HEADER_TOKEN_ENTRY_NAME}' +
             f'\n | token_raw: {token_raw}' +
@@ -226,27 +273,29 @@ def get_general_authorized_request(request: Request
             algorithms="HS256",
         )
         _ = DEBUG and log_debug(
-            'REQUEST_AUTHENTICATION@get_general_authorized_request'
+            'REQUEST_AUTHENTICATION | get_general_authorized_request'
             f' | jws_token_data = {jws_token_data}')
         authorized_request = get_authorized_request(request, jws_token_data)
         _ = DEBUG and log_debug(
-            'REQUEST_AUTHENTICATION@get_general_authorized_request'
+            'REQUEST_AUTHENTICATION | get_general_authorized_request'
             f' | authorized_request = {authorized_request}')
     except Exception as err:
+        error_message = str(err)
+        if "signature has expired" in error_message.lower():
+            log_error(
+                f'REQUEST_AUTHENTICATION | get_general_authorized_request'
+                f' | Exception: {error_message}')
+            return standard_error_return(
+                OTHER_TOKEN_ERROR_MESSAGE)
         # API Keys processing
         project_id = request.headers.get('x-project-id', '')
         _ = DEBUG and log_debug(
-            'REQUEST_AUTHENTICATION@get_general_authorized_request'
+            'REQUEST_AUTHENTICATION | get_general_authorized_request'
             f'\n | project_id = {project_id}'
             f'\n | jwt_token = {jwt_token}'
             f'\n | headers = {request.headers}'
             f'\n | request = {request}')
-        if project_id and jwt_token:
-            return get_api_key_auth(request, project_id, jwt_token)
-        _ = DEBUG and log_error(
-            f'REQUEST_AUTHENTICATION@get_general_authorized_request'
-            f' | Exception: {str(err)}')
-        return standard_error_return(INVALID_TOKEN_ERROR_MESSAGE)
+        return get_api_key_auth(request, jwt_token, project_id)
     return authorized_request
 
 

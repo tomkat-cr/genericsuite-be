@@ -16,17 +16,17 @@ from genericsuite.fastapilib.util.blueprint_one import BlueprintOne
 from genericsuite.fastapilib.util.dependencies import (
     get_default_fa_request,
 )
-from genericsuite.util.aws import storage_retieval
+from genericsuite.util.storage import storage_retieval
 from genericsuite.util.app_logger import log_debug
 from genericsuite.util.utilities import (
     return_resultset_jsonified_or_exception,
     send_file_text_text,
 )
-# from genericsuite.config.config import Config
 
 DEBUG = False
 
-DEFAULT_DOWNLOAD_METHOD = "fastapi"
+DEFAULT_DOWNLOAD_METHOD = os.environ.get('DEFAULT_DOWNLOAD_METHOD', "fastapi")
+# DEFAULT_DOWNLOAD_METHOD = "fastapi"
 # DEFAULT_DOWNLOAD_METHOD = "inline"
 # DEFAULT_DOWNLOAD_METHOD = "streaming"
 # DEFAULT_DOWNLOAD_METHOD = "attachment"

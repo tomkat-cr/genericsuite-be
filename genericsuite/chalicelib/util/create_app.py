@@ -10,9 +10,12 @@ from genericsuite.util.app_logger import log_info
 
 from genericsuite.config.config import Config
 
-from genericsuite.chalicelib.endpoints import users
-from genericsuite.chalicelib.endpoints import menu_options
-from genericsuite.chalicelib.endpoints import storage_retrieval
+from genericsuite.chalicelib.endpoints import (
+    users,
+    menu_options,
+    storage_retrieval,
+    logs
+)
 from genericsuite.chalicelib.util.generic_endpoint_builder import (
     generate_blueprints_from_json
 )
@@ -52,15 +55,16 @@ def create_app(app_name: str, settings=None) -> Any:
     # Set Content-type: multipart/form-data as Binary
     # to properly handle image uploads
     chalice_app.api.binary_types.append("multipart/form-data")
-    # log_debug(f'api.binary_types: {chalice_app.api.binary_types}')
 
     # Register general endpoints
-    chalice_app.register_blueprint(menu_options.bp, url_prefix='/menu_options')
-    # log_info("Registered menu_options blueprint")
-    chalice_app.register_blueprint(users.bp, url_prefix='/users')
-    # log_info("Registered users blueprint")
-    chalice_app.register_blueprint(storage_retrieval.bp, url_prefix='/asset')
-    # log_info("Registered storage_retrieval blueprint")
+    chalice_app.register_blueprint(
+        menu_options.bp, url_prefix=f'/{settings.API_VERSION}/menu_options')
+    chalice_app.register_blueprint(
+        users.bp, url_prefix=f'/{settings.API_VERSION}/users')
+    chalice_app.register_blueprint(
+        storage_retrieval.bp, url_prefix=f'/{settings.API_VERSION}/assets')
+    chalice_app.register_blueprint(
+        logs.bp, url_prefix=f'/{settings.API_VERSION}/logs')
 
     # Register generic endpoints (from the "endpoints.json" file)
     generate_blueprints_from_json(chalice_app, 'endpoints')

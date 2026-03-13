@@ -8,6 +8,7 @@ from genericsuite.util.framework_abs_layer import Response
 from genericsuite.util.jwt import (
     AuthorizedRequest
 )
+from genericsuite.config.config import Config
 from genericsuite.flasklib.util.jwt import token_required
 from genericsuite.flasklib.util.blueprint_one import BlueprintOne
 
@@ -16,7 +17,9 @@ from genericsuite.models.menu_options.menu_options import (
     menu_options_element as menu_options_element_model,
 )
 
-bp = BlueprintOne("menu_options", __name__, url_prefix='/menu_options')
+settings = Config()
+bp = BlueprintOne("menu_options", __name__,
+                  url_prefix=f'/{settings.API_VERSION}/menu_options')
 
 
 @bp.route('', methods=['GET'])

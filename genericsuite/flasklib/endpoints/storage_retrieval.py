@@ -9,15 +9,19 @@ from genericsuite.util.framework_abs_layer import (
 )
 from genericsuite.util.app_logger import log_debug
 
-from genericsuite.util.aws import storage_retieval
+from genericsuite.util.storage import storage_retieval
 from genericsuite.util.utilities import (
     return_resultset_jsonified_or_exception,
 )
+from genericsuite.config.config import Config
 
 from genericsuite.flasklib.util.blueprint_one import BlueprintOne
 
 DEBUG = False
-bp = BlueprintOne('asset', __name__, url_prefix='/asset')
+
+settings = Config()
+bp = BlueprintOne('assets', __name__,
+                  url_prefix=f'/{settings.API_VERSION}/assets')
 
 
 def debug_args(args1, kwargs1):

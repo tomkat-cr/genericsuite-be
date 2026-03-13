@@ -108,7 +108,7 @@ def error_resultset(
 
 def return_resultset_jsonified_or_exception(
     result: dict,
-    http_error: int = 400,
+    status_code: Union[int, None] = None,
     headers: dict = None,
 ) -> Response:
     """Standard way to return results to to outside world.
@@ -116,19 +116,23 @@ def return_resultset_jsonified_or_exception(
     """
     if not headers:
         headers = {}
-    if result['error'] or result['error_message']:
+    if result.get('error') or result.get('error_message'):
         if DEBUG:
             log_debug(
                 'return_resultset_jsonified_or_exception |' +
-                f' ERROR error_message: {result["error_message"]}' +
-                f' | http_error: {http_error}'
+                f' ERROR error_message: {result.get("error_message")}' +
+                f' | status_code: {status_code}'
             )
         return standard_error_return(
-            error_message=result['error_message'],
-            error_code=http_error,
+            error_message=result.get('error_message'),
+            error_code=status_code or 400,
             headers=headers,
         )
-    return Response(body=result, status_code=200, headers=headers)
+    return Response(
+        body=result,
+        status_code=status_code or 200,
+        headers=headers
+    )
 
 
 def get_standard_base_exception_msg(
@@ -295,7 +299,7 @@ def get_request_body(request: Request) -> dict:
     """Returns the request body (Chalice)"""
     try:
         request_body = request.json_body
-    except BaseException:
+    except Exception:
         request_body = dict()
     return request_body
 

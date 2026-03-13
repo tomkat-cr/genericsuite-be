@@ -6,6 +6,8 @@ from itertools import islice
 import json
 import re
 
+import traceback
+
 from bson.json_util import dumps, ObjectId
 
 from genericsuite.util.app_logger import log_debug
@@ -80,13 +82,14 @@ class GenericDbHelper(GenericDbHelperWithRequest):
         # The resulting will be something like:
         # listing_filter BEFORE: {'meal_date': {'$lte': 946702800.0,
         # '$gte': 946616400.0}, 'observations': {'$regex':
-        # '.*sancocho.*', '$options': 'si'}, 'user_id': 'XXXX'}
+        # '.*mondongo.*', '$options': 'si'}, 'user_id': 'XXXX'}
         listing_filter = {
             # SQL LIKE in MongoDb
             k: {
                 '$regex': f".*{v}.*",
                 '$options': 'si',
             } if k not in self.mandatory_filters
+            and not k == '_id'
             and not self.is_datefield(k)
             # Date range
             else get_date_range_filter(v)
@@ -101,11 +104,11 @@ class GenericDbHelper(GenericDbHelperWithRequest):
 
         if '_id' in listing_filter:
             try:
-                listing_filter['_id'] = ObjectId(listing_filter['_id'])
+                listing_filter['_id'] = ObjectId(str(listing_filter['_id']))
             except ValueError:
                 resultset['error_message'] = \
                     f"_id `{listing_filter['_id']}` is invalid [FUL3]."
-            except BaseException as err:
+            except Exception as err:
                 resultset['error_message'] = \
                     get_standard_base_exception_msg(err, 'FUL4')
 
@@ -115,10 +118,11 @@ class GenericDbHelper(GenericDbHelperWithRequest):
 
         if self.query_params.get("only_listing_cols", "1") == "1":
             # By default, include only listing enabled columns and
-            # unprotected columns (those not in projection_exclusions)
+            # exclude unprotected columns (those not in
+            # projection_exclusions)
             projection = self.listing_disabled_columns_projection()
         else:
-            # include only unprotected columns (those not in
+            # Include only unprotected columns (those not in
             # projection_exclusions)
             projection = self.listing_projection_exclusions()
 
@@ -126,14 +130,15 @@ class GenericDbHelper(GenericDbHelperWithRequest):
         # {'$or': [{'$and': [{'user_id': 'XXXX'},
         # {'meal_date': {'$lte': 946702800.0, '$gte': 946616400.0}}]},
         # {'$and': [{'user_id': 'XXXX'}, {'observations':
-        # {'$regex': '.*sanncocho.*', '$options': 'si'}}]}]}
+        # {'$regex': '.*mondongo.*', '$options': 'si'}}]}]}
         listing_filter = self.add_mandatory_filters(listing_filter, combinator)
 
         _ = DEBUG and \
-            log_debug(f"FETCH_LIST | self.table_name: {self.table_name}" +
-                      f"\n | combinator: {combinator}" +
-                      f"\n | like_query_params: {like_query_params}" +
-                      f"\n | listing_filter: {listing_filter}")
+            log_debug(
+                f"FETCH_LIST | self.table_name: {self.table_name}" +
+                f"\n | combinator: {combinator}" +
+                f"\n | like_query_params: {like_query_params}" +
+                f"\n | listing_filter: {listing_filter}")
 
         column_name, direction = self.get_sort_config(order_param)
         _ = DEBUG and \
@@ -157,9 +162,12 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             resultset['resultset'] = dumps(db_result)
             _ = DEBUG and \
                 log_debug(f"FETCH_LIST 020 | resultset: {resultset}")
-        except BaseException as err:
+        except Exception as err:
+            call_stack = traceback.format_exc()
+            error_message = f"\nError Message: {err}\nCall Stack:" + \
+                f"\n{call_stack}" if DEBUG else str(err)
             resultset['error_message'] = get_standard_base_exception_msg(
-                err, 'FUL1'
+                error_message, 'FUL1'
             )
             resultset['error'] = True
         resultset = put_total_pages_in_resultset(
@@ -206,55 +214,12 @@ class GenericDbHelper(GenericDbHelperWithRequest):
 
         try:
             resultset['resultset'] = dumps(db_row['resultset'])
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'FU2')
             resultset['error'] = True
 
         return self.run_specific_func('read', resultset)
-
-    def fetch_row_by_entryname_raw(
-        self,
-        entry_name: str,
-        entry_value: str,
-        filters: dict = None,
-    ) -> dict:
-        """
-        Fetches a row from the database based on the given
-        entry_name and entry_value and returns it without
-        applying dumps() to the 'resultset' element.
-
-        Args:
-            entry_name (str): The name of the entry to filter by.
-            entry_value (str): The value of the entry to filter by.
-            filters (dict, optional): Additional filters to apply.
-            e.g. user_id.
-
-        Returns:
-            dict: The resultset containing the fetched row.
-        """
-        resultset = get_default_resultset()
-        if self.error_message:
-            resultset['error_message'] = self.error_message
-            resultset['error'] = True
-            return resultset
-
-        filters = {} if not filters else filters
-        filters.update({entry_name: entry_value})
-        try:
-            resultset['resultset'] = self.table_obj.find_one(
-                filters
-            )
-        except BaseException as err:
-            resultset['error_message'] = \
-                get_standard_base_exception_msg(err, 'FUBEN1')
-            resultset['error'] = True
-        _ = DEBUG and \
-            log_debug("fetch_row_by_entryname_raw: " +
-                      f"entry_name: {entry_name}" +
-                      f" | entry_value: {entry_value}" +
-                      f" | resultset: {resultset}")
-        return resultset
 
     def create_row(
         self,
@@ -333,15 +298,17 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             )
         # Creates the new item
         try:
-            resultset['resultset']['_id'] = str(
-                self.table_obj.insert_one(data).inserted_id
-            )
-        except BaseException as err:
+            insert_obj = self.table_obj.insert_one(data)
+            resultset['resultset']['_id'] = str(insert_obj.inserted_id)
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'CU5')
             resultset['error'] = True
         else:
-            resultset['resultset']['rows_affected'] = '1'
+            resultset['resultset']['rows_affected'] = \
+                str(insert_obj.inserted_count) \
+                if hasattr(insert_obj, 'inserted_count') \
+                else '1'
 
         return self.run_specific_func('create', resultset)
 
@@ -431,7 +398,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             resultset['resultset']['rows_affected'] = str(op_result)
             # Ensure the _id is returned for the specific function
             resultset['resultset']['_id'] = str(record['_id'])
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'UU2')
             resultset['error'] = True
@@ -477,7 +444,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             )
             # Ensure the _id is returned for the specific function
             resultset['resultset']['_id'] = str(remove_id)
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'DU2')
             resultset['error'] = True
@@ -541,7 +508,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             resultset['error'] = True
             return resultset
 
-        response = db_parent_row['resultset'].get(self.array_field, [])
+        response = db_parent_row['resultset'].get(self.array_field, []) or []
 
         if filters is not None:
             for filter_key in filters:
@@ -575,7 +542,8 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             # Create a list of filters based on lf (acronim of listing filters)
             all_filters = [
                 lambda x, key=filter_key:
-                re.search(lf[key]["$regex"], x.get(key, ''),
+                # Use "str(x.get(key, ''))" to handle numeric-only values
+                re.search(lf[key]["$regex"], str(x.get(key, '')),
                           re.IGNORECASE) is not None
                 if lf[key]["type"] == "regex"
                 else (x.get(key) <= lf[key]["$lte"] and
@@ -586,8 +554,11 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             ]
             _ = DEBUG and \
                 log_debug(
-                    f'\nfetch_array_rows | lf: {lf}' +
-                    f'\nfetch_array_rows | all_filters: {all_filters}\n')
+                    '\n>>> fetch_array_rows:' +
+                    f'\n| like_query_params: {like_query_params}' +
+                    f'\n| lf (list filters): {lf}' +
+                    f'\n| all_filters: {all_filters}' +
+                    '\n')
             # Apply filters using OR logic
             response = list(
                 filter(
@@ -598,7 +569,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
 
         try:
             resultset['resultset'] = dumps(response)
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = get_standard_base_exception_msg(
                 err, 'FUFT2'
             )
@@ -672,7 +643,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             # Get the array field ID, if not exists, returns an error
             try:
                 key_value = data[self.array_field].get(self.array_field_key)
-            except BaseException as err:
+            except Exception as err:
                 resultset['error_message'] = \
                     get_standard_base_exception_msg(err, 'AFTTU2')
                 resultset['error'] = True
@@ -707,7 +678,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             )
             # Ensure the _id is returned for the specific function
             resultset['resultset']['_id'] = str(parent_keys['_id'])
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'AFTTU1')
             resultset['error'] = True
@@ -773,6 +744,9 @@ class GenericDbHelper(GenericDbHelperWithRequest):
                       f'\narray_field_in_json={array_field_in_json}, ' +
                       'key value to REMOVE=' +
                       f'{data[array_field_in_json][self.array_field_key]}\n')
+
+        # For example:
+        # pull_element={'array_name': {'id_attrb_name': 'id_to_be_removed'}}
         pull_element = {
             self.array_field: {
                 self.array_field_key:
@@ -795,7 +769,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             )
             # Ensure the _id is returned for the specific function
             resultset['resultset']['_id'] = str(parent_keys['_id'])
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'RFTTU')
             resultset['error'] = True
@@ -838,7 +812,7 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             resultset['resultset']['rows_count'] = str(
                 self.table_obj.count_documents(find_criteria)
             )
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'GFMIU-010')
             resultset['error'] = True

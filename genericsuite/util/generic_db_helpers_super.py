@@ -1,6 +1,8 @@
 """
 Generic Database Helper super class
 """
+import os
+from datetime import datetime
 from uuid import uuid4
 
 from bson.json_util import ObjectId
@@ -51,14 +53,14 @@ class GenericDbHelperSuper:
             self.table_name = self.cnf_db['table_name']
             self.name = self.cnf_db.get('name', self.name)
             self.title = self.cnf_db.get('title', self.title)
+            _ = DEBUG and \
+                log_debug(f"||| GenericDbHelper | db: {db}")
             try:
-                _ = DEBUG and \
-                    log_debug(f"||| GenericDbHelper | db: {db}")
                 self.table_obj = db[self.table_name]
-                _ = DEBUG and \
-                    log_debug("||| GenericDbHelper | self.table_obj:" +
-                              f" {self.table_obj}")
-            except BaseException as error:
+                # _ = DEBUG and \
+                #     log_debug("||| GenericDbHelper | self.table_obj:" +
+                #               f" {self.table_obj}")
+            except Exception as error:
                 self.error_message = "ERROR connecting to Database:" + \
                                      f" {str(error)}"
                 log_error(self.error_message)
@@ -80,9 +82,9 @@ class GenericDbHelperSuper:
                    self.sub_type == "array":
                     self.array_field = self.cnf_db.get('array_name')
                     self.array_field_key = self.cnf_db['primaryKeyName']
-                    self.parent_key_names = self.cnf_db['parentKeyNames']
+                    self.parent_key_names = self.cnf_db['endpointKeyNames']
                     self.parent_key_field = \
-                        self.cnf_db['parentKeyNames'][0]['parameterName']
+                        self.cnf_db['endpointKeyNames'][0]['parameterName']
 
     def listing_projection_exclusions(self) -> dict:
         """
@@ -95,9 +97,8 @@ class GenericDbHelperSuper:
             e.g. {'field_name': 0, 'field_name2': 0}
             e.g. {} (empty dictionary)
         """
-        projection = {k: 0 for k in self.cnf_db.get(
-            'projection_exclusion', []
-        )}
+        projection_exclusion = self.cnf_db.get('projection_exclusion', [])
+        projection = {k: 0 for k in projection_exclusion}
         if DEBUG:
             log_debug('listing_projection_exclusions |' +
                       f' projection: {projection}')
@@ -116,10 +117,11 @@ class GenericDbHelperSuper:
             e.g. {'field_name': 0, 'field_name2': 0}
             e.g. {} (empty dictionary)
         """
+        projection_exclusion = self.cnf_db.get('projection_exclusion', [])
         projection = {
             k["name"]: 0 for k in self.cnf_db.get('fieldElements', [])
             if not k.get("listing", False) or
-            k["name"] in self.cnf_db.get('projection_exclusion', [])
+            k["name"] in projection_exclusion
         }
         if DEBUG:
             log_debug('listing_disabled_columns_projection |' +
@@ -142,14 +144,14 @@ class GenericDbHelperSuper:
 
         listing_filter BEFORE: {'meal_date': {'$lte': 946702800.0,
         '$gte': 946616400.0}, 'observations': {'$regex':
-        '.*sancocho.*', '$options': 'si'}, 'user_id': 'XXXX'}
+        '.*mondongo.*', '$options': 'si'}, 'user_id': 'XXXX'}
 
         mandatory_filter_to_add: [{'user_id': 'XXXX'}]
 
         listing_filter AFTER: {'$or': [{'$and': [{'user_id': 'XXXX'},
         {'meal_date': {'$lte': 946702800.0, '$gte': 946616400.0}}]},
         {'$and': [{'user_id': 'XXXX'}, {'observations':
-        {'$regex': '.*sanncocho.*', '$options': 'si'}}]}]}
+        {'$regex': '.*mondongo.*', '$options': 'si'}}]}]}
 
         Args:
             listing_filter (dict): The original listing filter.
@@ -290,6 +292,20 @@ class GenericDbHelperSuper:
                 mandatory_fields.append(element_name)
         return mandatory_fields
 
+    def get_current_user(self) -> str:
+        """
+        Get the current user Id from the Request
+
+        NOTE:
+        This method is implemented in the GenericDbHelperWithRequest class.
+        It is defined here to avoid errors in the __init__ method when there's
+        any error.
+
+        Returns:
+            str: the current user Id from the JWT Request
+        """
+        return "**UserId not available without a Request**"
+
     def replace_special_vars(self, params: dict) -> dict:
         """
         Returns the params record replacing special value tokens.
@@ -306,9 +322,6 @@ class GenericDbHelperSuper:
             k: self.get_current_user() if v == "{CurrentUserId}" else v
             for k, v in params.items()
         }
-        # if DEBUG:
-        #     log_debug("replace_special_vars | params:" +
-        #               f" {params} | response: {response}")
         return response
 
     def get_field_element(self, fieldname: str) -> dict:
@@ -322,10 +335,6 @@ class GenericDbHelperSuper:
             dict: field (attribute) definition or an empty dict
                 if the field is not found.
         """
-        # if DEBUG:
-        #     log_debug(f">>> get_field_element | fieldname: {fieldname}" +
-        #               f" | fieldElements: {self.cnf_db.get('fieldElements')}"
-        #               )
         field_element = [v for v in self.cnf_db.get('fieldElements', [])
                          if v.get('name') == fieldname]
         # Returns an empty dict if the field is not found
@@ -427,11 +436,11 @@ class GenericDbHelperSuper:
             projection = {}
 
         try:
-            str_id = ObjectId(row_id)
+            str_id = ObjectId(str(row_id).strip())
         except ValueError:
             resultset['error_message'] = \
                 f'Id `{row_id}` is invalid [FUR1].'
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'FUR2')
             # raise
@@ -444,11 +453,54 @@ class GenericDbHelperSuper:
             resultset['resultset'] = self.table_obj.find_one(
                 {'_id': str_id}, projection
             )
-        except BaseException as err:
+        except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'FUR3')
             resultset['error'] = True
 
+        return resultset
+
+    def fetch_row_by_entryname_raw(
+        self,
+        entry_name: str,
+        entry_value: str,
+        filters: dict = None,
+    ) -> dict:
+        """
+        Fetches a row from the database based on the given
+        entry_name and entry_value and returns it without
+        applying dumps() to the 'resultset' element.
+
+        Args:
+            entry_name (str): The name of the entry to filter by.
+            entry_value (str): The value of the entry to filter by.
+            filters (dict, optional): Additional filters to apply.
+            e.g. user_id.
+
+        Returns:
+            dict: The resultset containing the fetched row.
+        """
+        resultset = get_default_resultset()
+        if self.error_message:
+            resultset['error_message'] = self.error_message
+            resultset['error'] = True
+            return resultset
+
+        filters = {} if not filters else filters
+        filters.update({entry_name: entry_value})
+        try:
+            resultset['resultset'] = self.table_obj.find_one(
+                filters
+            )
+        except Exception as err:
+            resultset['error_message'] = \
+                get_standard_base_exception_msg(err, 'FUBEN1')
+            resultset['error'] = True
+        _ = DEBUG and \
+            log_debug("fetch_row_by_entryname_raw: " +
+                      f"entry_name: {entry_name}" +
+                      f" | entry_value: {entry_value}" +
+                      f" | resultset: {resultset}")
         return resultset
 
     # ----- Array row operations.
@@ -493,7 +545,93 @@ class GenericDbHelperSuper:
             for v in self.parent_key_names
         }
         if "id" in parent_keys:
-            # {'_id': ObjectId(data[self.parent_key_field])}
-            parent_keys["_id"] = ObjectId(parent_keys["id"])
+            parent_keys["_id"] = ObjectId(str(parent_keys["id"]).strip())
             del parent_keys["id"]
         return parent_keys
+
+    def get_table_structure(self) -> dict:
+        structure = {}
+        mandatory_fields = self.cnf_db.get('mandatory_fields', [])
+        skip_types = ["label", "h1", "h2", "h3",
+                      "h4", "h5", "h6", "hr"]
+        partition_key = None
+        sort_key = None
+        for field in self.cnf_db.get('fieldElements', []):
+            field_type = field.get("type", "")
+            if field_type in skip_types:
+                continue
+
+            field_name = field.get("name", "")
+
+            if field_name.endswith("_repeat") \
+               and field_name.replace("_repeat", "") in \
+               self.cnf_db.get("passwords", []):
+                continue
+
+            structure[field_name] = field
+
+            structure[field_name]['required'] = field.get(
+                "required", False) is True
+            if field_name in mandatory_fields:
+                structure[field_name]['required'] = True
+
+            if field_type == "_id":
+                if not partition_key:
+                    if field_name == "id":
+                        partition_key = "_id"
+                    else:
+                        partition_key = field_name
+                    structure[field_name]['partition_key'] = True
+                elif not sort_key:
+                    sort_key = field_name
+                    structure[field_name]['sort_key'] = True
+
+            def_val = field.get("default_value")
+            if def_val is not None:
+                structure[field_name]['default_value'] = \
+                    self.quote_value(
+                        field_type, def_val)
+
+        return structure
+
+    def quote_value(self, field_type: str, field_value: str) -> str:
+        db_engine = os.environ["APP_DB_ENGINE"]
+
+        if str(field_value) == "current_timestamp":
+            return datetime.now().timestamp()
+
+        if field_type in [
+            "array",
+        ]:
+            if db_engine == "postgres":
+                return f"'{field_value}'"
+            else:
+                return f"(JSON_ARRAY('{field_value}'))"
+
+        if field_type in [
+            "text",
+            "textarea",
+            "email",
+            "_id",
+            "select",
+            "select_table",
+            "select_component",
+            "suggestion_dropdown",
+            "component",
+        ]:
+            return f"{field_value}"
+
+        if field_type in [
+            "number",
+            "date",
+            "datetime",
+            "datetime-local",
+        ]:
+            return float(field_value)
+
+        if field_type in [
+            "integer",
+        ]:
+            return int(field_value)
+
+        return None

@@ -76,7 +76,7 @@ def get_users_config(app_context: AppContext) -> dict:
     resultset = get_default_resultset()
     user_data = app_context.get_user_data()
     resultset["resultset"] = {r["config_name"]: r["config_value"]
-                              for r in user_data.get("users_config", [])}
+                              for r in user_data.get("users_config", []) or []}
     if DEBUG:
         log_debug('GUC-2) get_users_config |' +
                   f' resultset: {resultset}')

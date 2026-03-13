@@ -17,7 +17,75 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Security
 
 
-## [0.2.0] - 2025-11-14
+## [0.3.0] - 2026-02-18
+
+### Added
+- API_VERSION envvar to set the API version, default to "v1" [GS-245].
+- Postgres database support [GS-194].
+- Supabase support [GS-161].
+- MySQL support [GS-249].
+- Implement storage abstraction layer for S3, Azure and GCP [GS-72].
+- Implement AWS generate_presigned_url() to protect S3 bucket access, so they can be set to expire in a short time and configured to block all public access. Configuration available with STORAGE_PRESIGNED_EXPIRATION_SECONDS (default to 5 minutes or 300 seconds) [GS-72].
+- Save OpenAPI schema files (JSON and YAML) to a directory specified by the PATH_TO_SAVE_OPENAPI envvar [GS-245].
+- "requests-toolbelt" dependency because it's required by parse_multipart.py [GS-248].
+- "make test" command to run tests [GS-248].
+- "pymongo" and "boto3" to dev group dependencies to run tests [GS-248].
+- APP_LOGGER_OPTIONS envvar to configure logging options, initially to disable the debug message at the application startup when "silent" is set [GS-245].
+- MCP access token retrieval from headers (Authorization: Bearer <token>) with the get_access_token() function in mcplib utilities [GS-159].
+- MCP_MANDATORY_USER_ID envvar to force MCP authentication with user_id and api_key. Default to "0" to allow api key only authentication [GS-159].
+- Implement logs endpoint [GS-250].
+- Add Message-ID header to outgoing emails [GS-37].
+- Allow configuring email debug mode via the SEND_EMAIL_DEBUG environment variable [GS-37].
+- `db_engine` configuration to SqlTable so methods like array_fields_management() and array_fields_value() can use the corresponding functions [GS-194].
+- Implement $inc, $push, $addToSet and $pull operations to the SQL abstraction [GS-194].
+- Add `get_table_structure()` and `quote_value()` on generic DB helpers to fix the  `super_admin_create()` ("supad-create" endpoint) execution on apps with specific user table mandatory attributes needing default values [GS-125].
+- Introduce $elemMatch support in all database abstractions. Enhance query handling by extracting and filtering $elemMatch conditions, improving data retrieval accuracy [GS-161] [GS-194] [GS-249] [GS-102].
+
+### Changed
+- Refactor: standardize storage retrieval URL prefix from `/asset` to `/assets` across all frameworks [GS-245].
+- Refactor: standardize return_resultset_jsonified_or_exception() function status code parameter name from "http_error" to "status_code" in "utilities.py" and "users.py" [GS-245].
+- Enhance logging in aws.py for better debugging, including an initial message in the app startup to show the logging level.
+- STORAGE_URL_SEED envvar is now required only if STORAGE_URL_ENCRYPTION is enabled [GS-72].
+- STORAGE_ENCRYPTION envvar renamed to STORAGE_URL_ENCRYPTION [GS-72].
+- Enhance AWS S3 URL masking feature to avoid exposing the bucket name. It can be configured with envvars: STORAGE_URL_ENCRYPTION, STORAGE_URL_SEED, RUN_PROTOCOL, URL_MASK_EXTERNAL_HOSTNAME, URL_MASK_EXTERNAL_PROTOCOL. Does not work with API Gateway, only EC2 instances or VPS servers [GS-72].
+- The URL_MASK_EXTERNAL_HOSTNAME envvar replaced DEV_MASK_EXT_HOSTNAME, and DEV_MASK_EXT_HOSTNAME is still being used, but has precedence assigning URL_MASK_EXTERNAL_HOSTNAME [GS-72].
+- Migrate Marshmallow to Pydantic: update schema_verification() function to use Pydantic instead of Marshmallow [GS-248].
+- Rename "parentKeyNames" to "endpointKeyNames" in JSON config files [GS-159].
+- Reimplement API key authentication using a dedicated table "users_api_keys" [GS-159].
+- Remove example users_api_keys from app context.
+- Enhance `send_email.py` to return a resultset with error information when an error occurs, parameters validation, HTML stripping, and type hints [GS-37].
+
+### Fixed
+- Remove "/" prefix in the key to avoid double "/" in get_bucket_key_from_url() and fix encoded chars in get_s3_presigned_url() [GS-245].
+- Clean up unused imports and comments in create_app.py.
+- Update delete_params_file return type in app_context.py.
+- DynamoDB abstractor table object scan error "AttributeError: 'tuple' object has no attribute 'update'" [GS-102].
+- Robustify ObjectId conversion by casting to string in fetch_list() when "_id_ is in like_query_params.
+- Allow `Request` objects as input for current user data functions to make the users onboarding workflow work [GS-37].
+- Prevent "AssertionError: AuthenticationMiddleware must be installed to access request.user" in `get_curr_user_id` when it's a normal Request with no JWT authentication [GS-37].
+- `send_email` includes "Message-ID" header to prevent google (and others) from rejecting emails [GS-37].
+- Update SQL abstraction to handle NULL comparisons dynamically [GS-262]. 
+- "bson.errors.InvalidId" error when creating a new user with Supabase, assigning `parent_keys["_id"] = ObjectId(parent_keys["id"])` [GS-251].
+
+### Security
+- Update "urllib3" to "^2.6.3" to fix security vulnerabilities [GS-219]:
+    * "Allocation of Resources Without Limits or Throttling": "CWE-770", "CVE-2025-66418", "CVSS 8.9", "SNYK-PYTHON-URLLIB3-14192443"
+    * "Improper Handling of Highly Compressed Data (Data Amplification)": "CWE-409", "CVSS 8.9", "CVE-2025-66471", "CVE-2026-21441", "CWE-409".
+- Update "werkzeug" to "^3.1.6" to fix security vulnerabilities [GS-219]:
+    * "Improper Handling of Windows Device Names": "CWE-67", "CVSS 6.3", "CVE-2025-66221", "CVE-2026-27199", "CWE-67".
+- Upgrade "cryptography" to "^46.0.5" to fix security vulnerabilities [GS-219]:
+    * "Insufficient Verification of Data Authenticity": "CVE-2026-26007", "CWE-345".
+- Add mandatory filters to get_item_from_db() and GenericEndpointHelper.generic_crud_main() [GS-262].
+- Add sanitization to "message" parameter in POST /log endpoint [GS-262].
+
+### Removed
+- "boto3" and "pymongo" dependencies, so each project can have its own dependencies depending on the selected database and cloud storage provider [GS-245].
+- save_all_users_params_files() function and /users/caujf endpoint [GS-240] [GS-245].
+- "python-dateutil", "marshmallow", "requests", "dnspython", "wheel" dependencies, because they are not used [GS-248].
+- "fastmcp" and "mcp" dependencies, so each project can install them if needed [GS-248].
+
+
+## [0.2.0] - 2025-11-17
 
 ### Added
 - Implement MCP on GS BE Core [GS-189].
@@ -70,8 +138,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
     * "Starlette vulnerable to O(n^2) DoS via Range header merging in ``starlette.responses.FileResponse``"
 - Update "dnspython" to ">=2.6.1" to fix security vulnerabilities [GS-219]:
     * "Potential DoS via the Tudoor mechanism in eventlet and dnspython"
-- Read the user data from the database in "get_api_key_auth()" instead of the "/tmp/params_[user_id].json" because storing sensitive or configuration data in a world-writable directory like /tmp is a security risk [GS-240].
-- Add USER_PARAMS_FILE_ENABLED envvar to enable/disable user's parameters file "/tmp/params_[user_id].json", default to "0" to avoid security risks when running in a production environment [GS-240].
+- Read the user data from the database in "get_api_key_auth()" instead of the "/tmp/params_[user_id].json" (local users JSON files) because storing sensitive or configuration data in a world-writable directory like /tmp is a security risk [GS-240].
+- Add USER_PARAMS_FILE_ENABLED envvar to enable/disable user's parameters file "/tmp/params_[user_id].json" (local users JSON files), default to "0" to avoid security risks when running in a production environment [GS-240].
 
 
 ## [0.1.11] - 2025-07-08
@@ -97,7 +165,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### Added
 - Implement API keys to GS BE Core [GS-159].
-- Implement the "CAUJF" endpoint to build all user's parameters local JSON files [GS-159].
+- Implement the /users/caujf endpoint to build all local users JSON files [GS-159].
 - Generic Endpoint Builder for Flask [GS-15].
 
 ### Changed
@@ -119,7 +187,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Add GS_LOCAL_ENVIR envvar to detect a local database running in a docker container [GS-102].
 
 ### Changed
-- Make DynamoDb tables with prefix work with the GS DB Abstraction [GS-102].
+- Make DynamoDB tables with prefix work with the GS DB Abstraction [GS-102].
 - Add error handling to all GenericDbHelper methods [GS-102].
 - DynamoDB abstraction "update_one()" method handles update_one, replace_one, $addToSet and $pull operations [GS-102].
 - App logger shows LOCAL condition and database engine.
@@ -282,7 +350,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ## [0.0.2] - 2022-08-22
 
 ### Added
-- DynamoDb emulated a-la MongoDB way.
+- DynamoDB emulated a-la MongoDB way [GS-102].
 
 
 ## [0.0.1] - 2022-03-10
