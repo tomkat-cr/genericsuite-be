@@ -54,9 +54,12 @@ class ParamsFile():
             # For the un-authenticated endpoint calls file
             filename = None
         else:
+            # Avoid characters that are not allowed in filenames built from user_id or ObjectId
+            safe_user_id = "".join(
+                [c for c in str(user_id) if c.isalnum() or c in ('-', '_')])
             filename = self.get_params_file_path(
                 PARAMS_FILE_USER_FILENAME_TEMPLATE.replace(
-                    '[user_id]', user_id))
+                    '[user_id]', safe_user_id))
         _ = DEBUG and \
             log_debug(
                 'GET_FILENAME-1) get_params_filename |' +

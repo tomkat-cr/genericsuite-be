@@ -1,0 +1,10 @@
+{
+  "name": "genericsuite-be",
+  "version": "0.3.0",
+  "description": "The GenericSuite for Python (backend version)",
+  "author": "Carlos J. Ramirez",
+  "license": "ISC",
+  "devDependencies": {
+    "genericsuite-be-scripts": "file:../genericsuite-be-scripts"
+  }
+}
