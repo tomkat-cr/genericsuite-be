@@ -38,7 +38,7 @@ setup(
     author='Carlos J. Ramirez',
     author_email='info@genericsuite.com',
     url='https://github.com/tomkat-cr/genericsuite-be',
-    license='ISC License',
+    license='MIT',
     py_modules=['genericsuite'],
     classifiers=classifiers,
 )
