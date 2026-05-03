@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI Coding Assistants (Claude Code, Gemini CLI, Cursor, Antigravity, etc.) when working with code in this repository.
 
 ## Project overview
 
@@ -97,9 +97,6 @@ make publish-test
 
 # SAST testing
 make sast-test
-
-# Link AGENTS.md and CLAUDE.md files
-make agents_md_link
 ```
 
 ## Testing instructions
@@ -136,5 +133,5 @@ Tests are in `tests/` and are purely unit tests — no live database required. E
 
 ## Important Notes
 
-- The `AGENTS.md` file (if present) is a symlink to `CLAUDE.md` — edit only `CLAUDE.md`.
+- The files `AGENTS.md`, `GEMINI.md`, etc. (if present) have only a referece to `@CLAUDE.md` — edit only `CLAUDE.md`.
 - Skills, commands, rules, and sub-agents are located in the `.claude/` directory.

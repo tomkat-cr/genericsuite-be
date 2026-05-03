@@ -36,6 +36,3 @@ publish-test: sast-test build
 publish: sast-test build
 	# Production Pypi publish
 	poetry run python3 -m twine upload dist/*
-
-agents_md_link:
-	ln -s CLAUDE.md AGENTS.md
