@@ -23,6 +23,9 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - AGENTS.md, GEMINI.md, and CLAUDE.md files to provide context and instructions to AI Coding Assistants [GS-303].
 - Add SAST testing [GS-315].
 
+### Changed
+- Enhance comments about how to specify the C0301 and E501 line-too-long lint conditions on `config.py`
+
 ### Security
 - Upgrade "pyjwt" to "^2.10.1" to fix security vulnerabilities [GS-219]:
     * Improper Verification of Cryptographic Signature [High Severity], SNYK-PYTHON-PYJWT-15518059

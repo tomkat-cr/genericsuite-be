@@ -12,7 +12,12 @@ Configuration manager
 # pylint: disable=R0915
 # W0105 | Disable "pointless-string-statement" (for """ comments)
 # pylint: disable=W0105
-# C0301: | Disable "line-too-long"
+
+# E501 | Disable "line-too-long"
+# Flake8/pycodestyle
+# noqa: E501
+
+# C0301 | Disable "line-too-long"
 # pylint: disable=C0301
 
 from typing import Union, Any
