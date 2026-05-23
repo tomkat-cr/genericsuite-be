@@ -65,15 +65,20 @@ HTTP Request
 # Install dependencies
 make install          # poetry install
 
-# Run all tests
+# Run all tests (default: CURRENT_FRAMEWORK=fastapi)
 make test
 
+# Run all tests with coverage report
+make test-cov
+
+# Run tests for a specific framework
+CURRENT_FRAMEWORK=fastapi make test
+CURRENT_FRAMEWORK=flask   make test
+CURRENT_FRAMEWORK=chalice make test
+CURRENT_FRAMEWORK=mcp     make test
+
 # Run a single test file
-APP_NAME=test_app APP_STAGE=test APP_HOST_NAME=localhost APP_SECRET_KEY=fake_secret_key \
-  APP_SUPERADMIN_EMAIL=fake_email GIT_SUBMODULE_LOCAL_PATH=fake_path CLOUD_PROVIDER=aws \
-  AWS_REGION=us-east-1 GET_SECRETS_ENABLED=0 APP_DB_URI=fake_db_uri \
-  APP_DB_ENGINE=MONGODB APP_DB_NAME=mongo \
-  poetry run pytest tests/test_db_abstractor_dynamodb_operators.py
+APP_DB_URI=fake_db_uri APP_DB_ENGINE=MONGODB APP_DB_NAME=mongo APP_NAME=test_app APP_STAGE=test APP_HOST_NAME=localhost APP_SECRET_KEY=fake_secret_key STORAGE_URL_SEED=xyz APP_SUPERADMIN_EMAIL=fake_email GIT_SUBMODULE_LOCAL_PATH=fake_path CLOUD_PROVIDER=aws AWS_REGION=us-east-1 GET_SECRETS_ENABLED=0 CURRENT_FRAMEWORK=fastapi poetry run pytest tests/test_db_abstractor_dynamodb_operators.py
 
 # Run a single test function
 ... poetry run pytest tests/test_file.py::test_function_name
@@ -103,7 +108,49 @@ make sast-test
 
 ### Testing
 
-Tests are in `tests/` and are purely unit tests — no live database required. Each file exercises a specific DB abstractor using in-memory mocks or monkeypatching. The `make test` command injects all required environment variables so no `.env` file is needed locally.
+Tests are in `tests/` and are purely unit tests — no live database required. Each test file exercises a specific module using in-memory mocks or `sys.modules` patching. The `make test` command injects all required environment variables so no `.env` file is needed locally.
+
+### Framework-specific behaviour
+
+`CURRENT_FRAMEWORK` controls which framework adapter is loaded at import time. The test suite must pass for all four supported frameworks. `make test` and `make test-cov` run all four automatically.
+
+| Framework | Command | Skipped tests |
+|-----------|---------|---------------|
+| FastAPI   | `CURRENT_FRAMEWORK=fastapi make test` | 8 (Flask/Chalice/MCP-specific) |
+| Flask     | `CURRENT_FRAMEWORK=flask make test`   | 9 (FastAPI/Chalice/MCP-specific) |
+| Chalice   | `CURRENT_FRAMEWORK=chalice make test` | 17 (FastAPI/Flask/MCP-specific + Pydantic Request instantiation) |
+| MCP       | `CURRENT_FRAMEWORK=mcp make test`     | 15 (FastAPI/Flask/Chalice-specific + Pydantic Request instantiation) |
+
+`fastmcp` (the MCP server SDK) is a dev dependency and is installed automatically via `make install`. The MCP framework adapter test (`test_mcplib_framework_abstraction.py`) uses the real installed `fastmcp` package — no mocking of the `mcp` or `fastmcp` packages at module level (doing so would corrupt `mcp.server.lowlevel` for other tests).
+
+Tests decorated with `@pytest.mark.skipif` are skipped gracefully — they are not failures. Framework-adapter test files (`test_fastapilib_*.py`, `test_flasklib_*.py`, `test_chalicelib_*.py`, `test_mcplib_*.py`) only run their real-SDK tests for the matching framework value. The shared `test_util_framework_abs_layer.py` imports from `{framework}lib.framework_abstraction` dynamically and skips Pydantic-specific instantiation tests when `CURRENT_FRAMEWORK=chalice` or `=mcp`.
+
+### Coverage
+
+`make test-cov` accumulates coverage across all four frameworks (using `--cov-append`) and runs a single final `coverage report --fail-under=30` on the combined result. This avoids the threshold firing on each individual framework run (each framework alone covers ~28-31%). The combined total is currently ~31%.
+
+**Do not set `fail_under` in `.coveragerc`** — it would fire on every intermediate run and stop Make. The threshold is set only in the final `coverage report` call inside the `test-cov` Makefile target.
+
+To raise the threshold as test coverage grows, update the `--fail-under=30` value in `Makefile`.
+
+### Required environment variables for test runs
+
+| Variable | Test value |
+|----------|------------|
+| `APP_NAME` | `test_app` |
+| `APP_STAGE` | `test` |
+| `APP_HOST_NAME` | `localhost` |
+| `APP_SECRET_KEY` | `fake_secret_key` |
+| `APP_SUPERADMIN_EMAIL` | `fake_email` |
+| `GIT_SUBMODULE_LOCAL_PATH` | `fake_path` |
+| `CLOUD_PROVIDER` | `aws` |
+| `AWS_REGION` | `us-east-1` |
+| `GET_SECRETS_ENABLED` | `0` |
+| `APP_DB_URI` | `fake_db_uri` |
+| `APP_DB_ENGINE` | `MONGODB` |
+| `APP_DB_NAME` | `mongo` |
+| `CURRENT_FRAMEWORK` | `fastapi` / `flask` / `chalice` / `mcp` |
+| `STORAGE_URL_SEED` | `xyz` |
 
 ## Code style guidelines
 

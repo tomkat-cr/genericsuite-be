@@ -1,0 +1,17 @@
+[run]
+source = genericsuite
+omit =
+    genericsuite/__init__.py
+    genericsuite/*/endpoints/__init__.py
+    genericsuite/*/__init__.py
+    genericsuite/util/__init__.py
+    genericsuite/config/__init__.py
+    genericsuite/constants/__init__.py
+    genericsuite/models/billing/__init__.py
+    genericsuite/models/logs/__init__.py
+    genericsuite/models/menu_options/__init__.py
+    genericsuite/models/users/__init__.py
+
+[report]
+show_missing = true
+skip_covered = false
