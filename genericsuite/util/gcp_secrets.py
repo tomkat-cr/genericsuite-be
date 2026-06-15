@@ -16,13 +16,54 @@ TEMP_DIR = os.environ.get('TEMP_DIR', '/tmp')
 def get_secrets(secret_name: str, region_name: str,
                 get_default_resultset: Callable, logger: Callable) -> dict:
     """
-    Get a secret from GCP Secrets Manager.
+    Get a secret from GCP Secret Manager.
+
+    Args:
+        secret_name (str): The short secret name (e.g. "myapp-prod-secrets").
+        region_name (str): The GCP region (informational; not used in the
+            resource name but kept for interface parity).
+        get_default_resultset (Callable): Factory for the result dict.
+        logger (Callable): Logger instance.
+
+    Returns:
+        dict: Standard result dict with parsed secret JSON in 'resultset'.
     """
     _ = DEBUG and logger.debug(
         f'GCP get_secrets | secret_name: {secret_name}'
         f' | region_name: {region_name}')
+
     result = get_default_resultset()
     result['resultset'] = {}
+
+    project_id = os.environ.get('GCP_PROJECT_ID')
+    if not project_id:
+        result['error'] = True
+        result['error_message'] = (
+            'ERROR: GCP_PROJECT_ID environment variable is not set [G-GS-E010]'
+        )
+        return result
+
+    try:
+        from google.cloud import secretmanager  # pylint: disable=import-outside-toplevel
+        client = secretmanager.SecretManagerServiceClient()
+        resource_name = (
+            f"projects/{project_id}/secrets/{secret_name}/versions/latest"
+        )
+        response = client.access_secret_version(name=resource_name)
+        secret_payload = response.payload.data.decode('utf-8')
+    except Exception as err:  # pylint: disable=broad-except
+        result['error'] = True
+        result['error_message'] = str(err) + ' [G-GS-E020]'
+        return result
+
+    try:
+        result['resultset'] = json.loads(secret_payload)
+    except ValueError as err:
+        result['error'] = True
+        result['error_message'] = str(err) + ' [G-GS-E030]'
+    except Exception as err:  # pylint: disable=broad-except
+        result['error'] = True
+        result['error_message'] = str(err) + ' [G-GS-E030]'
     return result
 
 

@@ -21,7 +21,16 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### Added
 - AGENTS.md, GEMINI.md, and CLAUDE.md files to provide context and instructions to AI Coding Assistants [GS-303].
-- Add SAST testing [GS-315].
+- SAST testing [GS-315].
+- General unit tests [GS-21].
+- AWS_SSL_CERTIFICATE_ARN_BE envvar to the `.env.example` file [GS-328].
+- GCP Cloud Storage (GCS) object storage support: full implementation of `upload_file_to_storage`, `remove_from_storage`, `get_gcs_presigned_url`, `storage_retieval`, and `prepare_asset_url` in `genericsuite/util/gcp.py` [GS-318].
+- Azure Blob Storage object storage support: full implementation of `upload_file_to_storage`, `remove_from_storage`, `get_blob_presigned_url` (SAS tokens), `storage_retieval`, and `prepare_asset_url` in `genericsuite/util/azure.py` [GS-317].
+- GCP Secret Manager support: real `get_secrets()` implementation in `genericsuite/util/gcp_secrets.py` using `google-cloud-secret-manager` SDK; requires `GCP_PROJECT_ID` env var [GS-318].
+- Azure Key Vault support: real `get_secrets()` implementation in `genericsuite/util/azure_secrets.py` using `azure-keyvault-secrets` + `azure-identity` SDKs; requires `AZURE_KEYVAULT_URL` env var [GS-317].
+- Optional dependency groups `gcp` and `azure` in `pyproject.toml` for lazy SDK installation [GS-317] [GS-318].
+- New env vars documented in `.env.example`: `GCP_PROJECT_ID`, `GCS_CHATBOT_ATTACHMENTS_BUCKET_*`, `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_ACCOUNT_KEY`, `AZURE_CHATBOT_ATTACHMENTS_CONTAINER_*`, `AZURE_KEYVAULT_URL`, `CLOUD_STORAGE_PRESIGNED_EXPIRY`, `CLOUD_STORAGE_PRESIGNED_ACTIVE` [GS-317] [GS-318].
+- Unit tests for GCS storage (`tests/test_gcp_storage.py`), Azure Blob storage (`tests/test_azure_storage.py`), GCP Secret Manager (`tests/test_util_gcp_secrets.py`), and Azure Key Vault (`tests/test_util_azure_secrets.py`) [GS-317] [GS-318].
 
 ### Changed
 - Enhance comments about how to specify the C0301 and E501 line-too-long lint conditions on `config.py`
