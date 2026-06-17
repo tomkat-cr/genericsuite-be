@@ -96,7 +96,6 @@ if FRAMEWORK == 'fastapi':
 
                 # FastAPI will handle multiple origins by splitting the
                 # `CORS_ORIGIN` string if it contains commas.
-                headers["Access-Control-Allow-Origin"] = '*'
 
                 if 'Access-Control-Allow-Methods' not in headers:
                     headers["Access-Control-Allow-Methods"] = \
