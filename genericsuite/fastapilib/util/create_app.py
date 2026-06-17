@@ -98,7 +98,9 @@ def set_cors_config(fastapi_app, settings):
     """
     Sets the CORS configuration for the API.
     """
-    origins = [settings.CORS_ORIGIN]
+    origins = [settings.CORS_ORIGIN] \
+        if "," not in settings.CORS_ORIGIN \
+        else settings.CORS_ORIGIN.split(",")
     fastapi_app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,

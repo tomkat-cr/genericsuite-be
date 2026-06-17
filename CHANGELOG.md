@@ -35,6 +35,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Changed
 - Enhance comments about how to specify the C0301 and E501 line-too-long lint conditions on `config.py`
 - License changed to MIT [FA-244].
+- Update FastAPI abstraction layer CORS configuration in `create_app.py` to handle multiple origins by splitting the `CORS_ORIGIN` string if it contains commas.
 
 ### Security
 - Upgrade "pyjwt" to "^2.10.1" to fix security vulnerabilities [GS-219]:
