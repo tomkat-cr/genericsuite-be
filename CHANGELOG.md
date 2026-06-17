@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Optional dependency groups `gcp` and `azure` in `pyproject.toml` for lazy SDK installation [GS-317] [GS-318].
 - New env vars documented in `.env.example`: `GCP_PROJECT_ID`, `GCS_CHATBOT_ATTACHMENTS_BUCKET_*`, `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_ACCOUNT_KEY`, `AZURE_CHATBOT_ATTACHMENTS_CONTAINER_*`, `AZURE_KEYVAULT_URL`, `CLOUD_STORAGE_PRESIGNED_EXPIRY`, `CLOUD_STORAGE_PRESIGNED_ACTIVE` [GS-317] [GS-318].
 - Unit tests for GCS storage (`tests/test_gcp_storage.py`), Azure Blob storage (`tests/test_azure_storage.py`), GCP Secret Manager (`tests/test_util_gcp_secrets.py`), and Azure Key Vault (`tests/test_util_azure_secrets.py`) [GS-317] [GS-318].
+- Introduce `DEBUG_ORIGINS` environment variable in `create_app.py` to log CORS origins during development. This enhances debugging capabilities for CORS configuration.
 
 ### Changed
 - Enhance comments about how to specify the C0301 and E501 line-too-long lint conditions on `config.py`
