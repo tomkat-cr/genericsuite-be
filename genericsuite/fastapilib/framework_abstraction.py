@@ -89,10 +89,15 @@ if FRAMEWORK == 'fastapi':
                 headers = headers if headers else {}
                 if 'Content-Type' not in headers:
                     headers['Content-Type'] = 'application/json'
-                if 'Access-Control-Allow-Origin' not in headers:
-                    # FastAPI will handle multiple origins by splitting the
-                    # `CORS_ORIGIN` string if it contains commas.
-                    headers["Access-Control-Allow-Origin"] = '*'
+
+                # if 'Access-Control-Allow-Origin' not in headers:
+                #     headers["Access-Control-Allow-Origin"] = \
+                #         os.environ.get('APP_CORS_ORIGIN', '*')
+
+                # FastAPI will handle multiple origins by splitting the
+                # `CORS_ORIGIN` string if it contains commas.
+                headers["Access-Control-Allow-Origin"] = '*'
+
                 if 'Access-Control-Allow-Methods' not in headers:
                     headers["Access-Control-Allow-Methods"] = \
                         "GET, POST, PUT, DELETE, OPTIONS"
