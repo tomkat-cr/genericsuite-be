@@ -25,7 +25,7 @@ from genericsuite.fastapilib.endpoints import (
 from genericsuite.config.config_from_db import set_init_custom_data
 
 DEBUG = False
-DEBUG_ORIGINS = os.environ.get('DEBUG_ORIGINS', '0') == '1'
+DEBUG_CORS = os.environ.get('DEBUG_CORS', '0') == '1'
 
 
 def create_app(app_name: str, settings: Config = None) -> Any:
@@ -102,7 +102,7 @@ def set_cors_config(fastapi_app, settings):
     origins = [settings.CORS_ORIGIN] \
         if "," not in settings.CORS_ORIGIN \
         else settings.CORS_ORIGIN.split(",")
-    if DEBUG_ORIGINS:
+    if DEBUG_CORS:
         log_info(f"set_cors_config | origins: {origins}")
     fastapi_app.add_middleware(
         CORSMiddleware,
