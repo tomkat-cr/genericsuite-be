@@ -32,12 +32,15 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - New env vars documented in `.env.example`: `GCP_PROJECT_ID`, `GCS_CHATBOT_ATTACHMENTS_BUCKET_*`, `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_ACCOUNT_KEY`, `AZURE_CHATBOT_ATTACHMENTS_CONTAINER_*`, `AZURE_KEYVAULT_URL`, `CLOUD_STORAGE_PRESIGNED_EXPIRY`, `CLOUD_STORAGE_PRESIGNED_ACTIVE` [GS-317] [GS-318].
 - Unit tests for GCS storage (`tests/test_gcp_storage.py`), Azure Blob storage (`tests/test_azure_storage.py`), GCP Secret Manager (`tests/test_util_gcp_secrets.py`), and Azure Key Vault (`tests/test_util_azure_secrets.py`) [GS-317] [GS-318].
 - Introduce `DEBUG_CORS` environment variable in FastAPI `create_app.py` to log CORS origins during development. This enhances debugging capabilities for CORS configuration.
+- Integrate rate limiting in FastAPI and Flask endpoints.
+- `slowapi` for FastAPI rate limiting.
 
 ### Changed
 - Enhance comments about how to specify the C0301 and E501 line-too-long lint conditions on `config.py`
 - License changed to MIT [FA-244].
 - Update FastAPI abstraction layer CORS configuration in `create_app.py` to handle multiple origins by splitting the `CORS_ORIGIN` string if it contains commas.
 - Update CORS configuration in `framework_abstraction.py` to set `Access-Control-Allow-Origin` to '*' for handling multiple origins, as FastAPI manages origin splitting internally.
+- Remove request authentication for flexibility, and add rate limit in `logs.py` for the `/logs` endpoint.
 
 ### Security
 - Upgrade "pyjwt" to "^2.10.1" to fix security vulnerabilities [GS-219]:

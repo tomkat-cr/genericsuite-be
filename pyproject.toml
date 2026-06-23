@@ -48,6 +48,7 @@ cryptography = "^46.0.5"
 pydantic = "^2.9.2"
 urllib3 = "^2.6.3"
 requests-toolbelt = "^1.0.0"
+slowapi = "^0.1.10"
 
 [tool.poetry.extras]
 gcp = ["google-cloud-storage", "google-cloud-secret-manager"]
