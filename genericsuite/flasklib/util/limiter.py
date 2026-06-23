@@ -3,7 +3,6 @@
 # use Flask-Limiter for Flask integration.
 # Replace SlowAPI with Flask-Limiter usage.
 from flask import Flask
-from flask import jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 

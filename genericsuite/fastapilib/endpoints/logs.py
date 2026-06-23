@@ -1,7 +1,7 @@
 """
 Log server
 """
-from fastapi import Body
+from fastapi import Body, Request
 
 from genericsuite.util.framework_abs_layer import Response
 from genericsuite.fastapilib.util.blueprint_one import BlueprintOne
@@ -21,6 +21,7 @@ router = BlueprintOne()
     tags=['logs'],
 )
 async def logs_creation(
+    request: Request,
     data: LogRequest = Body(...),
 ) -> Response:
     return put_log(data)
