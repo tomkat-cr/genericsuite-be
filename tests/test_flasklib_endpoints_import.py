@@ -24,18 +24,30 @@ pytestmark = pytest.mark.skipif(
 
 def _setup_flask_mocks():
     """Set up flask + blueprint mocks for endpoint imports."""
-    sys.modules.setdefault("genericsuite.util.framework_abs_layer", MagicMock())
+    sys.modules.setdefault(
+        "genericsuite.util.framework_abs_layer", MagicMock())
     sys.modules.setdefault("genericsuite.util.app_logger", MagicMock())
     sys.modules.setdefault("genericsuite.util.jwt", MagicMock())
     sys.modules.setdefault("genericsuite.util.app_context", MagicMock())
     sys.modules.setdefault("genericsuite.util.security", MagicMock())
-    # Mock flasklib-specific utilities so endpoints can import without real Flask
-    sys.modules.setdefault("genericsuite.flasklib.util.blueprint_one", MagicMock())
+    # Mock flasklib-specific utilities so endpoints can import without
+    # real Flask
+    sys.modules.setdefault(
+        "genericsuite.flasklib.util.blueprint_one", MagicMock())
     sys.modules.setdefault("genericsuite.flasklib.util.jwt", MagicMock())
-    sys.modules.setdefault("genericsuite.flasklib.framework_abstraction", MagicMock())
-    # test_create_app_cors.py installs MagicMock for genericsuite.flasklib.endpoints
-    # (the package) via setdefault; Python refuses to treat a MagicMock as a package
-    # namespace, so sub-module imports fail with "not a package". Evict it.
+    sys.modules.setdefault(
+        "genericsuite.flasklib.framework_abstraction", MagicMock())
+    # logs.py imports get_flask_limiter → flask_limiter → flask.wrappers.
+    # Earlier tests (create_app_cors / framework_abstraction) leave
+    # sys.modules["flask"] as a MagicMock, so the real flask_limiter
+    # import fails with
+    # "No module named 'flask.wrappers'; 'flask' is not a package".
+    sys.modules.setdefault("genericsuite.flasklib.util.limiter", MagicMock())
+    # test_create_app_cors.py installs MagicMock for
+    # genericsuite.flasklib.endpoints
+    # (the package) via setdefault; Python refuses to treat a MagicMock as
+    # a package namespace, so sub-module imports fail with "not a package".
+    # Evict it.
     for _mod in list(sys.modules):
         if _mod == "genericsuite.flasklib.endpoints" or \
                 _mod.startswith("genericsuite.flasklib.endpoints."):

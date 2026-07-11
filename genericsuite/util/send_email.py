@@ -3,7 +3,7 @@
 
 # https://realpython.com/python-send-email/
 
-from typing import Union
+from typing import Optional, Union
 from os import environ
 from os.path import basename
 
@@ -22,7 +22,32 @@ from genericsuite.util.app_logger import log_debug, log_error
 DEBUG = environ.get('SEND_EMAIL_DEBUG', '0') == '1'
 
 
-def remove_html_tags(text):
+def parse_recipients(*fields: Union[list[str], str, None]) -> list[str]:
+    """Split comma-separated address strings into a flat list of addresses.
+
+    smtplib.sendmail() does not split on commas: a string is treated as one
+    envelope recipient. Pass a list of individual addresses instead.
+    """
+    addrs = []
+    for field in fields:
+        if not field:
+            continue
+        if isinstance(field, (list, tuple)):
+            for item in field:
+                addrs.extend(parse_recipients(item))
+        else:
+            addrs.extend(a.strip() for a in str(field).split(",") if a.strip())
+    # Preserve order, drop duplicates
+    seen = set()
+    unique = []
+    for addr in addrs:
+        if addr not in seen:
+            seen.add(addr)
+            unique.append(addr)
+    return unique
+
+
+def remove_html_tags(text: str) -> str:
     """Remove html tags from a string using regex"""
     # Pattern to match anything between '<' and '>'
     clean = re.compile('<.*?>')
@@ -35,7 +60,7 @@ def send_email(
     subject: str,
     text: str,
     html: str,
-    files: list[str] = None
+    files: Optional[list[str]] = None
 ) -> dict:
     """
     Send an Email
@@ -44,16 +69,17 @@ def send_email(
 
     files = [] if not files else files
     smtp_server = environ.get('SMTP_SERVER')
-    smtp_port = environ.get('SMTP_PORT')  # For starttls
+    smtp_port_raw = environ.get('SMTP_PORT')  # For starttls
     smtp_user = environ.get('SMTP_USER')
     smtp_password = environ.get('SMTP_PASSWORD')
 
     if not sender_email:
         sender_email = environ.get('SMTP_DEFAULT_SENDER')
-    if sender_email.strip() == '':
+    if not (sender_email or '').strip():
         result['error'] = True
         result['error_message'] = 'Sender email is required'
         return result
+    sender_email = sender_email.strip()
 
     if not receiver_email:
         receiver_email = []
@@ -63,6 +89,12 @@ def send_email(
         result['error'] = True
         result['error_message'] = 'Receiver email is required'
         return result
+
+    to_addrs = parse_recipients(receiver_email[0])
+    cc_addrs = parse_recipients(receiver_email[1:]) if len(
+        receiver_email) > 1 else []
+    # Envelope must include every address that should receive the message
+    envelope_recipients = parse_recipients(to_addrs, cc_addrs)
 
     if not subject:
         result['error'] = True
@@ -79,10 +111,33 @@ def send_email(
     elif not text:
         text = remove_html_tags(html)
 
+    missing_smtp = [
+        name for name, value in (
+            ('SMTP_SERVER', smtp_server),
+            ('SMTP_PORT', smtp_port_raw),
+            ('SMTP_USER', smtp_user),
+            ('SMTP_PASSWORD', smtp_password),
+        ) if not value
+    ]
+    if missing_smtp:
+        result['error'] = True
+        result['error_message'] = (
+            'Missing SMTP configuration: ' + ', '.join(missing_smtp)
+        )
+        return result
+
+    try:
+        smtp_port = int(smtp_port_raw)
+    except (TypeError, ValueError):
+        result['error'] = True
+        result['error_message'] = f'Invalid SMTP_PORT: {smtp_port_raw}'
+        return result
+
     _ = DEBUG and log_debug(
         'SEND_EMAIL' +
         f'\n | sender_email: {sender_email}' +
-        f'\n | receiver_email: {receiver_email}' +
+        f'\n | to_addrs: {to_addrs}' +
+        f'\n | cc_addrs: {cc_addrs}' +
         f'\n | subject: {subject}' +
         f'\n | text: {text}' +
         f'\n | html: {html}' +
@@ -91,14 +146,16 @@ def send_email(
     message = MIMEMultipart("alternative")
     message["Subject"] = subject
     message["From"] = sender_email
-    message['To'] = COMMASPACE.join(receiver_email)
+    message['To'] = COMMASPACE.join(to_addrs)
+    if len(cc_addrs) > 0:
+        message['Cc'] = COMMASPACE.join(cc_addrs)
     message['Date'] = formatdate(localtime=True)
     message["Message-ID"] = make_msgid()
 
     # Turn these into plain/html MIMEText objects
-    body_plain_text = MIMEText(text, "plain")
+    body_plain_text = MIMEText(text, "plain", "utf-8")
     if html:
-        body_html = MIMEText(html, "html")
+        body_html = MIMEText(html, "html", "utf-8")
 
     # Add HTML/plain-text parts to MIMEMultipart message
     # The email client will try to render the last part first
@@ -118,12 +175,15 @@ def send_email(
         message.attach(part)
 
     if DEBUG:
+        password_mask = (
+            '*' * len(smtp_password) if smtp_password else '(not set)'
+        )
         log_debug(
             'SEND_EMAIL' +
             f'\n | smtp_server: {smtp_server}' +
             f'\n | smtp_port: {smtp_port}' +
             f'\n | smtp_user: {smtp_user}' +
-            f'\n | smtp_password: {"*" * len(smtp_password)}' +
+            f'\n | smtp_password: {password_mask}' +
             f'\n | sender_email: {sender_email}' +
             f'\n | receiver_email: {receiver_email}' +
             f'\n | subject: {subject}' +
@@ -136,27 +196,37 @@ def send_email(
 
     # Try to log in to smtp server and send email
     try:
-        smtp = smtplib.SMTP(smtp_server, smtp_port)
-        # smtp.ehlo()  # Can be omitted
-        smtp.starttls(context=context)  # Secure the connection
-        # smtp.ehlo()  # Can be omitted
-        smtp.login(smtp_user, smtp_password)
-    except Exception as err:
-        # Print any error messages to stdout
+        with smtplib.SMTP(smtp_server, smtp_port) as smtp:
+            try:
+                # smtp.ehlo()  # Can be omitted
+                smtp.starttls(context=context)  # Secure the connection
+                # smtp.ehlo()  # Can be omitted
+                smtp.login(smtp_user, smtp_password)
+            except Exception as err:  # pylint: disable=broad-except
+                result['error'] = True
+                result['error_message'] = (
+                    f'Send_Email ERROR (preparing phase): {err}'
+                )
+                log_error(result['error_message'])
+                return result
+
+            try:
+                smtp.sendmail(
+                    sender_email,
+                    envelope_recipients,
+                    message.as_string(),
+                )
+            except Exception as err:  # pylint: disable=broad-except
+                result['error'] = True
+                result['error_message'] = (
+                    f'Send_Email ERROR (sending phase): {err}'
+                )
+                log_error(result['error_message'])
+                return result
+    except Exception as err:  # pylint: disable=broad-except
         result['error'] = True
         result['error_message'] = f'Send_Email ERROR (preparing phase): {err}'
         log_error(result['error_message'])
         return result
-
-    try:
-        smtp.sendmail(sender_email, receiver_email, message.as_string())
-    except Exception as err:
-        # Print any error messages to stdout
-        result['error'] = True
-        result['error_message'] = f'Send_Email ERROR (sending phase): {err}'
-        log_error(result['error_message'])
-        return result
-    finally:
-        smtp.close()
 
     return result
