@@ -239,3 +239,26 @@ def test_fetch_list_without_relationships_unchanged():
     # decode with ast.literal_eval instead of bson.json_util.loads here.
     rows = ast.literal_eval(result['resultset'])
     assert rows == [{'_id': '1', 'title': 'Hello'}]
+
+
+def test_fetch_row_resolves_select_table_descriptions():
+    helper = make_full_helper(
+        [{'name': 'user_id', 'type': 'select_table',
+          'related_table': 'users'}],
+        [],
+    )
+    helper.fetch_row_raw = MagicMock(return_value={
+        'error': False, 'error_message': None,
+        'resultset': {'_id': '1', 'user_id': 'aaa'},
+    })
+    fake_users_table = MagicMock()
+    fake_users_table.find.return_value = [{'_id': 'aaa', 'name': 'John Doe'}]
+    with patch('genericsuite.util.generic_db_helpers_super.db',
+               {'users': fake_users_table}):
+        result = helper.fetch_row('1')
+    assert result['error'] is False
+    # NOTE: this test suite mocks bson.json_util.dumps as `str(x)` (Python
+    # repr, not real JSON) for every test module that touches it, so we
+    # decode with ast.literal_eval instead of bson.json_util.loads here.
+    row = ast.literal_eval(result['resultset'])
+    assert row['user_id_description'] == 'John Doe'

@@ -217,7 +217,11 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             return resultset
 
         try:
-            resultset['resultset'] = dumps(db_row['resultset'])
+            row = db_row['resultset']
+            relationships = self.get_select_table_relationships()
+            if relationships:
+                row = self.resolve_relationships([row], relationships)[0]
+            resultset['resultset'] = dumps(row)
         except Exception as err:
             resultset['error_message'] = \
                 get_standard_base_exception_msg(err, 'FU2')
