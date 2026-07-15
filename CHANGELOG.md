@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ## [Unreleased]
 
 ### Added
+- `select_table` field type: 1-1 relationship resolution in listings and reads. New JSON field attributes `related_table`, `related_key`, `description_fields`, `description_separator`, `related_filter`; rows now include `{field}_description`. Engine-agnostic `$in` resolver for all DB engines, with DynamoDB BatchGetItem and MongoDB `$lookup` fast paths [GS-select-table].
 
 ### Changed
 
