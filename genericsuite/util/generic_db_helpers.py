@@ -4,13 +4,14 @@ Generic Database Helper, to handle all operations over a given table.
 from typing import Optional, Union
 from itertools import islice
 import json
+import os
 import re
 
 import traceback
 
 from bson.json_util import dumps, ObjectId
 
-from genericsuite.util.app_logger import log_debug
+from genericsuite.util.app_logger import log_debug, log_error
 from genericsuite.util.datetime_utilities import (
     current_datetime_timestamp,
     get_date_range_filter,
@@ -145,24 +146,39 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             log_debug(f"FETCH_LIST 010 | column_name: {column_name}," +
                       f" direction: {direction}")
 
+        relationships = self.get_select_table_relationships()
         try:
-            db_result = (
-                self.table_obj.find(
-                    listing_filter, projection
+            rows = None
+            if relationships and \
+                    os.environ.get('APP_DB_ENGINE', '').upper() \
+                    == 'MONGODB':
+                try:
+                    rows = self._fetch_list_mongodb_lookup(
+                        listing_filter, projection, column_name,
+                        direction, skip, limit, relationships)
+                except Exception as err:  # pylint: disable=broad-except
+                    log_error(
+                        "FETCH_LIST | $lookup fallback to default"
+                        f" resolver [FLML1]: {err}")
+                    rows = None
+            if rows is None:
+                db_result = (
+                    self.table_obj.find(
+                        listing_filter, projection
+                    )
+                    .sort(
+                        column_name,
+                        get_order_direction(direction)
+                    )
                 )
-                .sort(
-                    column_name,
-                    get_order_direction(direction)
-                )
-            )
-            if skip > 0:
-                db_result = db_result.skip(int(skip))
-            if limit > 0:
-                db_result = db_result.limit(int(limit))
-            rows = list(db_result)
-            relationships = self.get_select_table_relationships()
-            if relationships:
-                rows = self.resolve_relationships(rows, relationships)
+                if skip > 0:
+                    db_result = db_result.skip(int(skip))
+                if limit > 0:
+                    db_result = db_result.limit(int(limit))
+                rows = list(db_result)
+                if relationships:
+                    rows = self.resolve_relationships(
+                        rows, relationships)
             resultset['resultset'] = dumps(rows)
             _ = DEBUG and \
                 log_debug(f"FETCH_LIST 020 | resultset: {resultset}")
@@ -184,6 +200,59 @@ class GenericDbHelper(GenericDbHelperWithRequest):
         _ = DEBUG and \
             log_debug(f"FETCH_LIST 030 | resultset: {resultset}")
         return self.run_specific_func('list', resultset)
+
+    def _fetch_list_mongodb_lookup(
+        self,
+        listing_filter: dict,
+        projection: dict,
+        column_name: str,
+        direction: str,
+        skip: int,
+        limit: int,
+        relationships: list,
+    ) -> list:
+        """
+        MongoDb-only listing with $lookup joins, single round-trip.
+        Pagination stages come BEFORE $lookup so only the current page
+        is joined. FK values stored as strings are converted to
+        ObjectId inside the lookup sub-pipeline when related_key is _id.
+        """
+        pipeline = [
+            {'$match': listing_filter},
+            {'$sort': {column_name: get_order_direction(direction)}},
+        ]
+        if skip > 0:
+            pipeline.append({'$skip': int(skip)})
+        if limit > 0:
+            pipeline.append({'$limit': int(limit)})
+        if projection:
+            pipeline.append({'$project': projection})
+        for rel in relationships:
+            as_name = f"_rel_{rel['local_field']}"
+            if rel['related_key'] == '_id':
+                fk_expr = {'$convert': {
+                    'input': '$$fk_value', 'to': 'objectId',
+                    'onError': '$$fk_value', 'onNull': None}}
+            else:
+                fk_expr = '$$fk_value'
+            sub_pipeline = [{'$match': {'$expr': {
+                '$eq': [f"${rel['related_key']}", fk_expr]}}}]
+            if rel['related_filter']:
+                sub_pipeline.append({'$match': rel['related_filter']})
+            pipeline.append({'$lookup': {
+                'from': rel['related_table'],
+                'let': {'fk_value': f"${rel['local_field']}"},
+                'pipeline': sub_pipeline,
+                'as': as_name,
+            }})
+        rows = list(self.table_obj.aggregate(pipeline))
+        for row in rows:
+            for rel in relationships:
+                related = row.pop(f"_rel_{rel['local_field']}", [])
+                row[f"{rel['local_field']}_description"] = (
+                    self.build_relationship_description(related[0], rel)
+                    if related else None)
+        return rows
 
     def fetch_row(self, row_id: str, projection: dict = None) -> dict:
         """

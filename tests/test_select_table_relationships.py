@@ -210,6 +210,9 @@ def make_full_helper(field_elements, main_rows):
 
 
 def test_fetch_list_resolves_select_table_descriptions():
+    # Forces the default find()+resolve_relationships path (not the
+    # MongoDB $lookup fast path, covered separately) by disabling the
+    # MONGODB engine flag for the duration of this call.
     helper = make_full_helper(
         [{'name': 'user_id', 'type': 'select_table',
           'related_table': 'users', 'listing': True}],
@@ -218,7 +221,8 @@ def test_fetch_list_resolves_select_table_descriptions():
     fake_users_table = MagicMock()
     fake_users_table.find.return_value = [{'_id': 'aaa', 'name': 'John Doe'}]
     with patch('genericsuite.util.generic_db_helpers_super.db',
-               {'users': fake_users_table}):
+               {'users': fake_users_table}), \
+            patch.dict(os.environ, {'APP_DB_ENGINE': ''}):
         result = helper.fetch_list(skip=0, limit=10)
     assert result['error'] is False
     # NOTE: this test suite mocks bson.json_util.dumps as `str(x)` (Python
@@ -355,6 +359,50 @@ def test_dynamodb_batch_get_raises_after_max_retries():
         except RuntimeError as err:
             assert '[BGUK1]' in str(err)
     assert conn.batch_get_item.call_count == 5  # capped at max attempts
+
+
+def test_fetch_list_mongodb_uses_lookup_pipeline():
+    helper = make_full_helper(
+        [{'name': 'user_id', 'type': 'select_table',
+          'related_table': 'users', 'listing': True}],
+        [],
+    )
+    helper.table_obj.aggregate.return_value = [
+        {'_id': '1', 'user_id': 'aaa',
+         '_rel_user_id': [{'_id': 'aaa', 'name': 'John Doe'}]},
+        {'_id': '2', 'user_id': 'zzz', '_rel_user_id': []},
+    ]
+    with patch.dict(os.environ, {'APP_DB_ENGINE': 'MONGODB'}):
+        result = helper.fetch_list(skip=0, limit=10)
+    assert result['error'] is False
+    rows = ast.literal_eval(result['resultset'])
+    assert rows[0]['user_id_description'] == 'John Doe'
+    assert rows[1]['user_id_description'] is None
+    assert '_rel_user_id' not in rows[0]
+    pipeline = helper.table_obj.aggregate.call_args[0][0]
+    stages = [list(stage.keys())[0] for stage in pipeline]
+    assert '$lookup' in stages
+    assert stages.index('$skip' if '$skip' in stages else '$sort') \
+        < stages.index('$lookup')  # join happens after pagination
+    helper.table_obj.find.assert_not_called()
+
+
+def test_fetch_list_mongodb_lookup_falls_back_on_error():
+    helper = make_full_helper(
+        [{'name': 'user_id', 'type': 'select_table',
+          'related_table': 'users', 'listing': True}],
+        [{'_id': '1', 'user_id': 'aaa'}],
+    )
+    helper.table_obj.aggregate.side_effect = Exception('no aggregate')
+    fake_users_table = MagicMock()
+    fake_users_table.find.return_value = [{'_id': 'aaa', 'name': 'John Doe'}]
+    with patch('genericsuite.util.generic_db_helpers_super.db',
+               {'users': fake_users_table}), \
+            patch.dict(os.environ, {'APP_DB_ENGINE': 'MONGODB'}):
+        result = helper.fetch_list(skip=0, limit=10)
+    assert result['error'] is False
+    rows = ast.literal_eval(result['resultset'])
+    assert rows[0]['user_id_description'] == 'John Doe'
 
 
 def test_fetch_related_rows_falls_back_when_batch_get_exhausts_retries():
