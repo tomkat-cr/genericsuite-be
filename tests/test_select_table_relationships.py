@@ -1,6 +1,7 @@
 """
 Tests for select_table 1-1 relationship resolution (GenericDbHelperSuper).
 """
+import ast
 import sys
 from unittest.mock import MagicMock, patch
 
@@ -27,6 +28,18 @@ sys.modules.setdefault("genericsuite.util.passwords", MagicMock())
 from genericsuite.util.generic_db_helpers_super import (  # noqa: E402
     GenericDbHelperSuper
 )
+
+# Some other test modules mock "genericsuite.util.generic_db_helpers"
+# wholesale (via setdefault, or even direct assignment for "bson"/
+# "bson.json_util") for their own isolation purposes. Since these tests
+# below need the REAL GenericDbHelper class calling a *working* dumps(),
+# force our own consistent bson mock back in and do a fresh import here,
+# regardless of what any earlier-collected test file already put in
+# sys.modules for these keys.
+sys.modules["bson"] = _bson
+sys.modules["bson.json_util"] = _bson.json_util
+sys.modules.pop("genericsuite.util.generic_db_helpers", None)
+from genericsuite.util.generic_db_helpers import GenericDbHelper  # noqa: E402
 
 
 def make_helper(field_elements: list) -> GenericDbHelperSuper:
@@ -165,3 +178,59 @@ def test_resolve_relationships_applies_related_filter_and_projection():
     query_arg, projection_arg = fake_users_table.find.call_args[0]
     assert query_arg['active'] is True
     assert projection_arg == {'firstname': 1, 'lastname': 1, '_id': 1}
+
+
+def make_full_helper(field_elements, main_rows):
+    """GenericDbHelper wired with a fake main table, bypassing __init__."""
+    helper = GenericDbHelper.__new__(GenericDbHelper)
+    helper.cnf_db = {'fieldElements': field_elements}
+    helper.error_message = None
+    helper.table_name = 'main_table'
+    helper.name = 'Main'
+    helper.title = 'Mains'
+    helper.mandatory_filters = {}
+    helper.query_params = {'only_listing_cols': '0'}
+    helper.table_type = 'main_table'
+    helper.sub_type = ''
+    fake_cursor = MagicMock()
+    fake_cursor.sort.return_value = fake_cursor
+    fake_cursor.skip.return_value = fake_cursor
+    fake_cursor.limit.return_value = fake_cursor
+    fake_cursor.__iter__ = lambda self_: iter(main_rows)
+    helper.table_obj = MagicMock()
+    helper.table_obj.find.return_value = fake_cursor
+    helper.table_obj.count_documents.return_value = len(main_rows)
+    return helper
+
+
+def test_fetch_list_resolves_select_table_descriptions():
+    helper = make_full_helper(
+        [{'name': 'user_id', 'type': 'select_table',
+          'related_table': 'users', 'listing': True}],
+        [{'_id': '1', 'user_id': 'aaa'}],
+    )
+    fake_users_table = MagicMock()
+    fake_users_table.find.return_value = [{'_id': 'aaa', 'name': 'John Doe'}]
+    with patch('genericsuite.util.generic_db_helpers_super.db',
+               {'users': fake_users_table}):
+        result = helper.fetch_list(skip=0, limit=10)
+    assert result['error'] is False
+    # NOTE: this test suite mocks bson.json_util.dumps as `str(x)` (Python
+    # repr, not real JSON) for every test module that touches it, so we
+    # decode with ast.literal_eval instead of bson.json_util.loads here.
+    rows = ast.literal_eval(result['resultset'])
+    assert rows[0]['user_id_description'] == 'John Doe'
+
+
+def test_fetch_list_without_relationships_unchanged():
+    helper = make_full_helper(
+        [{'name': 'title', 'type': 'text', 'listing': True}],
+        [{'_id': '1', 'title': 'Hello'}],
+    )
+    result = helper.fetch_list(skip=0, limit=10)
+    assert result['error'] is False
+    # NOTE: this test suite mocks bson.json_util.dumps as `str(x)` (Python
+    # repr, not real JSON) for every test module that touches it, so we
+    # decode with ast.literal_eval instead of bson.json_util.loads here.
+    rows = ast.literal_eval(result['resultset'])
+    assert rows == [{'_id': '1', 'title': 'Hello'}]

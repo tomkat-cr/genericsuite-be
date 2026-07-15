@@ -38,7 +38,11 @@ _util_mock.get_id_as_string = lambda row: str(row.get("_id", "test_id"))
 sys.modules["genericsuite.util.utilities"] = _util_mock
 
 _super_mock = MagicMock()
-sys.modules["genericsuite.util.generic_db_helpers_super"] = _super_mock
+# Use setdefault (not direct assignment) so this doesn't clobber the real
+# module, or another test's mock, if it was already imported earlier in
+# the same pytest session (module-level test mocking is process-global).
+sys.modules.setdefault(
+    "genericsuite.util.generic_db_helpers_super", _super_mock)
 
 import types as _t
 _cfg_mod = _t.ModuleType("genericsuite.config.config")

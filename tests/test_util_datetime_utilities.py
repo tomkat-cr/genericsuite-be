@@ -7,6 +7,12 @@ from datetime import datetime, timezone
 
 sys.modules.setdefault("genericsuite.util.app_logger", MagicMock())
 
+# This module needs the REAL implementation, not the plain MagicMock some
+# other test files install (via setdefault) if they are collected first in
+# the same pytest session. Force a fresh import so this file's own tests
+# never run against a stubbed-out version.
+sys.modules.pop("genericsuite.util.datetime_utilities", None)
+
 from genericsuite.util.datetime_utilities import (
     current_datetime_timestamp,
     get_datetime_utc,

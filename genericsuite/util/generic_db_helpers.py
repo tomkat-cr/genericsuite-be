@@ -159,7 +159,11 @@ class GenericDbHelper(GenericDbHelperWithRequest):
                 db_result = db_result.skip(int(skip))
             if limit > 0:
                 db_result = db_result.limit(int(limit))
-            resultset['resultset'] = dumps(db_result)
+            rows = list(db_result)
+            relationships = self.get_select_table_relationships()
+            if relationships:
+                rows = self.resolve_relationships(rows, relationships)
+            resultset['resultset'] = dumps(rows)
             _ = DEBUG and \
                 log_debug(f"FETCH_LIST 020 | resultset: {resultset}")
         except Exception as err:
