@@ -167,7 +167,7 @@ class GenericDbHelperSuper:
                 and not rel['related_filter']:
             try:
                 return db[rel['related_table']].batch_get(
-                    [str(value) for value in query_values])
+                    sorted({str(value) for value in query_values}))
             except Exception as err:  # pylint: disable=broad-except
                 log_error(
                     "FETCH_RELATED_ROWS | batch_get fallback to find"

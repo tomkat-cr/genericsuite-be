@@ -46,6 +46,7 @@ sys.modules["bson"] = _bson
 sys.modules["bson.json_util"] = _bson.json_util
 sys.modules.pop("genericsuite.util.generic_db_helpers", None)
 from genericsuite.util.generic_db_helpers import GenericDbHelper  # noqa: E402
+from bson.json_util import ObjectId  # noqa: E402
 
 
 def make_helper(field_elements: list) -> GenericDbHelperSuper:
@@ -281,6 +282,32 @@ def test_fetch_related_rows_dynamodb_uses_batch_get():
             REL_USERS, ['aaa'], {'name': 1, '_id': 1})
     assert rows == [{'_id': 'aaa', 'name': 'John Doe'}]
     fake_users_table.find.assert_not_called()
+
+
+def test_fetch_related_rows_dynamodb_dedupes_objectid_and_string_keys():
+    # resolve_relationships() appends both the raw string FK and its
+    # ObjectId() form to query_values when related_key == '_id' (see
+    # resolve_relationships), so a real 24-hex FK arrives here twice:
+    # once as str, once as ObjectId. The DynamoDb branch must dedupe
+    # before calling batch_get, or DynamoDB raises ValidationException
+    # on duplicate keys and the whole batch falls back to find() (silent
+    # [FRR1] fallback), defeating the BatchGetItem fast path.
+    helper = make_helper([])
+    fake_users_table = MagicMock()
+    fake_users_table.batch_get.return_value = [
+        {'_id': '66aabbccddeeff0011223344', 'name': 'John Doe'}]
+    hex_id = '66aabbccddeeff0011223344'
+    query_values = [hex_id, ObjectId(hex_id)]
+    with patch('genericsuite.util.generic_db_helpers_super.db',
+               {'users': fake_users_table}), \
+            patch.dict(os.environ, {'APP_DB_ENGINE': 'DYNAMODB'}):
+        helper._fetch_related_rows(
+            REL_USERS, query_values, {'name': 1, '_id': 1})
+    fake_users_table.find.assert_not_called()
+    fake_users_table.batch_get.assert_called_once()
+    called_keys = fake_users_table.batch_get.call_args[0][0]
+    assert called_keys.count(hex_id) == 1
+    assert len(called_keys) == 1
 
 
 def test_fetch_related_rows_dynamodb_falls_back_on_error():
