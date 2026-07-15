@@ -146,8 +146,8 @@ class GenericDbHelper(GenericDbHelperWithRequest):
             log_debug(f"FETCH_LIST 010 | column_name: {column_name}," +
                       f" direction: {direction}")
 
-        relationships = self.get_select_table_relationships()
         try:
+            relationships = self.get_select_table_relationships()
             rows = None
             if relationships and \
                     os.environ.get('APP_DB_ENGINE', '').upper() \
