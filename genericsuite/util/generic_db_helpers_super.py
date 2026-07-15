@@ -104,6 +104,54 @@ class GenericDbHelperSuper:
                       f' projection: {projection}')
         return projection
 
+    def get_select_table_relationships(self) -> list:
+        """
+        Scans the table definition for 'select_table' fields and returns
+        the 1-1 relationship descriptors.
+
+        Returns:
+            list: one dict per select_table field with keys:
+                local_field, related_table, related_key,
+                description_fields, description_separator, related_filter.
+        """
+        relationships = []
+        for field in self.cnf_db.get('fieldElements', []):
+            if field.get('type') != 'select_table':
+                continue
+            if not field.get('related_table'):
+                log_error(
+                    "GET_SELECT_TABLE_RELATIONSHIPS | field"
+                    f" '{field.get('name')}' has type select_table but no"
+                    " related_table attribute [GSTR1]")
+                continue
+            relationships.append({
+                'local_field': field['name'],
+                'related_table': field['related_table'],
+                'related_key': field.get('related_key', '_id'),
+                'description_fields': field.get(
+                    'description_fields', ['name']),
+                'description_separator': field.get(
+                    'description_separator', ' '),
+                'related_filter': field.get('related_filter', {}),
+            })
+        return relationships
+
+    def build_relationship_description(
+        self,
+        related_row: dict,
+        relationship: dict,
+    ) -> str:
+        """
+        Builds the description string for a related row by joining the
+        relationship's description_fields with description_separator.
+        """
+        parts = [
+            str(related_row[field])
+            for field in relationship['description_fields']
+            if related_row.get(field) is not None
+        ]
+        return relationship['description_separator'].join(parts)
+
     def listing_disabled_columns_projection(self) -> dict:
         """
         This method returns the projection dictionary for fields
