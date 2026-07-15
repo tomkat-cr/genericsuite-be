@@ -855,6 +855,40 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
         return self.generic_query(query_params, projection,
                                   query_type="find_one")
 
+    def batch_get(self, values: list, key_name: str = '_id') -> list:
+        """
+        Fetches multiple items by primary key using BatchGetItem,
+        chunked at DynamoDb's 100-key limit, retrying UnprocessedKeys.
+
+        Args:
+            values (list): primary key values to fetch.
+            key_name (str): logical key name expected by the caller.
+
+        Returns:
+            list: the fetched items.
+        """
+        table_name = self.get_table_name()
+        partition_key = self.get_key_schema()[0]['AttributeName']
+        results = []
+        for i in range(0, len(values), 100):
+            chunk = values[i:i + 100]
+            request_items = {
+                table_name: {
+                    'Keys': [{partition_key: str(value)}
+                             for value in chunk],
+                }
+            }
+            while request_items:
+                response = self._db_conection.batch_get_item(
+                    RequestItems=request_items)
+                results.extend(
+                    response.get('Responses', {}).get(table_name, []))
+                request_items = response.get('UnprocessedKeys') or None
+        if partition_key != key_name:
+            for item in results:
+                item.setdefault(key_name, item.get(partition_key))
+        return results
+
     def insert_one(self, new_item):
         """
         Translate MongoDb 'insert_one' to DynamoDb 'put_item' and returns

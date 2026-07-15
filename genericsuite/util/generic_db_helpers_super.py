@@ -159,9 +159,19 @@ class GenericDbHelperSuper:
         projection: dict,
     ) -> list:
         """
-        Fetches the related rows for one relationship. Engine-agnostic:
-        every DB abstractor translates the MongoDb $in operator.
+        Fetches the related rows for one relationship. Engine-agnostic
+        default ($in find); DynamoDb uses a BatchGetItem fast path.
         """
+        db_engine = os.environ.get('APP_DB_ENGINE', '').upper()
+        if db_engine == 'DYNAMODB' and rel['related_key'] == '_id' \
+                and not rel['related_filter']:
+            try:
+                return db[rel['related_table']].batch_get(
+                    [str(value) for value in query_values])
+            except Exception as err:  # pylint: disable=broad-except
+                log_error(
+                    "FETCH_RELATED_ROWS | batch_get fallback to find"
+                    f" [FRR1]: {err}")
         query = {rel['related_key']: {'$in': query_values}}
         query.update(rel['related_filter'])
         return list(db[rel['related_table']].find(query, projection))

@@ -2,6 +2,7 @@
 Tests for select_table 1-1 relationship resolution (GenericDbHelperSuper).
 """
 import ast
+import os
 import sys
 from unittest.mock import MagicMock, patch
 
@@ -262,3 +263,66 @@ def test_fetch_row_resolves_select_table_descriptions():
     # decode with ast.literal_eval instead of bson.json_util.loads here.
     row = ast.literal_eval(result['resultset'])
     assert row['user_id_description'] == 'John Doe'
+
+
+def test_fetch_related_rows_dynamodb_uses_batch_get():
+    helper = make_helper([])
+    fake_users_table = MagicMock()
+    fake_users_table.batch_get.return_value = [
+        {'_id': 'aaa', 'name': 'John Doe'}]
+    with patch('genericsuite.util.generic_db_helpers_super.db',
+               {'users': fake_users_table}), \
+            patch.dict(os.environ, {'APP_DB_ENGINE': 'DYNAMODB'}):
+        rows = helper._fetch_related_rows(
+            REL_USERS, ['aaa'], {'name': 1, '_id': 1})
+    assert rows == [{'_id': 'aaa', 'name': 'John Doe'}]
+    fake_users_table.find.assert_not_called()
+
+
+def test_fetch_related_rows_dynamodb_falls_back_on_error():
+    helper = make_helper([])
+    fake_users_table = MagicMock()
+    fake_users_table.batch_get.side_effect = Exception('boom')
+    fake_users_table.find.return_value = [{'_id': 'aaa', 'name': 'John Doe'}]
+    with patch('genericsuite.util.generic_db_helpers_super.db',
+               {'users': fake_users_table}), \
+            patch.dict(os.environ, {'APP_DB_ENGINE': 'DYNAMODB'}):
+        rows = helper._fetch_related_rows(
+            REL_USERS, ['aaa'], {'name': 1, '_id': 1})
+    assert rows == [{'_id': 'aaa', 'name': 'John Doe'}]
+    fake_users_table.find.assert_called_once()
+
+
+def test_dynamodb_batch_get_chunks_and_retries_unprocessed():
+    # Pop mocked modules to import the real DynamoDB class
+    sys.modules.pop("genericsuite.util.db_abstractor_super", None)
+    sys.modules.pop("genericsuite.util.db_abstractor_elem_match", None)
+    sys.modules.pop("genericsuite.util.db_abstractor_dynamodb", None)
+    from genericsuite.util.db_abstractor_dynamodb import (
+        DynamoDbTableAbstract)
+    table = DynamoDbTableAbstract.__new__(DynamoDbTableAbstract)
+    table._prefix = ''
+    table._table_name = 'users'
+    table._key_schema = [{'AttributeName': '_id', 'KeyType': 'HASH'}]
+    table._attribute_definitions = []
+    table._global_secondary_indexes = []
+    conn = MagicMock()
+    # First call returns one item + unprocessed keys; retry returns rest.
+    conn.batch_get_item.side_effect = [
+        {'Responses': {'users': [{'_id': 'aaa', 'name': 'John'}]},
+         'UnprocessedKeys': {'users': {'Keys': [{'_id': 'bbb'}]}}},
+        {'Responses': {'users': [{'_id': 'bbb', 'name': 'Jane'}]},
+         'UnprocessedKeys': {}},
+    ]
+    table._db_conection = conn
+    result = table.batch_get(['aaa', 'bbb'])
+    assert len(result) == 2
+    assert conn.batch_get_item.call_count == 2
+    # 150 keys -> chunked into 100 + 50 (2 more calls, no retries)
+    conn.batch_get_item.side_effect = [
+        {'Responses': {'users': []}, 'UnprocessedKeys': {}},
+        {'Responses': {'users': []}, 'UnprocessedKeys': {}},
+    ]
+    conn.batch_get_item.reset_mock()
+    table.batch_get([str(i) for i in range(150)])
+    assert conn.batch_get_item.call_count == 2
