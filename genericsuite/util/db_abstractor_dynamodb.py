@@ -4,6 +4,7 @@ DbAbstractorDynamodb: Database abstraction layer for DynamoDb
 
 import os
 import json
+import time
 from bson.json_util import dumps, ObjectId
 from decimal import Decimal
 
@@ -858,7 +859,8 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
     def batch_get(self, values: list, key_name: str = '_id') -> list:
         """
         Fetches multiple items by primary key using BatchGetItem,
-        chunked at DynamoDb's 100-key limit, retrying UnprocessedKeys.
+        chunked at DynamoDb's 100-key limit, retrying UnprocessedKeys
+        up to 5 attempts per chunk with a small incremental backoff.
 
         Args:
             values (list): primary key values to fetch.
@@ -866,7 +868,11 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
 
         Returns:
             list: the fetched items.
+
+        Raises:
+            RuntimeError: if UnprocessedKeys remain after max retries.
         """
+        max_attempts = 5
         table_name = self.get_table_name()
         partition_key = self.get_key_schema()[0]['AttributeName']
         results = []
@@ -878,7 +884,15 @@ class DynamoDbTableAbstract(DynamoDbUtilities):
                              for value in chunk],
                 }
             }
+            attempt = 0
             while request_items:
+                attempt += 1
+                if attempt > max_attempts:
+                    raise RuntimeError(
+                        "batch_get: unprocessed keys remain after max"
+                        " retries [BGUK1]")
+                if attempt > 1:
+                    time.sleep(0.05 * (attempt - 1))
                 response = self._db_conection.batch_get_item(
                     RequestItems=request_items)
                 results.extend(

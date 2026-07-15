@@ -326,3 +326,47 @@ def test_dynamodb_batch_get_chunks_and_retries_unprocessed():
     conn.batch_get_item.reset_mock()
     table.batch_get([str(i) for i in range(150)])
     assert conn.batch_get_item.call_count == 2
+
+
+def test_dynamodb_batch_get_raises_after_max_retries():
+    # Pop mocked modules to import the real DynamoDB class
+    sys.modules.pop("genericsuite.util.db_abstractor_super", None)
+    sys.modules.pop("genericsuite.util.db_abstractor_elem_match", None)
+    sys.modules.pop("genericsuite.util.db_abstractor_dynamodb", None)
+    from genericsuite.util.db_abstractor_dynamodb import (
+        DynamoDbTableAbstract)
+    table = DynamoDbTableAbstract.__new__(DynamoDbTableAbstract)
+    table._prefix = ''
+    table._table_name = 'users'
+    table._key_schema = [{'AttributeName': '_id', 'KeyType': 'HASH'}]
+    table._attribute_definitions = []
+    table._global_secondary_indexes = []
+    conn = MagicMock()
+    # ALWAYS returns non-empty UnprocessedKeys -> must raise, not hang.
+    conn.batch_get_item.return_value = {
+        'Responses': {'users': []},
+        'UnprocessedKeys': {'users': {'Keys': [{'_id': 'aaa'}]}},
+    }
+    table._db_conection = conn
+    with patch('genericsuite.util.db_abstractor_dynamodb.time.sleep'):
+        try:
+            table.batch_get(['aaa'])
+            assert False, "batch_get should raise after max retries"
+        except RuntimeError as err:
+            assert '[BGUK1]' in str(err)
+    assert conn.batch_get_item.call_count == 5  # capped at max attempts
+
+
+def test_fetch_related_rows_falls_back_when_batch_get_exhausts_retries():
+    helper = make_helper([])
+    fake_users_table = MagicMock()
+    fake_users_table.batch_get.side_effect = RuntimeError(
+        'batch_get: unprocessed keys remain after max retries [BGUK1]')
+    fake_users_table.find.return_value = [{'_id': 'aaa', 'name': 'John Doe'}]
+    with patch('genericsuite.util.generic_db_helpers_super.db',
+               {'users': fake_users_table}), \
+            patch.dict(os.environ, {'APP_DB_ENGINE': 'DYNAMODB'}):
+        rows = helper._fetch_related_rows(
+            REL_USERS, ['aaa'], {'name': 1, '_id': 1})
+    assert rows == [{'_id': 'aaa', 'name': 'John Doe'}]
+    fake_users_table.find.assert_called_once()
