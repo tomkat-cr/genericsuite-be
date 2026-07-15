@@ -25,6 +25,11 @@ sys.modules.setdefault("genericsuite.util.config_dbdef_helpers", MagicMock())
 sys.modules.setdefault("genericsuite.util.datetime_utilities", MagicMock())
 sys.modules.setdefault("genericsuite.util.passwords", MagicMock())
 
+# Other test modules (e.g. test_util_jwt.py) install a MagicMock for
+# generic_db_helpers_super when they are collected first. These tests need
+# the REAL class, so drop any cached entry and import fresh — this keeps
+# the file correct under ANY collection order, not just alphabetical.
+sys.modules.pop("genericsuite.util.generic_db_helpers_super", None)
 from genericsuite.util.generic_db_helpers_super import (  # noqa: E402
     GenericDbHelperSuper
 )

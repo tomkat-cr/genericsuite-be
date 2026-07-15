@@ -6,7 +6,7 @@ import sys
 import os
 import types
 import base64
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 # Clean any cached mocked version
 for _mod in list(sys.modules):
@@ -41,10 +41,15 @@ _super_mock = MagicMock()
 # Use setdefault (not direct assignment) so this doesn't clobber the real
 # module, or another test's mock, if it was already imported earlier in
 # the same pytest session (module-level test mocking is process-global).
+# Invariant that makes setdefault safe here: these tests only need
+# genericsuite.util.generic_db_helpers_super to be importable — they pass
+# against BOTH the real module (installed when
+# test_select_table_relationships.py is collected first, as in the full
+# suite run) and this fallback MagicMock (when this file runs alone).
 sys.modules.setdefault(
     "genericsuite.util.generic_db_helpers_super", _super_mock)
 
-import types as _t
+import types as _t  # noqa: E402
 _cfg_mod = _t.ModuleType("genericsuite.config.config")
 os.environ.setdefault("APP_SECRET_KEY", "fake_secret_key_for_tests_only")
 os.environ.setdefault("EXPIRATION_MINUTES", "30")
@@ -60,7 +65,7 @@ class _StubConfig:
 _cfg_mod.Config = _StubConfig
 sys.modules["genericsuite.config.config"] = _cfg_mod
 
-from genericsuite.util.jwt import (
+from genericsuite.util.jwt import (  # noqa: E402
     generate_access_token,
     token_encode,
     get_basic_auth,
