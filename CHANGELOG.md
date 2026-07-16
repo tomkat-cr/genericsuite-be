@@ -7,7 +7,6 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ## [Unreleased]
 
 ### Added
-- `select_table` field type: 1-1 relationship resolution in listings and reads. New JSON field attributes `related_table`, `related_key`, `description_fields`, `description_separator`, `related_filter`; rows now include `{field}_description`. Engine-agnostic `$in` resolver for all DB engines, with DynamoDB BatchGetItem and MongoDB `$lookup` fast paths [GS-select-table].
 
 ### Changed
 
@@ -18,7 +17,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Security
 
 
-## [Unreleased] - 2026-04-03
+## [0.4.0] - 2026-07-15
 
 ### Added
 - AGENTS.md, GEMINI.md, and CLAUDE.md files to provide context and instructions to AI Coding Assistants [GS-303].
@@ -35,6 +34,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Introduce `DEBUG_CORS` environment variable in FastAPI `create_app.py` to log CORS origins during development. This enhances debugging capabilities for CORS configuration.
 - Integrate rate limiting in FastAPI and Flask endpoints.
 - `slowapi` for FastAPI rate limiting.
+- `select_table` field type: 1-1 relationship resolution in listings and reads. New JSON field attributes `related_table`, `related_key`, `description_fields`, `description_separator`, `related_filter`; rows now include `{field}_description`. Engine-agnostic `$in` resolver for all DB engines, with DynamoDB BatchGetItem and MongoDB `$lookup` fast paths [GS-259].
 
 ### Changed
 - Enhance comments about how to specify the C0301 and E501 line-too-long lint conditions on `config.py`
