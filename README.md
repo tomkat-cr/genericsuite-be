@@ -8,7 +8,7 @@
     title="GenericSuite logo by Carlos J. Ramirez"
 />
 
-[GenericSuite](https://www.carlosjramirez.com/genericsuite) is a versatile backend solution, designed to provide a comprehensive suite of features for Python APIs. It supports various frameworks including FastAPI, Flask and Chalice, making it adaptable to a range of projects. This repository contains the backend logic, utilities, and configurations necessary to build and deploy scalable and maintainable applications.
+[GenericSuite](https://genericsuite.carlosjramirez.com) is a versatile backend solution, designed to provide a comprehensive suite of features for Python APIs. It supports various frameworks including FastAPI, Flask and Chalice, making it adaptable to a range of projects. This repository contains the backend logic, utilities, and configurations necessary to build and deploy scalable and maintainable applications.
 
 ## Features
 
