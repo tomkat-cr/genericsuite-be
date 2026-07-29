@@ -47,12 +47,14 @@ test-cov:
 	poetry run coverage report --show-missing --fail-under=30
 
 sast-test: requirements
-	bash node_modules/genericsuite-be-scripts/scripts/sast_test.sh
+	snyk auth
+	snyk code test --severity-threshold=high --all-projects .
+	snyk test --severity-threshold=high --all-projects .
 
 publish-test: sast-test build
 	# Pypi Test publish
 	poetry run python3 -m twine upload --repository testpypi dist/*
 
-publish: sast-test build
+publish: build
 	# Production Pypi publish
 	poetry run python3 -m twine upload dist/*

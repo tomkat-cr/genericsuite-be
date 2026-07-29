@@ -16,7 +16,7 @@ from genericsuite.models.logs.logs import (
 settings = Config()
 bp = BlueprintOne("logs", __name__,
                   url_prefix=f'/{settings.API_VERSION}/logs')
-limiter = get_flask_limiter(bp)
+limiter = get_flask_limiter(bp.get_current_app())
 
 
 @limiter.limit("10 per minute")

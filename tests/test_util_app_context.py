@@ -80,6 +80,71 @@ def test_get_params_filename_strips_slashes():
     assert "/" not in basename
 
 
+def test_safe_params_path_keeps_file_under_temp_dir():
+    ParamsFile = _setup_and_import_paramsfile()
+    pf = ParamsFile("507f1f77bcf86cd799439011")
+    safe = pf._safe_params_path("/tmp/params_507f1f77bcf86cd799439011.json")
+    assert safe == os.path.realpath("/tmp/params_507f1f77bcf86cd799439011.json")
+    assert safe.startswith(os.path.realpath("/tmp") + os.sep)
+
+
+def test_safe_params_path_strips_directory_components():
+    ParamsFile = _setup_and_import_paramsfile()
+    pf = ParamsFile("test_user")
+    safe = pf._safe_params_path("/etc/passwd")
+    assert safe == os.path.realpath("/tmp/passwd")
+    assert not safe.startswith(os.path.realpath("/etc"))
+
+
+def test_safe_params_path_rejects_empty_basename():
+    ParamsFile = _setup_and_import_paramsfile()
+    pf = ParamsFile("test_user")
+    try:
+        pf._safe_params_path("")
+        assert False, "Expected ValueError for empty filename"
+    except ValueError as exc:
+        assert "Invalid params filename" in str(exc)
+
+
+def test_safe_params_path_rejects_dot_and_dotdot():
+    ParamsFile = _setup_and_import_paramsfile()
+    pf = ParamsFile("test_user")
+    for bad in (".", ".."):
+        try:
+            pf._safe_params_path(bad)
+            assert False, f"Expected ValueError for {bad!r}"
+        except ValueError as exc:
+            assert "Invalid params filename" in str(exc)
+
+
+def test_save_params_file_writes_only_under_temp_dir(tmp_path):
+    """save_params_file must not write outside TEMP_DIR even if given /etc/...."""
+    ParamsFile = _setup_and_import_paramsfile()
+    outside = tmp_path / "outside.json"
+    with patch.dict(os.environ, {
+        "PARAMS_FILE_ENABLED": "1",
+        "USER_PARAMS_FILE_ENABLED": "1",
+        "TEMP_DIR": "/tmp",
+    }):
+        # Re-import so module-level TEMP_DIR / flags pick up env if needed
+        for mod in list(sys.modules):
+            if "genericsuite.util.app_context" in mod:
+                del sys.modules[mod]
+        from genericsuite.util.app_context import ParamsFile as PF
+        pf = PF("test_user")
+        # Force flags on the instance path by patching module attrs
+        import genericsuite.util.app_context as ac
+        with patch.object(ac, "USER_PARAMS_FILE_ENABLED", "1"), \
+             patch.object(ac, "PARAMS_FILE_ENABLED", "1"), \
+             patch.object(ac, "TEMP_DIR", "/tmp"):
+            result = pf.save_params_file(str(outside), {"_id": "test_user", "x": 1})
+    assert result["error"] is False
+    assert not outside.exists()
+    expected = os.path.realpath(os.path.join("/tmp", outside.name))
+    assert os.path.exists(expected)
+    os.remove(expected)
+
+
 def test_load_params_file_disabled():
     """When PARAMS_FILE_ENABLED=0 load returns found=False."""
     ParamsFile = _setup_and_import_paramsfile()

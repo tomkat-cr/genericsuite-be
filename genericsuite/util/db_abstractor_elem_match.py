@@ -2,6 +2,8 @@ from genericsuite.util.app_logger import log_debug
 
 DEBUG = False
 
+MONGODB_ELEM_MATCH = "$elemMatch"
+
 
 class DbAbstractorElemMatch:
     """
@@ -27,8 +29,8 @@ class DbAbstractorElemMatch:
         cleaned_params = {}
 
         for key, value in query_params.items():
-            if isinstance(value, dict) and "$elemMatch" in value:
-                elem_match_conditions[key] = value["$elemMatch"]
+            if isinstance(value, dict) and MONGODB_ELEM_MATCH in value:
+                elem_match_conditions[key] = value[MONGODB_ELEM_MATCH]
             else:
                 cleaned_params[key] = value
 

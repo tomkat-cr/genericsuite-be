@@ -6,8 +6,7 @@ from typing import Any, Callable, Optional, Type
 from functools import wraps
 
 from pydantic import BaseModel
-from flask import Blueprint, current_app
-# from flask import request
+from flask import Blueprint, current_app, Flask
 
 from genericsuite.util.app_logger import log_debug
 from genericsuite.util.schema_utilities import schema_verification
@@ -83,7 +82,7 @@ class BlueprintOne(Blueprint):
 
         return decorator
 
-    def get_current_app(self) -> Any:
+    def get_current_app(self) -> Flask:
         """
         Get the current App object. It must be called inside a router function.
         """

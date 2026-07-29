@@ -14,6 +14,23 @@ from genericsuite.util.app_logger import log_debug, log_error
 
 DEBUG = False
 
+MONGODB_ELEM_MATCH = "$elemMatch"
+MONGODB_EQ = "$eq"
+MONGODB_NE = "$ne"
+MONGODB_GT = "$gt"
+MONGODB_GTE = "$gte"
+MONGODB_LT = "$lt"
+MONGODB_LTE = "$lte"
+MONGODB_IN = "$in"
+MONGODB_NIN = "$nin"
+MONGODB_AND = "$and"
+MONGODB_OR = "$or"
+
+AND_GLUE = " AND "
+
+MYSQL_DB_ENGINE = "MYSQL"
+POSTGRES_DB_ENGINE = "POSTGRES"
+
 
 def fix_item_for_dump(item: Dict):
     """
@@ -98,8 +115,8 @@ class SqlUtilities(DbAbstract):
         # quoted string and inject arbitrary SQL commands. For example,
         # an identifier like col" = 1 OR "1" = "1 would result in
         # "col" = 1 OR "1" = "1", which alters the query logic.
-        quote_char = "`" if self.db_engine == "MYSQL" else '"'
-        if self.db_engine == "MYSQL":
+        quote_char = "`" if self.db_engine == MYSQL_DB_ENGINE else '"'
+        if self.db_engine == MYSQL_DB_ENGINE:
             identifier = identifier.replace('`', '``')
         else:
             identifier = identifier.replace('"', '""')
@@ -121,22 +138,22 @@ class SqlUtilities(DbAbstract):
         s = s.replace("'", "''")
         # MySQL also interprets backslash as escape; escape it so a trailing
         # quote cannot be escaped by user input.
-        if self.db_engine == "MYSQL":
+        if self.db_engine == MYSQL_DB_ENGINE:
             s = s.replace("\\", "\\\\")
         return s
 
     def _get_sql_operator_mapping(self) -> dict:
         return {
-            "$eq": "=",
-            "$ne": "<>",
-            "$gt": ">",
-            "$gte": ">=",
-            "$lt": "<",
-            "$lte": "<=",
-            "$in": "IN",
-            "$nin": "NOT IN",
-            "$and": "AND",
-            "$or": "OR",
+            MONGODB_EQ: "=",
+            MONGODB_NE: "<>",
+            MONGODB_GT: ">",
+            MONGODB_GTE: ">=",
+            MONGODB_LT: "<",
+            MONGODB_LTE: "<=",
+            MONGODB_IN: "IN",
+            MONGODB_NIN: "NOT IN",
+            MONGODB_AND: "AND",
+            MONGODB_OR: "OR",
         }
 
     def _get_sql_operator(self, mongo_op: str) -> str:
@@ -208,11 +225,11 @@ class SqlUtilities(DbAbstract):
                 columns.append(col_name)
                 values.append(f"%{regex_value}%")
 
-            elif op == "$elemMatch":
+            elif op == MONGODB_ELEM_MATCH:
                 # op_val will be a dictionary with $elemMatch condition(s)
                 # E.g. {'id': 'xyz'}
                 array_cond = self.array_fields_management(
-                    col_name, "$elemMatch", op_val)
+                    col_name, MONGODB_ELEM_MATCH, op_val)
                 _ = DEBUG and log_debug(
                     f"||| special_case_handling [$elemMatch]"
                     f" | col_name: {col_name} "
@@ -223,7 +240,7 @@ class SqlUtilities(DbAbstract):
                     [one_val for one_val in op_val.values()
                      if one_val is not None])
 
-            elif op in ["$and", "$or"]:
+            elif op in [MONGODB_AND, MONGODB_OR]:
                 # This is a NESTED $and / $or scenario where
                 # op_val is a list with the sub-operators
                 # and their values. For example the
@@ -277,7 +294,7 @@ class SqlUtilities(DbAbstract):
                 columns.extend(sub_cols)
                 values.extend(sub_vals)
 
-            elif op in ["$in", "$nin"]:
+            elif op in [MONGODB_IN, MONGODB_NIN]:
                 """
                 For example:
                     For "op_val" = ['1', '22', '333'],
@@ -778,7 +795,7 @@ class SqlTable(SqlUtilities):
             f"||| _build_where_clause | query_params: {query_params}")
         if not query_params:
             return "", [], []
-        condition_glue = "OR" if "$or" in query_params else "AND"
+        condition_glue = "OR" if MONGODB_OR in query_params else "AND"
         conditions, columns, values = \
             self._get_conditions_and_values(query_params)
         where_clause = \
@@ -873,9 +890,9 @@ class SqlTable(SqlUtilities):
         """
         cleaned_value = {k: v for k, v in value.items() if v is not None}
         result = [cleaned_value]
-        if self.db_engine == "POSTGRES":
+        if self.db_engine == POSTGRES_DB_ENGINE:
             result = [self._prepare_value_for_sql(value)]
-        elif self.db_engine == "MYSQL":
+        elif self.db_engine == MYSQL_DB_ENGINE:
             result = [v for v in cleaned_value.values()]
         _ = DEBUG and log_debug(f"SqlTable.array_fields_value: {result}")
         return result
@@ -889,12 +906,12 @@ class SqlTable(SqlUtilities):
 
         if operation == "add":
 
-            if self.db_engine == "POSTGRES":
+            if self.db_engine == POSTGRES_DB_ENGINE:
 
                 result = f"{self._quote_identifier(col_name)} = " + \
                     f"{self._quote_identifier(col_name)} || %s::jsonb"
 
-            elif self.db_engine == "MYSQL":
+            elif self.db_engine == MYSQL_DB_ENGINE:
 
                 column_and_values = ", ".join([
                     f"'{self._escape_sql_string_literal(key)}', %s"
@@ -907,11 +924,11 @@ class SqlTable(SqlUtilities):
 
         elif operation == "remove":
 
-            if self.db_engine == "POSTGRES":
+            if self.db_engine == POSTGRES_DB_ENGINE:
 
                 # Condition: (elem->>'{key}') <> %s (key escaped for SQL
                 # injection safety)
-                where_contitions = " AND ".join([
+                where_contitions = AND_GLUE.join([
                     (f"(elem->>'{self._escape_sql_string_literal(key)}') " +
                      self.null_comparison("<>", "%s", val))
                     for key, val in value.items()
@@ -926,7 +943,7 @@ class SqlTable(SqlUtilities):
     '[]'::jsonb  -- If all elements are filtered out, return an empty array
 )
 """
-            elif self.db_engine == "MYSQL":
+            elif self.db_engine == MYSQL_DB_ENGINE:
                 # Use index-based column aliases (row_0, row_1, ...) to avoid
                 # user-supplied key in identifier position; path uses
                 # escaped key.
@@ -937,7 +954,7 @@ class SqlTable(SqlUtilities):
                     for i, key in enumerate(keys_list)
                 ])
                 # Condition: jt.row_{i} = %s
-                where_contitions = " AND ".join([
+                where_contitions = AND_GLUE.join([
                     (f"jt.row_{i} " +
                      self.null_comparison("=", "%s", val))
                     for i, (key, val) in enumerate(value.items())
@@ -958,20 +975,14 @@ class SqlTable(SqlUtilities):
     )
 )
 """
-        elif operation == "$elemMatch":
+        elif operation == MONGODB_ELEM_MATCH:
             # Search an element in the array and returns True if
             # condition(s) are met
 
-            if self.db_engine == "POSTGRES":
-                # result = " AND ".join([
-                #     f"{self._quote_identifier(col_name)} @> '[" + "{" +
-                #     f'"{key}": %s' + "}]'"
-                #     for key, val in value.items()
-                # ])
-
+            if self.db_engine == POSTGRES_DB_ENGINE:
                 # Condition: obj->>'{key}' = %s (key escaped for SQL injection
                 # safety)
-                where_contitions = " AND ".join([
+                where_contitions = AND_GLUE.join([
                     (f"obj->>'{self._escape_sql_string_literal(key)}' " +
                      self.null_comparison("=", "%s", val))
                     for key, val in value.items()
@@ -983,7 +994,7 @@ WHERE {where_contitions}
 )
 """
 
-            elif self.db_engine == "MYSQL":
+            elif self.db_engine == MYSQL_DB_ENGINE:
 
                 result = "AND ".join([
                     f"JSON_CONTAINS({self._quote_identifier(col_name)}, "
@@ -1166,7 +1177,7 @@ WHERE {where_contitions}
         quoted_table = self._quote_identifier(
             self._table_name, process_dot=True)
 
-        if self.db_engine == "POSTGRES":
+        if self.db_engine == POSTGRES_DB_ENGINE:
             pk_column = self._primary_key.get("pk")
             if pk_column:
                 sql = f"DELETE FROM {quoted_table} WHERE" + \

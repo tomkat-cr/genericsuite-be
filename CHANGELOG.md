@@ -31,22 +31,26 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Optional dependency groups `gcp` and `azure` in `pyproject.toml` for lazy SDK installation [GS-317] [GS-318].
 - New env vars documented in `.env.example`: `GCP_PROJECT_ID`, `GCS_CHATBOT_ATTACHMENTS_BUCKET_*`, `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_ACCOUNT_KEY`, `AZURE_CHATBOT_ATTACHMENTS_CONTAINER_*`, `AZURE_KEYVAULT_URL`, `CLOUD_STORAGE_PRESIGNED_EXPIRY`, `CLOUD_STORAGE_PRESIGNED_ACTIVE` [GS-317] [GS-318].
 - Unit tests for GCS storage (`tests/test_gcp_storage.py`), Azure Blob storage (`tests/test_azure_storage.py`), GCP Secret Manager (`tests/test_util_gcp_secrets.py`), and Azure Key Vault (`tests/test_util_azure_secrets.py`) [GS-317] [GS-318].
-- Introduce `DEBUG_CORS` environment variable in FastAPI `create_app.py` to log CORS origins during development. This enhances debugging capabilities for CORS configuration.
-- Integrate rate limiting in FastAPI and Flask endpoints.
-- `slowapi` for FastAPI rate limiting.
+- Introduce `DEBUG_CORS` environment variable in FastAPI `create_app.py` to log CORS origins during development. This enhances debugging capabilities for CORS configuration [GS-329].
+- `slowapi` for FastAPI rate limiting package [GS-332].
+- Integrate rate limiting in FastAPI and Flask endpoints [GS-332].
 - `select_table` field type: 1-1 relationship resolution in listings and reads. New JSON field attributes `related_table`, `related_key`, `description_fields`, `description_separator`, `related_filter`; rows now include `{field}_description`. Engine-agnostic `$in` resolver for all DB engines, with DynamoDB BatchGetItem and MongoDB `$lookup` fast paths [GS-259].
 
 ### Changed
-- Enhance comments about how to specify the C0301 and E501 line-too-long lint conditions on `config.py`
 - License changed to MIT [FA-244].
-- Update FastAPI abstraction layer CORS configuration in `create_app.py` to handle multiple origins by splitting the `CORS_ORIGIN` string if it contains commas.
-- Update CORS configuration in `framework_abstraction.py` to set `Access-Control-Allow-Origin` to '*' for handling multiple origins, as FastAPI manages origin splitting internally.
-- Remove request authentication for flexibility, and add rate limit in `logs.py` for the `/logs` endpoint.
+- Update FastAPI abstraction layer CORS configuration in `create_app.py` to handle multiple origins by splitting the `CORS_ORIGIN` string if it contains commas [GS-329].
+- Update CORS configuration in `framework_abstraction.py` to set `Access-Control-Allow-Origin` to '*' for handling multiple origins, as FastAPI manages origin splitting internally [GS-329].
+- Remove request authentication for flexibility [GS-329].
+- And add rate limit in `logs.py` for the `/logs` endpoint [GS-332].
+- Enhance comments about how to specify the C0301 and E501 line-too-long lint conditions on `config.py`
+- Replace Github Gemini code review with SonarQube and Claude code review [GS-336].
 
 ### Security
-- Upgrade "pyjwt" to "^2.10.1" to fix security vulnerabilities [GS-219]:
+- Upgrade "pyjwt" to "^2.13.0" to fix security vulnerabilities [GS-219]:
     * Improper Verification of Cryptographic Signature [High Severity], SNYK-PYTHON-PYJWT-15518059
-- Avoid characters that are not allowed in filenames built from user_id or ObjectId in `app_context.py` [GS-219]
+- Avoid characters that are not allowed in filenames built from user_id or ObjectId in `app_context.py` [GS-219].
+- Upgrade "urllib3" to "^2.7.0" to fix security vulnerabilities [GS-219].
+- Fix "Unsanitized input from an HTTP header flows into json.dump, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to write arbitrary files." in app_context.py [GS-219].
 
 
 ## [0.3.0] - 2026-02-18

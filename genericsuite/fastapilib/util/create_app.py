@@ -31,10 +31,16 @@ DEBUG = False
 DEBUG_CORS = os.environ.get('DEBUG_CORS', '0') == '1'
 
 
-async def _rate_limit_handler(request: Request, exc: RateLimitExceeded
-                              ) -> JSONResponse:
+def _rate_limit_handler(request: Request, exc: RateLimitExceeded
+                        ) -> JSONResponse:
+    """
+    Rate limit exceeded handler
+    Returns a JSON response with an error message and a status code of 429.
+    """
+    error_message = "Too many requests. Try again later."
     return JSONResponse({
-        "error": "Too many requests. Try again later."
+        "error": True,
+        "error_message": error_message
     }, status_code=429)
 
 
