@@ -170,6 +170,9 @@ tmp
 # NPM
 node_modules
 
+# SonarQube
+.sonar
+
 # Claude Code
 .claude/settings.local.json
 
@@ -179,4 +182,3 @@ node_modules
 .codex
 .cursor
 .gemini
-.sonar

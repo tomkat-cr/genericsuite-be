@@ -47,6 +47,7 @@ test-cov:
 	poetry run coverage report --show-missing --fail-under=30
 
 sast-test: requirements
+	# bash node_modules/genericsuite-be-scripts/scripts/sast_test.sh
 	snyk auth
 	snyk code test --severity-threshold=high --all-projects .
 	snyk test --severity-threshold=high --all-projects .
