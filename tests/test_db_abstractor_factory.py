@@ -43,7 +43,8 @@ def _import_db_abstractor():
     class _StubConfig:
         APP_SECRET_KEY = "k"
         DB_ENGINE = "MONGODB"
-        DB_CONFIG = {"app_db_uri": "fake", "app_db_name": "test", "dynamdb_prefix": ""}
+        DB_CONFIG = {"app_db_uri": "fake",
+                     "app_db_name": "test", "dynamdb_prefix": ""}
 
     _cfg_mod.Config = _StubConfig
     sys.modules.setdefault("genericsuite.config.config", _cfg_mod)
@@ -102,7 +103,9 @@ def test_verify_required_fields_returns_result_dict():
 # ---- set_db_request ----
 
 def test_set_db_request_stores_request():
-    _, set_db_request = _import_db_abstractor()
+    # _, set_db_request = _import_db_abstractor()
+    # assert True  # no exception raised
+    from genericsuite.util.db_abstractor import set_db_request, request_handler
     mock_req = MagicMock()
     set_db_request(mock_req)
-    assert True  # no exception raised
+    assert request_handler.get_request() is mock_req

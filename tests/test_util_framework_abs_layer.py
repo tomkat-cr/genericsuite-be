@@ -92,7 +92,8 @@ def test_request_authorization_header_accessible():
                     reason=f"Pydantic Request only on fastapi/flask (got {CURRENT_FRAMEWORK})")
 def test_request_to_dict():
     Request = _get_request_class()
-    req = Request(method="POST", headers={}, json_body={"a": 1}, query_params={})
+    req = Request(method="POST", headers={},
+                  json_body={"a": 1}, query_params={})
     d = req.to_dict()
     assert d["method"] == "POST"
     assert d["json_body"] == {"a": 1}
