@@ -34,7 +34,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Introduce `DEBUG_CORS` environment variable in FastAPI `create_app.py` to log CORS origins during development. This enhances debugging capabilities for CORS configuration [GS-329].
 - `slowapi` for FastAPI rate limiting package [GS-332].
 - Integrate rate limiting in FastAPI and Flask endpoints [GS-332].
-- `select_table` field type: 1-1 relationship resolution in listings and reads. New JSON field attributes `related_table`, `related_key`, `description_fields`, `description_separator`, `related_filter`; rows now include `{field}_description`. Engine-agnostic `$in` resolver for all DB engines, with DynamoDB BatchGetItem and MongoDB `$lookup` fast paths [GS-259].
+- `select_table` field type: 1-1 relationship resolution in listings and reads. New JSON field attributes `related_table`, `local_field`, `related_key`, `description_fields`, `description_separator`, `related_filter`; rows now include `{field}_description`. Engine-agnostic `$in` resolver for all DB engines, with DynamoDB BatchGetItem and MongoDB `$lookup` fast paths [GS-259].
 
 ### Changed
 - License changed to MIT [FA-244].

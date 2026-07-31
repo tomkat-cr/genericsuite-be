@@ -116,16 +116,18 @@ class GenericDbHelperSuper:
         """
         relationships = []
         for field in self.cnf_db.get('fieldElements', []):
+            local_field = field.get('local_field') or field['name']
             if field.get('type') != 'select_table':
                 continue
             if not field.get('related_table'):
                 log_error(
                     "GET_SELECT_TABLE_RELATIONSHIPS | field"
-                    f" '{field.get('name')}' has type select_table but no"
+                    f" '{local_field}'"
+                    " has type select_table but no"
                     " related_table attribute [GSTR1]")
                 continue
             relationships.append({
-                'local_field': field['name'],
+                'local_field': local_field,
                 'related_table': field['related_table'],
                 'related_key': field.get('related_key', '_id'),
                 'description_fields': field.get(
