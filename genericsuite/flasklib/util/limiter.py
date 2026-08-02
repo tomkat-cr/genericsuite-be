@@ -2,9 +2,20 @@
 # Flask rate limiting with SlowAPI is not directly supported; instead,
 # use Flask-Limiter for Flask integration.
 # Replace SlowAPI with Flask-Limiter usage.
-from flask import Flask
+from flask import Flask, request
 from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+
+from genericsuite.util.remote_address import resolve_client_ip
+
+
+def get_remote_address() -> str:
+    """
+    Rate-limiting key function. Trusts X-Forwarded-For only up to the
+    hop count configured via RATE_LIMIT_TRUSTED_PROXY_HOPS; see
+    genericsuite.util.remote_address for the trust model.
+    """
+    return resolve_client_ip(
+        request.remote_addr, request.headers.get('X-Forwarded-For'))
 
 
 def get_flask_limiter(app: Flask) -> Limiter:

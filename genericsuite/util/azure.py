@@ -38,15 +38,20 @@ def get_blob_service_client():
     Returns:
         azure.storage.blob.BlobServiceClient: The service client.
     """
-    from azure.storage.blob import BlobServiceClient  # pylint: disable=import-outside-toplevel
+    from azure.storage.blob import \
+        BlobServiceClient  # pylint: disable=import-outside-toplevel
     conn_str = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
     if conn_str:
         return BlobServiceClient.from_connection_string(conn_str)
     account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
     account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
+    if not account_name:
+        raise ValueError(
+            "ERROR-GBSC-010 - AZURE_STORAGE_ACCOUNT_NAME is required when "
+            "AZURE_STORAGE_CONNECTION_STRING is not set"
+        )
     account_url = f"https://{account_name}.blob.core.windows.net"
-    from azure.storage.blob import BlobServiceClient as _BSC  # pylint: disable=import-outside-toplevel
-    return _BSC(account_url=account_url, credential=account_key)
+    return BlobServiceClient(account_url=account_url, credential=account_key)
 
 
 def blob_storage_base_url(bucket_name: str) -> str:
@@ -263,10 +268,11 @@ def get_blob_presigned_url(
     result = get_default_resultset()
     expires_in = get_storage_presigned_expiration_seconds(expiration_seconds)
     try:
-        from azure.storage.blob import (  # pylint: disable=import-outside-toplevel
-            generate_blob_sas,
-            BlobSasPermissions,
-        )
+        from azure.storage.blob import \
+            (  # pylint: disable=import-outside-toplevel
+                generate_blob_sas,
+                BlobSasPermissions,
+            )
         account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
         account_key = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
         if not account_name or not account_key:

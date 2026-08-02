@@ -17,7 +17,7 @@ from genericsuite.config.config import Config
 from genericsuite.fastapilib.util.generic_endpoint_builder import (
     generate_blueprints_from_json
 )
-from genericsuite.util.limiter import limiter
+from genericsuite.fastapilib.util.limiter import limiter
 from genericsuite.fastapilib.endpoints import (
     users,
     menu_options,

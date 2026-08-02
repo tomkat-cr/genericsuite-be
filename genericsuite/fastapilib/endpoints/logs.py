@@ -9,7 +9,7 @@ from genericsuite.models.logs.logs import (
     put_log,
     LogRequest,
 )
-from genericsuite.util.limiter import limiter
+from genericsuite.fastapilib.util.limiter import limiter
 
 
 router = BlueprintOne()
