@@ -51,6 +51,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Avoid characters that are not allowed in filenames built from user_id or ObjectId in `app_context.py` [GS-219].
 - Upgrade "urllib3" to "^2.7.0" to fix security vulnerabilities [GS-219].
 - Fix "Unsanitized input from an HTTP header flows into json.dump, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to write arbitrary files." in app_context.py [GS-219].
+- Migrate to Python 3.14 [GS-337].
 
 
 ## [0.3.0] - 2026-02-18
