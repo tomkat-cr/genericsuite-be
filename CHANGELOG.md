@@ -48,6 +48,12 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Security
 - Upgrade "pyjwt" to "^2.13.0" to fix security vulnerabilities [GS-219]:
     * Improper Verification of Cryptographic Signature [High Severity], SNYK-PYTHON-PYJWT-15518059
+    * PyJWKClient: missing scheme allowlist enables CVE-2024-21643-class SSRF + token forgery via file://, ftp://, data: schemes
+    * PyJWKClient unbounded JWKS endpoint requests via attacker-controlled kid values (DoS)
+- Upgrade cryptography to "^50.0.0" to fix security vulnerabilities [GS-219].
+    * python-cryptography: Duplicate self-signed intermediates can cause exponential path-building
+    * cryptography: PKCS#7 EnvelopedData decryption exposes a Bleichenbacher oracle through distinguishable errors and timing
+    * python-cryptography verifier accepts wildcard DNS names allowing escape from permittedSubtrees
 - Avoid characters that are not allowed in filenames built from user_id or ObjectId in `app_context.py` [GS-219].
 - Upgrade "urllib3" to "^2.7.0" to fix security vulnerabilities [GS-219].
 - Fix "Unsanitized input from an HTTP header flows into json.dump, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to write arbitrary files." in app_context.py [GS-219].

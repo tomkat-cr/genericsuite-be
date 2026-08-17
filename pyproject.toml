@@ -44,7 +44,7 @@ packages = [
 python = ">=3.10,<4.0"
 pyjwt = "^2.13.0"
 werkzeug = "^3.1.6"
-cryptography = "^49.0.0"
+cryptography = "^50.0.0"
 pydantic = "^2.9.2"
 urllib3 = "^2.7.0"
 requests-toolbelt = "^1.0.0"
