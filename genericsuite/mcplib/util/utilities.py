@@ -169,7 +169,7 @@ def mcp_authenticate_api_key(
     """
     if not api_key:
         raise ValueError("API key is required")
-    if not username and not user_id:
+    if not username and not user_id and MCP_MANDATORY_USER_ID:
         raise ValueError("Username or user_id is required")
     request = get_app_request(
         path="user/login",
@@ -195,7 +195,9 @@ def mcp_authenticate_api_key(
     set_tool_context(
         request=request,
         resultset={
-            'user_id': user_id,
+            'user_id': user_id or
+            (authorized_request.user.public_id
+             if authorized_request.user else None),
         },
         app=app,
         cac_object_list=cac_object_list
@@ -207,7 +209,10 @@ def get_access_token():
     """
     Get the access token
     """
-    headers = get_http_headers()
+    headers = get_http_headers(include_all=True)
+    _ = DEBUG and log_debug(
+        ">> get_access_token | headers: "
+        f"{headers}")
     return headers.get("authorization")
 
 
@@ -221,11 +226,13 @@ def verify_app_context(
     access_token = get_access_token()
     for cac in cac_object_list:
         if cac.app_context is None:
-            if not os.environ.get("GS_API_KEY", access_token) or (
+            if (
+                not os.environ.get("GS_API_KEY") and
+                not access_token and
                 not os.environ.get("GS_USER_ID") and
                 not os.environ.get("GS_USER_NAME")
             ):
-                raise ValueError("User not authenticated")
+                raise ValueError("No user credentials found")
             else:
                 result = mcp_authenticate_api_key(
                     user_id=os.environ.get("GS_USER_ID"),

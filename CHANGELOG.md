@@ -36,6 +36,9 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Integrate rate limiting in FastAPI and Flask endpoints [GS-332].
 - `select_table` field type: 1-1 relationship resolution in listings and reads. New JSON field attributes `related_table`, `local_field`, `related_key`, `description_fields`, `description_separator`, `related_filter`; rows now include `{field}_description`. Engine-agnostic `$in` resolver for all DB engines, with DynamoDB BatchGetItem and MongoDB `$lookup` fast paths [GS-259].
 
+### Fixed
+- API Key MCP headers and API Key authentication issues: modify get_access_token to include all headers, update mcp_authenticate_api_key to only require user_id based on MCP_MANDATORY_USER_ID, improve user_id assignment logic when only API Key is provided. Adjust verify_app_context to raise a more descriptive error for missing user credentials [GS-243].
+
 ### Changed
 - License changed to MIT [FA-244].
 - Update FastAPI abstraction layer CORS configuration in `create_app.py` to handle multiple origins by splitting the `CORS_ORIGIN` string if it contains commas [GS-329].
