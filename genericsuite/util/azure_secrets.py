@@ -16,13 +16,55 @@ TEMP_DIR = os.environ.get('TEMP_DIR', '/tmp')
 def get_secrets(secret_name: str, region_name: str,
                 get_default_resultset: Callable, logger: Callable) -> dict:
     """
-    Get a secret from AZURE Secrets Manager.
+    Get a secret from Azure Key Vault.
+
+    Args:
+        secret_name (str): The secret name stored in Key Vault
+            (e.g. "myapp-prod-secrets").
+        region_name (str): The Azure region (informational; kept for interface
+            parity with the AWS/GCP equivalents).
+        get_default_resultset (Callable): Factory for the result dict.
+        logger (Callable): Logger instance.
+
+    Returns:
+        dict: Standard result dict with parsed secret JSON in 'resultset'.
     """
     _ = DEBUG and logger.debug(
         f'AZURE get_secrets | secret_name: {secret_name}'
         f' | region_name: {region_name}')
+
     result = get_default_resultset()
     result['resultset'] = {}
+
+    keyvault_url = os.environ.get('AZURE_KEYVAULT_URL')
+    if not keyvault_url:
+        result['error'] = True
+        result['error_message'] = (
+            'ERROR: AZURE_KEYVAULT_URL environment variable is not set'
+            ' [AZ-GS-E010]'
+        )
+        return result
+
+    try:
+        from azure.identity import DefaultAzureCredential  # pylint: disable=import-outside-toplevel
+        from azure.keyvault.secrets import SecretClient  # pylint: disable=import-outside-toplevel
+        credential = DefaultAzureCredential()
+        client = SecretClient(vault_url=keyvault_url, credential=credential)
+        secret = client.get_secret(secret_name)
+        secret_value = secret.value
+    except Exception as err:  # pylint: disable=broad-except
+        result['error'] = True
+        result['error_message'] = str(err) + ' [AZ-GS-E020]'
+        return result
+
+    try:
+        result['resultset'] = json.loads(secret_value)
+    except ValueError as err:
+        result['error'] = True
+        result['error_message'] = str(err) + ' [AZ-GS-E030]'
+    except Exception as err:  # pylint: disable=broad-except
+        result['error'] = True
+        result['error_message'] = str(err) + ' [AZ-GS-E030]'
     return result
 
 

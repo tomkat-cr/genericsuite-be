@@ -87,17 +87,15 @@ if FRAMEWORK == 'fastapi':
                     body = json.dumps(body)
 
                 headers = headers if headers else {}
+
+                # Content-Type must be set so Mangum knows to send the body
+                # as text (not base64). Without it, Mangum's for-else in
+                # handle_base64_response_body encodes the body as base64 and
+                # API Gateway delivers the base64 string to the client.
+                # CORS headers are intentionally omitted here — CORSMiddleware
+                # in create_app.py handles them for multiple origins.
                 if 'Content-Type' not in headers:
                     headers['Content-Type'] = 'application/json'
-                if 'Access-Control-Allow-Origin' not in headers:
-                    headers["Access-Control-Allow-Origin"] = \
-                        os.environ.get('APP_CORS_ORIGIN', '*')
-                if 'Access-Control-Allow-Methods' not in headers:
-                    headers["Access-Control-Allow-Methods"] = \
-                        "GET, POST, PUT, DELETE, OPTIONS"
-                if 'Access-Control-Allow-Headers' not in headers:
-                    headers["Access-Control-Allow-Headers"] = \
-                        "Content-Type, Authorization"
 
                 if DEBUG:
                     print('FastAPI abstraction' +

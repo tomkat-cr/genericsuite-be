@@ -75,7 +75,7 @@ def storage_retrieval_with_response_type_endpoint(
 def storage_retieval_chalice(
     request: Request,
     blueprint: BlueprintOne,
-    item_id: str,
+    item_id: Union[str, None],
     other_params: Optional[Union[dict, None]] = None,
 ) -> Response:
     """

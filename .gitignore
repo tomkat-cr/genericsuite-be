@@ -166,4 +166,19 @@ cython_debug/
 
 # Big lambdas deployment
 tmp
-*_IMPLEMENTATION.md
+
+# NPM
+node_modules
+
+# SonarQube
+.sonar
+
+# Claude Code
+.claude/settings.local.json
+
+# AI Agents
+.claude
+.agents
+.codex
+.cursor
+.gemini

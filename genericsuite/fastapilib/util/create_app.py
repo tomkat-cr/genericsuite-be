@@ -4,9 +4,11 @@ App main module (create_app) for FastAPI
 from typing import Any
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from mangum import Mangum
+from slowapi.errors import RateLimitExceeded
 
 from genericsuite.util.app_logger import log_info
 
@@ -15,6 +17,7 @@ from genericsuite.config.config import Config
 from genericsuite.fastapilib.util.generic_endpoint_builder import (
     generate_blueprints_from_json
 )
+from genericsuite.fastapilib.util.limiter import limiter
 from genericsuite.fastapilib.endpoints import (
     users,
     menu_options,
@@ -25,6 +28,20 @@ from genericsuite.fastapilib.endpoints import (
 from genericsuite.config.config_from_db import set_init_custom_data
 
 DEBUG = False
+DEBUG_CORS = os.environ.get('DEBUG_CORS', '0') == '1'
+
+
+def _rate_limit_handler(request: Request, exc: RateLimitExceeded
+                        ) -> JSONResponse:
+    """
+    Rate limit exceeded handler
+    Returns a JSON response with an error message and a status code of 429.
+    """
+    error_message = "Too many requests. Try again later."
+    return JSONResponse({
+        "error": True,
+        "error_message": error_message
+    }, status_code=429)
 
 
 def create_app(app_name: str, settings: Config = None) -> Any:
@@ -45,6 +62,10 @@ def create_app(app_name: str, settings: Config = None) -> Any:
 
     # CORS configuration
     set_cors_config(fastapi_app=fastapi_app, settings=settings)
+
+    # Rate limiting — shared across all routes that use @limiter.limit(...)
+    fastapi_app.state.limiter = limiter
+    fastapi_app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 
     # Register generic endpoints
     fastapi_app.include_router(
@@ -98,7 +119,11 @@ def set_cors_config(fastapi_app, settings):
     """
     Sets the CORS configuration for the API.
     """
-    origins = [settings.CORS_ORIGIN]
+    origins = [settings.CORS_ORIGIN] \
+        if "," not in settings.CORS_ORIGIN \
+        else settings.CORS_ORIGIN.split(",")
+    if DEBUG_CORS:
+        log_info(f"set_cors_config | origins: {origins}")
     fastapi_app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,

@@ -104,6 +104,136 @@ class GenericDbHelperSuper:
                       f' projection: {projection}')
         return projection
 
+    def get_select_table_relationships(self) -> list:
+        """
+        Scans the table definition for 'select_table' fields and returns
+        the 1-1 relationship descriptors.
+
+        Returns:
+            list: one dict per select_table field with keys:
+                local_field, related_table, related_key,
+                description_fields, description_separator, related_filter.
+        """
+        relationships = []
+        for field in self.cnf_db.get('fieldElements', []):
+            local_field = field.get('local_field') or field['name']
+            if field.get('type') != 'select_table':
+                continue
+            if not field.get('related_table'):
+                log_error(
+                    "GET_SELECT_TABLE_RELATIONSHIPS | field"
+                    f" '{local_field}'"
+                    " has type select_table but no"
+                    " related_table attribute [GSTR1]")
+                continue
+            relationships.append({
+                'local_field': local_field,
+                'related_table': field['related_table'],
+                'related_key': field.get('related_key', '_id'),
+                'description_fields': field.get(
+                    'description_fields', ['name']),
+                'description_separator': field.get(
+                    'description_separator', ' '),
+                'related_filter': field.get('related_filter', {}),
+            })
+        return relationships
+
+    def build_relationship_description(
+        self,
+        related_row: dict,
+        relationship: dict,
+    ) -> str:
+        """
+        Builds the description string for a related row by joining the
+        relationship's description_fields with description_separator.
+        """
+        parts = [
+            str(related_row[field])
+            for field in relationship['description_fields']
+            if related_row.get(field) is not None
+        ]
+        return relationship['description_separator'].join(parts)
+
+    def _fetch_related_rows(
+        self,
+        rel: dict,
+        query_values: list,
+        projection: dict,
+    ) -> list:
+        """
+        Fetches the related rows for one relationship. Engine-agnostic
+        default ($in find); DynamoDb uses a BatchGetItem fast path.
+        """
+        db_engine = os.environ.get('APP_DB_ENGINE', '').upper()
+        if db_engine == 'DYNAMODB' and rel['related_key'] == '_id' \
+                and not rel['related_filter']:
+            try:
+                return db[rel['related_table']].batch_get(
+                    sorted({str(value) for value in query_values}))
+            except Exception as err:  # pylint: disable=broad-except
+                log_error(
+                    "FETCH_RELATED_ROWS | batch_get fallback to find"
+                    f" [FRR1]: {err}")
+        query = {rel['related_key']: {'$in': query_values}}
+        query.update(rel['related_filter'])
+        return list(db[rel['related_table']].find(query, projection))
+
+    def resolve_relationships(
+        self,
+        rows: list,
+        relationships: list = None,
+    ) -> list:
+        """
+        Resolves select_table 1-1 relationships for a page of rows,
+        adding a '{field}_description' attribute per relationship.
+        Errors never propagate: on failure the description is None.
+        """
+        if relationships is None:
+            relationships = self.get_select_table_relationships()
+        if not rows or not relationships:
+            return rows
+        for rel in relationships:
+            desc_attr = f"{rel['local_field']}_description"
+            fk_values = {
+                str(row[rel['local_field']]) for row in rows
+                if row.get(rel['local_field']) is not None
+            }
+            if not fk_values:
+                for row in rows:
+                    row[desc_attr] = None
+                continue
+            query_values = list(fk_values)
+            if rel['related_key'] == '_id':
+                # Send both ObjectId and raw string forms: MongoDb stores
+                # ObjectId, SQL/DynamoDb abstractors normalize to string.
+                for value in list(fk_values):
+                    try:
+                        query_values.append(ObjectId(value))
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+            projection = {
+                field: 1 for field in rel['description_fields']}
+            projection[rel['related_key']] = 1
+            try:
+                related_rows = self._fetch_related_rows(
+                    rel, query_values, projection)
+            except Exception as err:  # pylint: disable=broad-except
+                log_error(
+                    "RESOLVE_RELATIONSHIPS | table:"
+                    f" {rel['related_table']} | error [RR1]: {err}")
+                related_rows = []
+            desc_map = {
+                str(related_row.get(rel['related_key'])):
+                    self.build_relationship_description(related_row, rel)
+                for related_row in related_rows
+            }
+            for row in rows:
+                fk_value = row.get(rel['local_field'])
+                row[desc_attr] = (
+                    desc_map.get(str(fk_value))
+                    if fk_value is not None else None)
+        return rows
+
     def listing_disabled_columns_projection(self) -> dict:
         """
         This method returns the projection dictionary for fields

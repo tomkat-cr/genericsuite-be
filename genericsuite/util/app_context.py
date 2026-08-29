@@ -37,11 +37,28 @@ class ParamsFile():
     def __init__(self, user_id: str):
         self.user_id = user_id
 
+    def _safe_params_path(self, filename: str) -> str:
+        """
+        Resolve filename under TEMP_DIR only (blocks path traversal).
+
+        Uses basename + realpath containment so tainted request-derived
+        values cannot escape the temp directory before open/json.dump.
+        """
+        name = os.path.basename(filename or "")
+        if not name or name in ('.', '..'):
+            raise ValueError(f"Invalid params filename: {filename}")
+        candidate = os.path.realpath(os.path.join(TEMP_DIR, name))
+        temp_root = os.path.realpath(TEMP_DIR)
+        if candidate != temp_root and not candidate.startswith(
+                temp_root + os.sep):
+            raise ValueError(f"Path traversal blocked: {filename}")
+        return candidate
+
     def get_params_file_path(self, filename: str):
         """
         Get the path of the file.
         """
-        return os.path.join(TEMP_DIR, filename)
+        return self._safe_params_path(filename)
 
     def get_params_filename(self, user_id: Optional[str] = None
                             ) -> Union[str, None]:
@@ -54,9 +71,12 @@ class ParamsFile():
             # For the un-authenticated endpoint calls file
             filename = None
         else:
+            # Avoid characters that are not allowed in filenames built from user_id or ObjectId
+            safe_user_id = "".join(
+                [c for c in str(user_id) if c.isalnum() or c in ('-', '_')])
             filename = self.get_params_file_path(
                 PARAMS_FILE_USER_FILENAME_TEMPLATE.replace(
-                    '[user_id]', user_id))
+                    '[user_id]', safe_user_id))
         _ = DEBUG and \
             log_debug(
                 'GET_FILENAME-1) get_params_filename |' +
@@ -75,9 +95,18 @@ class ParamsFile():
         elif not filename:
             result['error_message'] = "Filename is null"
             result['found'] = False
-        elif not os.path.exists(filename):
-            result['error_message'] = f"Filename does not exist: {filename}"
-            result['found'] = False
+        else:
+            try:
+                filename = self._safe_params_path(filename)
+            except ValueError as exc:
+                result['error_message'] = str(exc)
+                result['found'] = False
+                result['error'] = True
+                return result
+            if not os.path.exists(filename):
+                result['error_message'] = (
+                    f"Filename does not exist: {filename}")
+                result['found'] = False
         if result['found']:
             with open(filename, 'r', encoding='utf-8') as fhdlr:
                 result['resultset'] = json.load(fhdlr)
@@ -133,7 +162,14 @@ class ParamsFile():
         """
         result = get_default_resultset()
         result['resultset'] = data_to_save
-        is_general_param_file = filename == PARAMS_FILE_GENERAL_FILENAME
+        try:
+            filename = self._safe_params_path(filename)
+        except ValueError as exc:
+            result['error'] = True
+            result['error_message'] = str(exc)
+            return result
+        is_general_param_file = (
+            os.path.basename(filename) == PARAMS_FILE_GENERAL_FILENAME)
         if is_general_param_file and PARAMS_FILE_ENABLED != '1':
             return result
         if not is_general_param_file and USER_PARAMS_FILE_ENABLED != '1':

@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Changelog](http://keepachangelog.com/).
 
 
-## [Unreleased]
+## [Unreleased] - YYYY-MM-DD
 
 ### Added
 
@@ -15,6 +15,53 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Removed
 
 ### Security
+
+
+## [0.4.0] - 2026-08-30
+
+### Added
+- AGENTS.md, GEMINI.md, and CLAUDE.md files to provide context and instructions to AI Coding Assistants [GS-303].
+- SAST testing [GS-315].
+- General unit tests [GS-21].
+- AWS_SSL_CERTIFICATE_ARN_BE envvar to the `.env.example` file [GS-328].
+- GCP Cloud Storage (GCS) object storage support: full implementation of `upload_file_to_storage`, `remove_from_storage`, `get_gcs_presigned_url`, `storage_retieval`, and `prepare_asset_url` in `genericsuite/util/gcp.py` [GS-318].
+- Azure Blob Storage object storage support: full implementation of `upload_file_to_storage`, `remove_from_storage`, `get_blob_presigned_url` (SAS tokens), `storage_retieval`, and `prepare_asset_url` in `genericsuite/util/azure.py` [GS-317].
+- GCP Secret Manager support: real `get_secrets()` implementation in `genericsuite/util/gcp_secrets.py` using `google-cloud-secret-manager` SDK; requires `GCP_PROJECT_ID` env var [GS-318].
+- Azure Key Vault support: real `get_secrets()` implementation in `genericsuite/util/azure_secrets.py` using `azure-keyvault-secrets` + `azure-identity` SDKs; requires `AZURE_KEYVAULT_URL` env var [GS-317].
+- Optional dependency groups `gcp` and `azure` in `pyproject.toml` for lazy SDK installation [GS-317] [GS-318].
+- New env vars documented in `.env.example`: `GCP_PROJECT_ID`, `GCS_CHATBOT_ATTACHMENTS_BUCKET_*`, `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_ACCOUNT_KEY`, `AZURE_CHATBOT_ATTACHMENTS_CONTAINER_*`, `AZURE_KEYVAULT_URL`, `CLOUD_STORAGE_PRESIGNED_EXPIRY`, `CLOUD_STORAGE_PRESIGNED_ACTIVE` [GS-317] [GS-318].
+- Unit tests for GCS storage (`tests/test_gcp_storage.py`), Azure Blob storage (`tests/test_azure_storage.py`), GCP Secret Manager (`tests/test_util_gcp_secrets.py`), and Azure Key Vault (`tests/test_util_azure_secrets.py`) [GS-317] [GS-318].
+- Introduce `DEBUG_CORS` environment variable in FastAPI `create_app.py` to log CORS origins during development. This enhances debugging capabilities for CORS configuration [GS-329].
+- `slowapi` for FastAPI rate limiting package [GS-332].
+- Integrate rate limiting in FastAPI and Flask endpoints [GS-332].
+- `select_table` field type: 1-1 relationship resolution in listings and reads. New JSON field attributes `related_table`, `local_field`, `related_key`, `description_fields`, `description_separator`, `related_filter`; rows now include `{field}_description`. Engine-agnostic `$in` resolver for all DB engines, with DynamoDB BatchGetItem and MongoDB `$lookup` fast paths [GS-259].
+
+### Fixed
+- API Key MCP headers and API Key authentication issues: modify get_access_token to include all headers, update mcp_authenticate_api_key to only require user_id based on MCP_MANDATORY_USER_ID, improve user_id assignment logic when only API Key is provided. Adjust verify_app_context to raise a more descriptive error for missing user credentials [GS-243].
+
+### Changed
+- License changed to MIT [FA-244].
+- Update FastAPI abstraction layer CORS configuration in `create_app.py` to handle multiple origins by splitting the `CORS_ORIGIN` string if it contains commas [GS-329].
+- Update CORS configuration in `framework_abstraction.py` to set `Access-Control-Allow-Origin` to '*' for handling multiple origins, as FastAPI manages origin splitting internally [GS-329].
+- Remove request authentication for flexibility [GS-329].
+- And add rate limit in `logs.py` for the `/logs` endpoint [GS-332].
+- Enhance comments about how to specify the C0301 and E501 line-too-long lint conditions on `config.py`
+- Replace Github Gemini code review with SonarQube and Claude code review [GS-336].
+
+### Security
+- Upgrade "pyjwt" to "^2.13.0" to fix security vulnerabilities [GS-219]:
+    * Improper Verification of Cryptographic Signature [High Severity], SNYK-PYTHON-PYJWT-15518059
+    * PyJWKClient: missing scheme allowlist enables CVE-2024-21643-class SSRF + token forgery via file://, ftp://, data: schemes
+    * PyJWKClient unbounded JWKS endpoint requests via attacker-controlled kid values (DoS)
+- Upgrade cryptography to "^50.0.0" to fix security vulnerabilities [GS-219].
+    * python-cryptography: Duplicate self-signed intermediates can cause exponential path-building
+    * cryptography: PKCS#7 EnvelopedData decryption exposes a Bleichenbacher oracle through distinguishable errors and timing
+    * python-cryptography verifier accepts wildcard DNS names allowing escape from permittedSubtrees
+- Avoid characters that are not allowed in filenames built from user_id or ObjectId in `app_context.py` [GS-219].
+- Upgrade "urllib3" to "^2.7.0" to fix security vulnerabilities [GS-219].
+- Fix "Unsanitized input from an HTTP header flows into json.dump, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to write arbitrary files." in app_context.py [GS-219].
+- Migrate to Python 3.14 [GS-337].
+- Bump Node.js version in .nvmrc to 26 [GS-339].
 
 
 ## [0.3.0] - 2026-02-18
@@ -292,7 +339,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ---
 
 ### Changed
-- Add links to https://www.carlosjramirez.com/genericsuite/ in the README.
+- Add links to https://www.carlosjramirez.com/en/genericsuite/ in the README.
 
 
 ## [0.1.2] - 2024-04-01

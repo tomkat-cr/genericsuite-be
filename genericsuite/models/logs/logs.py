@@ -1,8 +1,6 @@
-from typing import Optional
+from pydantic import BaseModel, Field, field_validator
 
-from pydantic import BaseModel
-
-from genericsuite.util.framework_abs_layer import Response, BlueprintOne
+from genericsuite.util.framework_abs_layer import Response
 from genericsuite.util.app_logger import (
     log_debug,
     log_error,
@@ -10,24 +8,32 @@ from genericsuite.util.app_logger import (
     log_warning,
     sanitize_log_message,
 )
-from genericsuite.util.jwt import AuthorizedRequest
 from genericsuite.util.utilities import (
-    get_request_body,
+    # get_request_body,
     return_resultset_jsonified_or_exception,
 )
 
 
 class LogRequest(BaseModel):
     """ Log request """
-    message: str
-    log_type: str
-    timestamp: int
+    message: str = Field(min_length=10, max_length=5000)
+    log_type: str = Field(min_length=4, max_length=10)
+    timestamp: int = Field(ge=0)
+    hp: str = Field(default="")
+
+    @field_validator("message", "log_type", "hp", mode="before")
+    @classmethod
+    def strip_str(cls, v: object) -> object:
+        return v.strip() if isinstance(v, str) else v
+
+    @field_validator("timestamp", mode="before")
+    @classmethod
+    def convert_timestamp(cls, v: object) -> object:
+        return int(v) if isinstance(v, str) else v
 
 
 def put_log(
-    request: AuthorizedRequest,
-    blueprint: BlueprintOne,
-    other_params: Optional[dict] = None
+    data: LogRequest
 ) -> Response:
     """
     This endpoint is used to receive and process log messages from clients.
@@ -37,11 +43,16 @@ def put_log(
     :param other_params: Any other parameters that may be needed.
     :return: A response object containing the response data.
     """
-    if other_params is None:
-        other_params = {}
-    params = get_request_body(request)
-    log_type = (params.get('log_type') or 'info').lower()
-    message = sanitize_log_message(params.get('message'))
+    log_type = (data.log_type or 'info').lower()
+    message = sanitize_log_message(data.message)
+
+    if data.hp:
+        return return_resultset_jsonified_or_exception(
+            {
+                "error": False,
+                "resultset": "Ok",
+            }
+        )
 
     if log_type == 'info':
         log_info(message)
