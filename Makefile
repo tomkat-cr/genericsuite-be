@@ -58,4 +58,4 @@ publish-test: sast-test build
 
 publish: requirements build
 	# Production Pypi publish
-	poetry run python3 -m twine upload dist/*
+	poetry run python3 -m twine upload dist/* ${ARGS:-}
