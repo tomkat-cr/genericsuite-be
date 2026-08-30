@@ -1,6 +1,6 @@
 {
   "name": "genericsuite-be",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "The GenericSuite for Python (backend version)",
   "author": "Carlos J. Ramirez",
   "license": "MIT",
